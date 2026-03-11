@@ -1,0 +1,26 @@
+[pre-commit]
+parallel = true
+
+[[pre-commit.jobs]]
+name = "oxlint"
+glob = "src/{lib,cli,server}/**/*.ts"
+run = "bunx oxlint {staged_files} --fix"
+stage_fixed = true
+
+[[pre-commit.jobs]]
+name = "oxlint-web"
+glob = "src/web/**/*.{ts,vue}"
+run = "bunx oxlint --config src/web/.oxlintrc.json {staged_files} --fix"
+stage_fixed = true
+
+[[pre-commit.jobs]]
+name = "oxfmt"
+glob = "src/{lib,cli,server}/**/*.ts"
+run = "bunx oxfmt {staged_files}"
+stage_fixed = true
+
+[[pre-commit.jobs]]
+name = "oxfmt-web"
+glob = "src/web/**/*.{ts,vue}"
+run = "bunx oxfmt {staged_files}"
+stage_fixed = true
