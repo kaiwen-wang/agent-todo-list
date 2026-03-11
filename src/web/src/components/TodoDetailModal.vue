@@ -7,7 +7,6 @@ import {
   NIcon,
   NSelect,
   NInput,
-  NButtonGroup,
   NButton,
   useMessage,
 } from 'naive-ui'
@@ -19,13 +18,17 @@ import {
   AntennaBars5,
 } from '@vicons/tabler'
 import { useProjectStore } from '@/stores/project'
-import type { Status, Priority } from '@/types'
+import type { Status, Priority, Label } from '@/types'
 import {
   STATUSES,
   PRIORITIES,
+  LABELS,
   STATUS_DISPLAY,
   PRIORITY_DISPLAY,
   PRIORITY_COLORS,
+  STATUS_COLORS,
+  LABEL_DISPLAY,
+  LABEL_COLORS,
 } from '@/types'
 
 const PRIORITY_ICON: Record<Priority, Component> = {
@@ -39,7 +42,17 @@ const PRIORITY_ICON: Record<Priority, Component> = {
 const store = useProjectStore()
 const message = useMessage()
 
+const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }))
 const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }))
+const labelOptions = LABELS.map((l) => ({ label: LABEL_DISPLAY[l], value: l }))
+
+function renderStatusLabel(option: { label: string; value: string }) {
+  const s = option.value as Status
+  return h('span', { style: 'display: flex; align-items: center; gap: 8px' }, [
+    h('span', { style: `width: 8px; height: 8px; border-radius: 50%; background: ${STATUS_COLORS[s]}; flex-shrink: 0` }),
+    option.label,
+  ])
+}
 
 function renderPriorityLabel(option: { label: string; value: string }) {
   const p = option.value as Priority
@@ -48,6 +61,15 @@ function renderPriorityLabel(option: { label: string; value: string }) {
     option.label,
   ])
 }
+
+function renderLabelTag(option: { label: string; value: string }) {
+  const l = option.value as Label
+  return h('span', { style: `display: flex; align-items: center; gap: 6px` }, [
+    h('span', { style: `width: 8px; height: 8px; border-radius: 50%; background: ${LABEL_COLORS[l]}; flex-shrink: 0` }),
+    option.label,
+  ])
+}
+
 const assigneeOptions = computed(() =>
   store.members.map((m) => ({ label: m.name, value: m.id })),
 )
@@ -116,6 +138,11 @@ async function changePriority(priority: Priority) {
   saveField('priority', priority)
 }
 
+async function changeLabels(labels: Label[]) {
+  if (!todo.value) return
+  saveField('labels', labels)
+}
+
 async function changeAssignee(assignee: string | null) {
   if (!todo.value || assignee === todo.value.assignee) return
   saveField('assignee', assignee)
@@ -179,17 +206,14 @@ function formatDate(iso: string): string {
         <div class="meta-grid">
           <div class="meta-item">
             <label class="meta-label">Status</label>
-            <NButtonGroup size="tiny">
-              <NButton
-                v-for="s in STATUSES"
-                :key="s"
-                :type="todo.status === s ? 'primary' : 'default'"
-                :ghost="todo.status !== s"
-                @click="changeStatus(s)"
-              >
-                {{ STATUS_DISPLAY[s] }}
-              </NButton>
-            </NButtonGroup>
+            <NSelect
+              :value="todo.status"
+              :options="statusOptions"
+              :render-label="renderStatusLabel"
+              size="small"
+              style="width: 160px"
+              @update:value="changeStatus"
+            />
           </div>
 
           <div class="meta-item">
@@ -214,6 +238,21 @@ function formatDate(iso: string): string {
               placeholder="Unassigned"
               style="width: 160px"
               @update:value="changeAssignee"
+            />
+          </div>
+
+          <div class="meta-item">
+            <label class="meta-label">Labels</label>
+            <NSelect
+              :value="todo.labels"
+              :options="labelOptions"
+              :render-label="renderLabelTag"
+              size="small"
+              multiple
+              clearable
+              placeholder="Add labels..."
+              style="min-width: 200px"
+              @update:value="changeLabels"
             />
           </div>
 

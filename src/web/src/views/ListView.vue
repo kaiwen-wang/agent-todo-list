@@ -18,7 +18,7 @@ import {
   AntennaBars5,
 } from '@vicons/tabler'
 import { useProjectStore } from '@/stores/project'
-import type { Todo, Status, Priority } from '@/types'
+import type { Todo, Status, Priority, Label } from '@/types'
 import {
   STATUSES,
   PRIORITIES,
@@ -26,6 +26,8 @@ import {
   PRIORITY_DISPLAY,
   STATUS_COLORS,
   PRIORITY_COLORS,
+  LABEL_DISPLAY,
+  LABEL_COLORS,
 } from '@/types'
 
 import CreateTodoModal from '@/components/CreateTodoModal.vue'
@@ -121,6 +123,21 @@ const columns: DataTableColumns<Todo> = [
     align: 'center',
     render(row) {
       return renderPriority(PRIORITY_ICON[row.priority], PRIORITY_COLORS[row.priority], PRIORITY_DISPLAY[row.priority])
+    },
+  },
+  {
+    title: 'Labels',
+    key: 'labels',
+    width: 160,
+    render(row) {
+      if (!row.labels?.length) return null
+      return h('span', { style: 'display: flex; flex-wrap: wrap; gap: 4px' },
+        row.labels.map((l: Label) =>
+          h('span', {
+            style: `font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 8px; white-space: nowrap; background: ${LABEL_COLORS[l]}22; color: ${LABEL_COLORS[l]}`,
+          }, LABEL_DISPLAY[l]),
+        ),
+      )
     },
   },
   {

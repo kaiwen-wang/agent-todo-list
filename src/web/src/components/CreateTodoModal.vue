@@ -19,8 +19,18 @@ import {
   AntennaBars4,
   AntennaBars5,
 } from '@vicons/tabler'
-import type { Status, Priority } from '@/types'
-import { STATUSES, PRIORITIES, STATUS_DISPLAY, PRIORITY_DISPLAY, PRIORITY_COLORS } from '@/types'
+import type { Status, Priority, Label } from '@/types'
+import {
+  STATUSES,
+  PRIORITIES,
+  LABELS,
+  STATUS_DISPLAY,
+  PRIORITY_DISPLAY,
+  PRIORITY_COLORS,
+  STATUS_COLORS,
+  LABEL_DISPLAY,
+  LABEL_COLORS,
+} from '@/types'
 import { useProjectStore } from '@/stores/project'
 
 const PRIORITY_ICON: Record<Priority, Component> = {
@@ -47,6 +57,7 @@ const title = ref('')
 const description = ref('')
 const status = ref<Status>(props.defaultStatus ?? 'todo')
 const priority = ref<Priority>('none')
+const labels = ref<Label[]>([])
 const assignee = ref<string | null>(null)
 const submitting = ref(false)
 
@@ -56,11 +67,28 @@ const memberOptions = computed(() =>
 
 const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }))
 const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }))
+const labelOptions = LABELS.map((l) => ({ label: LABEL_DISPLAY[l], value: l }))
+
+function renderStatusLabel(option: { label: string; value: string }) {
+  const s = option.value as Status
+  return h('span', { style: 'display: flex; align-items: center; gap: 8px' }, [
+    h('span', { style: `width: 8px; height: 8px; border-radius: 50%; background: ${STATUS_COLORS[s]}; flex-shrink: 0` }),
+    option.label,
+  ])
+}
 
 function renderPriorityLabel(option: { label: string; value: string }) {
   const p = option.value as Priority
   return h('span', { style: 'display: flex; align-items: center; gap: 8px' }, [
     h(NIcon, { size: 16, color: PRIORITY_COLORS[p] }, { default: () => h(PRIORITY_ICON[p]) }),
+    option.label,
+  ])
+}
+
+function renderLabelTag(option: { label: string; value: string }) {
+  const l = option.value as Label
+  return h('span', { style: 'display: flex; align-items: center; gap: 6px' }, [
+    h('span', { style: `width: 8px; height: 8px; border-radius: 50%; background: ${LABEL_COLORS[l]}; flex-shrink: 0` }),
     option.label,
   ])
 }
@@ -73,6 +101,7 @@ watch(
       description.value = ''
       status.value = props.defaultStatus ?? 'todo'
       priority.value = 'none'
+      labels.value = []
       assignee.value = null
     }
   },
@@ -87,6 +116,7 @@ async function submit() {
       description: description.value.trim() || undefined,
       status: status.value,
       priority: priority.value,
+      labels: labels.value.length ? labels.value : undefined,
       assignee: assignee.value,
     })
     message.success('Todo created')
@@ -130,7 +160,7 @@ async function submit() {
 
         <NSpace :size="12">
           <NFormItem label="Status" style="flex: 1">
-            <NSelect v-model:value="status" :options="statusOptions" />
+            <NSelect v-model:value="status" :options="statusOptions" :render-label="renderStatusLabel" />
           </NFormItem>
           <NFormItem label="Priority" style="flex: 1">
             <NSelect
@@ -140,6 +170,17 @@ async function submit() {
             />
           </NFormItem>
         </NSpace>
+
+        <NFormItem label="Labels">
+          <NSelect
+            v-model:value="labels"
+            :options="labelOptions"
+            :render-label="renderLabelTag"
+            multiple
+            clearable
+            placeholder="Add labels..."
+          />
+        </NFormItem>
 
         <NFormItem label="Assignee">
           <NSelect

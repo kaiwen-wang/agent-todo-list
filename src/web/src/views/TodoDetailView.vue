@@ -24,13 +24,16 @@ import {
   AntennaBars5,
 } from '@vicons/tabler'
 import { useProjectStore } from '@/stores/project'
-import type { Status, Priority } from '@/types'
+import type { Status, Priority, Label } from '@/types'
 import {
   STATUSES,
   PRIORITIES,
+  LABELS,
   STATUS_DISPLAY,
   PRIORITY_DISPLAY,
   PRIORITY_COLORS,
+  LABEL_DISPLAY,
+  LABEL_COLORS,
 } from '@/types'
 
 const PRIORITY_ICON: Record<Priority, Component> = {
@@ -54,6 +57,7 @@ const editTitle = ref('')
 const editDescription = ref('')
 const editPriority = ref<Priority | null>(null)
 const editStatus = ref<Status | null>(null)
+const editLabels = ref<Label[]>([])
 const editAssignee = ref<string | null>(null)
 const saving = ref(false)
 
@@ -64,10 +68,20 @@ const memberOptions = computed(() =>
 const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }))
 const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }))
 
+const labelOptions = LABELS.map((l) => ({ label: LABEL_DISPLAY[l], value: l }))
+
 function renderPriorityLabel(option: { label: string; value: string }) {
   const p = option.value as Priority
   return h('span', { style: 'display: flex; align-items: center; gap: 8px' }, [
     h(NIcon, { size: 16, color: PRIORITY_COLORS[p] }, { default: () => h(PRIORITY_ICON[p]) }),
+    option.label,
+  ])
+}
+
+function renderLabelTag(option: { label: string; value: string }) {
+  const l = option.value as Label
+  return h('span', { style: 'display: flex; align-items: center; gap: 6px' }, [
+    h('span', { style: `width: 8px; height: 8px; border-radius: 50%; background: ${LABEL_COLORS[l]}; flex-shrink: 0` }),
     option.label,
   ])
 }
@@ -80,6 +94,7 @@ function startEdit() {
   editDescription.value = todo.value.description
   editPriority.value = todo.value.priority
   editStatus.value = todo.value.status
+  editLabels.value = [...(todo.value.labels ?? [])]
   editAssignee.value = todo.value.assignee
   editing.value = true
 }
@@ -93,6 +108,7 @@ async function saveEdit() {
       description: editDescription.value.trim(),
       priority: editPriority.value || undefined,
       status: editStatus.value || undefined,
+      labels: editLabels.value,
       assignee: editAssignee.value,
     })
     editing.value = false
@@ -197,6 +213,16 @@ function formatDate(iso: string): string {
               {{ PRIORITY_DISPLAY[todo.priority] }}
             </NSpace>
           </NDescriptionsItem>
+          <NDescriptionsItem label="Labels">
+            <NSpace v-if="todo.labels?.length" :size="4">
+              <span
+                v-for="l in todo.labels"
+                :key="l"
+                :style="{ fontSize: '11px', fontWeight: 600, padding: '1px 8px', borderRadius: '8px', background: LABEL_COLORS[l] + '22', color: LABEL_COLORS[l] }"
+              >{{ LABEL_DISPLAY[l] }}</span>
+            </NSpace>
+            <span v-else style="opacity: 0.35">None</span>
+          </NDescriptionsItem>
           <NDescriptionsItem label="Assignee">
             {{ todo.assigneeName || 'Unassigned' }}
           </NDescriptionsItem>
@@ -236,6 +262,17 @@ function formatDate(iso: string): string {
             <NSelect v-model:value="editPriority" :options="priorityOptions" :render-label="renderPriorityLabel" />
           </NFormItem>
         </NSpace>
+
+        <NFormItem label="Labels">
+          <NSelect
+            v-model:value="editLabels"
+            :options="labelOptions"
+            :render-label="renderLabelTag"
+            multiple
+            clearable
+            placeholder="Add labels..."
+          />
+        </NFormItem>
 
         <NFormItem label="Assignee">
           <NSelect

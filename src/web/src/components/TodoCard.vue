@@ -9,7 +9,7 @@ import {
   AntennaBars5,
 } from '@vicons/tabler'
 import type { Todo, Priority } from '@/types'
-import { PRIORITY_DISPLAY, PRIORITY_COLORS } from '@/types'
+import { PRIORITY_DISPLAY, PRIORITY_COLORS, LABEL_DISPLAY, LABEL_COLORS } from '@/types'
 import { useProjectStore } from '@/stores/project'
 
 const PRIORITY_ICON: Record<Priority, Component> = {
@@ -51,8 +51,16 @@ function openDetail() {
       </NIcon>
     </div>
     <div class="card-title">{{ todo.title }}</div>
-    <div v-if="todo.assigneeName" class="card-footer">
-      <span class="card-assignee">{{ todo.assigneeName }}</span>
+    <div v-if="todo.labels?.length || todo.assigneeName" class="card-footer">
+      <div v-if="todo.labels?.length" class="card-labels">
+        <span
+          v-for="l in todo.labels"
+          :key="l"
+          class="card-label"
+          :style="{ background: LABEL_COLORS[l] + '22', color: LABEL_COLORS[l] }"
+        >{{ LABEL_DISPLAY[l] }}</span>
+      </div>
+      <span v-if="todo.assigneeName" class="card-assignee">{{ todo.assigneeName }}</span>
     </div>
   </NCard>
 </template>
@@ -103,10 +111,29 @@ function openDetail() {
 
 .card-footer {
   margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.card-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.card-label {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 8px;
+  white-space: nowrap;
 }
 
 .card-assignee {
   font-size: 11px;
   opacity: 0.5;
+  margin-left: auto;
 }
 </style>
