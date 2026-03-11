@@ -12,7 +12,8 @@ import * as Automerge from "@automerge/automerge";
 import { join } from "node:path";
 import type { Project } from "../lib/schema.js";
 import { loadDoc, saveDoc } from "../lib/storage.js";
-import { addTodo, updateTodo, deleteTodo, updateProject } from "../lib/operations.js";
+import { addTodo, updateTodo, deleteTodo, updateProject, addMember, removeMember, updateMember } from "../lib/operations.js";
+import { findMember } from "../lib/queries.js";
 import { toJSON } from "../lib/export.js";
 import { syncConfig } from "../lib/project.js";
 
@@ -76,7 +77,8 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
                   description: body.description,
                   status: body.status,
                   priority: body.priority,
-                  tags: body.tags,
+                  assignee: body.assignee,
+
                 });
                 doc = result.doc;
                 await save();
@@ -103,6 +105,34 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
                   prefix: doc.prefix,
                   name: doc.name,
                 });
+                return jsonResponse({ ok: true });
+              }
+
+              case "addMember": {
+                doc = addMember(
+                  doc,
+                  body.name ?? "Unnamed",
+                  body.role ?? "member",
+                  body.email ?? null,
+                );
+                await save();
+                const added = doc.members[doc.members.length - 1]!;
+                return jsonResponse({ ok: true, id: added.id });
+              }
+
+              case "removeMember": {
+                const member = findMember(doc, body.memberId ?? body.name ?? "");
+                if (!member) return jsonResponse({ error: "Member not found" }, 400);
+                doc = removeMember(doc, member.id);
+                await save();
+                return jsonResponse({ ok: true });
+              }
+
+              case "updateMember": {
+                const target = findMember(doc, body.memberId ?? body.name ?? "");
+                if (!target) return jsonResponse({ error: "Member not found" }, 400);
+                doc = updateMember(doc, target.id, body.updates ?? {});
+                await save();
                 return jsonResponse({ ok: true });
               }
 
