@@ -52,9 +52,9 @@ const DIFFICULTY_COLORS: Record<Difficulty, (s: string) => string> = {
 
 const DIFFICULTY_LABELS: Record<Difficulty, string> = {
   none: "",
-  easy: "easy",
-  medium: "med",
-  hard: "HARD",
+  easy: "low",
+  medium: "medium",
+  hard: "high",
 };
 
 /** Format a single todo as a one-line summary for list view. */

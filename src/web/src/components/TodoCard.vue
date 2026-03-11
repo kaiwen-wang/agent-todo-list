@@ -73,22 +73,19 @@ function onDragStart(e: DragEvent) {
     content-class="card-content"
   >
     <div class="card-header">
-      <span class="todo-ref">{{ todo.ref }}</span>
-      <span class="card-header-icons">
+      <span class="card-header-left">
+        <span class="todo-ref">{{ todo.ref }}</span>
         <span
           v-if="todo.difficulty && todo.difficulty !== 'none'"
-          class="difficulty-badge"
-          :style="{
-            background: DIFFICULTY_COLORS[todo.difficulty] + '22',
-            color: DIFFICULTY_COLORS[todo.difficulty],
-          }"
+          class="difficulty-num"
+          :style="{ color: DIFFICULTY_COLORS[todo.difficulty] }"
           :title="'Difficulty: ' + DIFFICULTY_DISPLAY[todo.difficulty]"
           >{{ DIFFICULTY_DISPLAY[todo.difficulty] }}</span
         >
-        <NIcon :size="16" :color="priorityColor" :title="priorityLabel">
-          <component :is="priorityIcon" />
-        </NIcon>
       </span>
+      <NIcon :size="16" :color="priorityColor" :title="priorityLabel">
+        <component :is="priorityIcon" />
+      </NIcon>
     </div>
     <div class="card-title">{{ todo.title }}</div>
     <div v-if="todo.description" class="card-description">{{ todo.description }}</div>
@@ -152,20 +149,18 @@ function onDragStart(e: DragEvent) {
   font-family: monospace;
 }
 
-.card-header-icons {
+.card-header-left {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  align-items: baseline;
+  gap: 5px;
 }
 
-.difficulty-badge {
-  font-size: 9px;
+.difficulty-num {
+  font-size: 10px;
   font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 6px;
-  white-space: nowrap;
-  text-transform: uppercase;
+  font-family: monospace;
   letter-spacing: 0.3px;
+  text-transform: uppercase;
 }
 
 .card-title {

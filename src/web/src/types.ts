@@ -142,9 +142,9 @@ export const PRIORITY_DISPLAY: Record<Priority, string> = {
 
 export const DIFFICULTY_DISPLAY: Record<Difficulty, string> = {
   none: "None",
-  easy: "Easy",
+  easy: "Low",
   medium: "Medium",
-  hard: "Hard",
+  hard: "High",
 };
 
 export const PRIORITY_COLORS: Record<Priority, string> = {
