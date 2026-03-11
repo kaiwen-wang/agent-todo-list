@@ -17,6 +17,8 @@ import { registerBranch } from "./commands/branch.js";
 import { registerMember } from "./commands/member.js";
 import { registerConfig } from "./commands/config.js";
 import { registerServe } from "./commands/browser.js";
+import { registerInbox } from "./commands/inbox.js";
+import { registerBrain } from "./commands/brain.js";
 
 const program = new Command();
 
@@ -38,5 +40,7 @@ registerBranch(program);
 registerMember(program);
 registerConfig(program);
 registerServe(program);
+registerInbox(program);
+registerBrain(program);
 
 program.parse();
