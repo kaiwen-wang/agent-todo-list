@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { NBadge, NButton } from 'naive-ui'
+import { NButton } from 'naive-ui'
 import type { Todo, Status } from '@/types'
 import { STATUS_DISPLAY, STATUS_COLORS } from '@/types'
 import TodoCard from './TodoCard.vue'
@@ -22,7 +22,7 @@ const showCreate = ref(false)
     <div class="column-header">
       <div class="column-indicator" :style="{ background: color }" />
       <span class="column-label">{{ label }}</span>
-      <NBadge :value="todos.length" :color="color" show-zero type="info" />
+      <span class="column-count" :style="{ background: color + '22', color: color }">{{ todos.length }}</span>
       <NButton size="tiny" quaternary @click="showCreate = true" class="add-btn">+</NButton>
     </div>
     <div class="column-body">
@@ -57,7 +57,7 @@ const showCreate = ref(false)
 .column-indicator {
   width: 10px;
   height: 10px;
-  border-radius: 3px;
+  border-radius: 50%;
   flex-shrink: 0;
 }
 
@@ -65,6 +65,20 @@ const showCreate = ref(false)
   font-size: 13px;
   font-weight: 600;
   flex: 1;
+}
+
+.column-count {
+  min-width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0 4px;
+  box-sizing: border-box;
 }
 
 .column-body {

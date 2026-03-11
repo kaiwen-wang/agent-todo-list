@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, type Component } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   NButton,
+  NIcon,
   NSpace,
   NCard,
   NForm,
@@ -15,6 +16,13 @@ import {
   NButtonGroup,
   useMessage,
 } from 'naive-ui'
+import {
+  AntennaBars1,
+  AntennaBars2,
+  AntennaBars3,
+  AntennaBars4,
+  AntennaBars5,
+} from '@vicons/tabler'
 import { useProjectStore } from '@/stores/project'
 import type { Status, Priority } from '@/types'
 import {
@@ -24,6 +32,13 @@ import {
   PRIORITY_DISPLAY,
   PRIORITY_COLORS,
 } from '@/types'
+
+const PRIORITY_ICON: Record<Priority, Component> = {
+  low: AntennaBars2,
+  medium: AntennaBars3,
+  high: AntennaBars4,
+  urgent: AntennaBars5,
+}
 
 const props = defineProps<{
   number: number
@@ -164,11 +179,12 @@ function formatDate(iso: string): string {
         <NDescriptions :column="4" label-placement="top" size="small" class="meta-descriptions">
           <NDescriptionsItem label="Priority">
             <NSpace :size="6" align="center">
-              <span
-                v-if="todo.priority"
-                class="priority-dot"
-                :style="{ background: PRIORITY_COLORS[todo.priority] }"
-              />
+              <NIcon
+                :size="18"
+                :color="todo.priority ? PRIORITY_COLORS[todo.priority] : '#d4d4d8'"
+              >
+                <component :is="todo.priority ? PRIORITY_ICON[todo.priority] : AntennaBars1" />
+              </NIcon>
               {{ todo.priority ? PRIORITY_DISPLAY[todo.priority] : 'None' }}
             </NSpace>
           </NDescriptionsItem>
@@ -296,13 +312,6 @@ function formatDate(iso: string): string {
 
 .meta-descriptions {
   margin-top: 12px;
-}
-
-.priority-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: inline-block;
 }
 
 .detail-description {

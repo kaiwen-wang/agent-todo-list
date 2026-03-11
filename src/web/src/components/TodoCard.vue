@@ -1,9 +1,23 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { NCard } from 'naive-ui'
-import type { Todo } from '@/types'
+import { computed, type Component } from 'vue'
+import { NCard, NIcon } from 'naive-ui'
+import {
+  AntennaBars1,
+  AntennaBars2,
+  AntennaBars3,
+  AntennaBars4,
+  AntennaBars5,
+} from '@vicons/tabler'
+import type { Todo, Priority } from '@/types'
 import { PRIORITY_DISPLAY, PRIORITY_COLORS } from '@/types'
 import { useProjectStore } from '@/stores/project'
+
+const PRIORITY_ICON: Record<Priority, Component> = {
+  low: AntennaBars2,
+  medium: AntennaBars3,
+  high: AntennaBars4,
+  urgent: AntennaBars5,
+}
 
 const props = defineProps<{
   todo: Todo
@@ -11,7 +25,8 @@ const props = defineProps<{
 
 const store = useProjectStore()
 
-const priorityColor = computed(() => props.todo.priority ? PRIORITY_COLORS[props.todo.priority] : '#6b7280')
+const priorityIcon = computed(() => props.todo.priority ? PRIORITY_ICON[props.todo.priority] : AntennaBars1)
+const priorityColor = computed(() => props.todo.priority ? PRIORITY_COLORS[props.todo.priority] : '#d4d4d8')
 const priorityLabel = computed(() => props.todo.priority ? PRIORITY_DISPLAY[props.todo.priority] : 'None')
 
 function openDetail() {
@@ -30,7 +45,9 @@ function openDetail() {
   >
     <div class="card-header">
       <span class="todo-ref">{{ todo.ref }}</span>
-      <span class="priority-dot" :style="{ background: priorityColor }" :title="priorityLabel" />
+      <NIcon :size="16" :color="priorityColor" :title="priorityLabel">
+        <component :is="priorityIcon" />
+      </NIcon>
     </div>
     <div class="card-title">{{ todo.title }}</div>
     <div v-if="todo.assigneeName" class="card-footer">
@@ -69,13 +86,6 @@ function openDetail() {
   font-weight: 600;
   opacity: 0.45;
   font-family: monospace;
-}
-
-.priority-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
 }
 
 .card-title {
