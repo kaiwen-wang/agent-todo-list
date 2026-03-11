@@ -22,10 +22,7 @@ import { registerBrain } from "./commands/brain.js";
 
 const program = new Command();
 
-program
-  .name("agt")
-  .description("Agent-native todo/project management tool")
-  .version("0.1.0");
+program.name("agt").description("Agent-native todo/project management tool").version("0.1.0");
 
 // Register all commands
 registerInit(program);

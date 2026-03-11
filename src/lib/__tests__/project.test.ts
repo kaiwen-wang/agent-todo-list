@@ -2,12 +2,7 @@ import { test, expect, describe, afterEach } from "bun:test";
 import { join } from "node:path";
 import { mkdtempSync, rmSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
-import {
-  findProject,
-  isGitRepo,
-  initProject,
-  readConfig,
-} from "../project.js";
+import { findProject, isGitRepo, initProject, readConfig } from "../project.js";
 
 describe("findProject", () => {
   let tempDir: string;

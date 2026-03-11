@@ -50,10 +50,7 @@ describe("CLI end-to-end", () => {
   });
 
   test("init creates .todo/ directory", async () => {
-    const { stdout, exitCode } = await run(
-      ["init", "--name", "Test", "--prefix", "TST"],
-      tempDir,
-    );
+    const { stdout, exitCode } = await run(["init", "--name", "Test", "--prefix", "TST"], tempDir);
     expect(exitCode).toBe(0);
     expect(stdout).toContain("Initialized project");
 
@@ -67,10 +64,7 @@ describe("CLI end-to-end", () => {
   test("add creates a todo", async () => {
     await run(["init", "--name", "Test", "--prefix", "TST"], tempDir);
 
-    const { stdout, exitCode } = await run(
-      ["add", "My first task", "--priority", "high"],
-      tempDir,
-    );
+    const { stdout, exitCode } = await run(["add", "My first task", "--priority", "high"], tempDir);
     expect(exitCode).toBe(0);
     expect(stdout).toContain("TST-1");
     expect(stdout).toContain("My first task");

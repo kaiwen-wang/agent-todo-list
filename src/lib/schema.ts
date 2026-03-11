@@ -30,19 +30,9 @@ export const STATUSES: readonly Status[] = [
   "wont_do",
 ] as const;
 
-export const PRIORITIES: readonly Priority[] = [
-  "none",
-  "urgent",
-  "high",
-  "medium",
-  "low",
-] as const;
+export const PRIORITIES: readonly Priority[] = ["none", "urgent", "high", "medium", "low"] as const;
 
-export const LABELS: readonly Label[] = [
-  "bug",
-  "new_feature",
-  "feature_plus",
-] as const;
+export const LABELS: readonly Label[] = ["bug", "new_feature", "feature_plus"] as const;
 
 export const LABEL_DISPLAY: Record<Label, string> = {
   new_feature: "New Feature",
@@ -72,18 +62,18 @@ export const PRIORITY_DISPLAY: Record<Priority, string> = {
 export interface Comment {
   id: string;
   author: MemberId;
-  authorName: string;     // snapshot at creation time (survives member rename/delete)
+  authorName: string; // snapshot at creation time (survives member rename/delete)
   text: string;
   createdAt: Timestamp;
 }
 
 export interface AuditEntry {
   id: string;
-  action: string;         // e.g. "todo.created", "todo.updated", "todo.deleted"
+  action: string; // e.g. "todo.created", "todo.updated", "todo.deleted"
   actor: MemberId;
-  actorName: string;      // snapshot at creation time
-  target: string;         // e.g. "TODO-1" or member name
-  details: string;        // JSON string describing what changed
+  actorName: string; // snapshot at creation time
+  target: string; // e.g. "TODO-1" or member name
+  details: string; // JSON string describing what changed
   timestamp: Timestamp;
 }
 

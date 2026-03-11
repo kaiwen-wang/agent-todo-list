@@ -55,22 +55,14 @@ export function formatTodoLine(todo: Todo, prefix: string): string {
 }
 
 /** Format a todo's full detail view. */
-export function formatTodoDetail(
-  todo: Todo,
-  prefix: string,
-  memberName?: string,
-): string {
+export function formatTodoDetail(todo: Todo, prefix: string, memberName?: string): string {
   const lines: string[] = [];
   const ref = `${prefix}-${todo.number}`;
 
   lines.push(chalk.bold(`${ref}: ${todo.title}`));
   lines.push("");
-  lines.push(
-    `  Status:   ${STATUS_COLORS[todo.status](todo.status.replace("_", " "))}`,
-  );
-  lines.push(
-    `  Priority: ${PRIORITY_COLORS[todo.priority](PRIORITY_LABELS[todo.priority])}`,
-  );
+  lines.push(`  Status:   ${STATUS_COLORS[todo.status](todo.status.replace("_", " "))}`);
+  lines.push(`  Priority: ${PRIORITY_COLORS[todo.priority](PRIORITY_LABELS[todo.priority])}`);
 
   if (todo.assignee) {
     lines.push(`  Assignee: ${memberName ?? todo.assignee}`);

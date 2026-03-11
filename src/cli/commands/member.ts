@@ -14,9 +14,7 @@ import chalk from "chalk";
 const VALID_ROLES: MemberRole[] = ["owner", "member", "agent"];
 
 export function registerMember(program: Command): void {
-  const member = program
-    .command("member")
-    .description("Manage project members");
+  const member = program.command("member").description("Manage project members");
 
   member
     .command("add")
@@ -25,46 +23,41 @@ export function registerMember(program: Command): void {
     .option("-r, --role <role>", "Role: owner, member, or agent", "member")
     .option("-e, --email <email>", "Email address")
     .option("--json", "Output as JSON")
-    .action(
-      async (
-        name: string,
-        opts: { role: string; email?: string; json?: boolean },
-      ) => {
-        const paths = findProject();
-        if (!paths) error("Not in an agt project. Run 'agt init' first.");
+    .action(async (name: string, opts: { role: string; email?: string; json?: boolean }) => {
+      const paths = findProject();
+      if (!paths) error("Not in an agt project. Run 'agt init' first.");
 
-        let doc = await loadDoc(paths.dataPath);
-        if (!doc) error("Project data not found.");
+      let doc = await loadDoc(paths.dataPath);
+      if (!doc) error("Project data not found.");
 
-        if (!VALID_ROLES.includes(opts.role as MemberRole)) {
-          error(`Invalid role "${opts.role}". Use: ${VALID_ROLES.join(", ")}`);
-        }
+      if (!VALID_ROLES.includes(opts.role as MemberRole)) {
+        error(`Invalid role "${opts.role}". Use: ${VALID_ROLES.join(", ")}`);
+      }
 
-        // Check for duplicate name
-        const existing = findMember(doc, name);
-        if (existing && existing.name.toLowerCase() === name.toLowerCase()) {
-          error(`A member named "${existing.name}" already exists.`);
-        }
+      // Check for duplicate name
+      const existing = findMember(doc, name);
+      if (existing && existing.name.toLowerCase() === name.toLowerCase()) {
+        error(`A member named "${existing.name}" already exists.`);
+      }
 
-        doc = addMember(doc, name, opts.role as MemberRole, opts.email ?? null);
-        await saveDoc(paths.dataPath, doc);
+      doc = addMember(doc, name, opts.role as MemberRole, opts.email ?? null);
+      await saveDoc(paths.dataPath, doc);
 
-        const added = doc.members[doc.members.length - 1]!;
+      const added = doc.members[doc.members.length - 1]!;
 
-        if (opts.json) {
-          console.log(
-            JSON.stringify({
-              id: added.id,
-              name: added.name,
-              role: added.role,
-              email: added.email,
-            }),
-          );
-        } else {
-          success(`Added member "${name}" (${opts.role})`);
-        }
-      },
-    );
+      if (opts.json) {
+        console.log(
+          JSON.stringify({
+            id: added.id,
+            name: added.name,
+            role: added.role,
+            email: added.email,
+          }),
+        );
+      } else {
+        success(`Added member "${name}" (${opts.role})`);
+      }
+    });
 
   member
     .command("list")
@@ -167,9 +160,7 @@ export function registerMember(program: Command): void {
         await saveDoc(paths.dataPath, doc);
 
         if (opts.json) {
-          console.log(
-            JSON.stringify({ updated: found.name, fields: Object.keys(updates) }),
-          );
+          console.log(JSON.stringify({ updated: found.name, fields: Object.keys(updates) }));
         } else {
           success(`Updated member "${found.name}"`);
         }

@@ -1,20 +1,52 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { NButton } from 'naive-ui'
-import type { Todo, Status } from '@/types'
-import { STATUS_DISPLAY, STATUS_COLORS } from '@/types'
-import TodoCard from './TodoCard.vue'
-import CreateTodoModal from './CreateTodoModal.vue'
+import { ref, computed } from "vue";
+import { NButton } from "naive-ui";
+import type { Todo, Status } from "@/types";
+import { STATUS_DISPLAY, STATUS_COLORS } from "@/types";
+import TodoCard from "./TodoCard.vue";
+import CreateTodoModal from "./CreateTodoModal.vue";
+import { useProjectStore } from "@/stores/project";
 
 const props = defineProps<{
-  status: Status
-  todos: Todo[]
-}>()
+  status: Status;
+  todos: Todo[];
+}>();
 
-const label = computed(() => STATUS_DISPLAY[props.status])
-const color = computed(() => STATUS_COLORS[props.status])
+const store = useProjectStore();
+const label = computed(() => STATUS_DISPLAY[props.status]);
+const color = computed(() => STATUS_COLORS[props.status]);
 
-const showCreate = ref(false)
+const showCreate = ref(false);
+const isDragOver = ref(false);
+
+function onDragOver(e: DragEvent) {
+  e.preventDefault();
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = "move";
+  }
+}
+
+function onDragEnter(e: DragEvent) {
+  e.preventDefault();
+  isDragOver.value = true;
+}
+
+function onDragLeave() {
+  isDragOver.value = false;
+}
+
+async function onDrop(e: DragEvent) {
+  e.preventDefault();
+  isDragOver.value = false;
+
+  const todoId = e.dataTransfer?.getData("text/plain");
+  if (todoId) {
+    const todo = store.todos.find((t) => t.id === todoId);
+    if (todo && todo.status !== props.status) {
+      await store.moveTodo(todo.number, props.status);
+    }
+  }
+}
 </script>
 
 <template>
@@ -27,7 +59,14 @@ const showCreate = ref(false)
       }}</span>
       <NButton size="tiny" quaternary @click="showCreate = true" class="add-btn">+</NButton>
     </div>
-    <div class="column-body">
+    <div
+      class="column-body"
+      :class="{ 'drag-over': isDragOver }"
+      @dragover="onDragOver"
+      @dragenter="onDragEnter"
+      @dragleave="onDragLeave"
+      @drop="onDrop"
+    >
       <TodoCard v-for="todo in todos" :key="todo.id" :todo="todo" />
       <div v-if="todos.length === 0" class="column-empty">No items</div>
     </div>
@@ -85,10 +124,10 @@ const showCreate = ref(false)
 
 .column-body {
   flex: 1;
-  padding: 8px;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   overflow-y: auto;
 }
 
@@ -104,9 +143,13 @@ const showCreate = ref(false)
 }
 
 .column-empty {
-  padding: 24px 8px;
+  padding: 24px;
   text-align: center;
   font-size: 12px;
   opacity: 0.35;
+}
+
+.drag-over {
+  background: rgba(59, 130, 246, 0.08);
 }
 </style>

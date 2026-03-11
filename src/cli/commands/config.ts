@@ -6,7 +6,7 @@
  */
 
 import type { Command } from "commander";
-import { findProject, readConfig, syncConfig } from "../../lib/project.js";
+import { findProject, syncConfig } from "../../lib/project.js";
 import { loadDoc, saveDoc } from "../../lib/storage.js";
 import { updateProject } from "../../lib/operations.js";
 import { error, success } from "../output.js";
@@ -20,12 +20,7 @@ export function registerConfig(program: Command): void {
     .option("-d, --description <text>", "Set project description")
     .option("--json", "Output as JSON")
     .action(
-      async (opts: {
-        name?: string;
-        prefix?: string;
-        description?: string;
-        json?: boolean;
-      }) => {
+      async (opts: { name?: string; prefix?: string; description?: string; json?: boolean }) => {
         const paths = findProject();
         if (!paths) error("Not in an agt project. Run 'agt init' first.");
 
@@ -33,9 +28,7 @@ export function registerConfig(program: Command): void {
         if (!doc) error("Project data not found.");
 
         const hasUpdates =
-          opts.name !== undefined ||
-          opts.prefix !== undefined ||
-          opts.description !== undefined;
+          opts.name !== undefined || opts.prefix !== undefined || opts.description !== undefined;
 
         if (hasUpdates) {
           // Build updates from flags
@@ -54,9 +47,7 @@ export function registerConfig(program: Command): void {
           });
 
           if (opts.json) {
-            console.log(
-              JSON.stringify({ ok: true, updated: Object.keys(updates) }),
-            );
+            console.log(JSON.stringify({ ok: true, updated: Object.keys(updates) }));
           } else {
             success(`Updated project settings`);
           }

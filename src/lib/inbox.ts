@@ -50,18 +50,13 @@ export async function readProcessed(todoDir: string): Promise<string> {
 }
 
 /** Append processed entries to TODO-PROCESSED.md with a timestamp header. */
-export async function appendProcessed(
-  todoDir: string,
-  entries: ProcessedEntry[],
-): Promise<void> {
+export async function appendProcessed(todoDir: string, entries: ProcessedEntry[]): Promise<void> {
   if (entries.length === 0) return;
 
   const existing = await readProcessed(todoDir);
   const timestamp = new Date().toISOString().slice(0, 19).replace("T", " ");
 
-  const lines = entries.map(
-    (e) => `- [${e.ref}] ${e.original} -> "${e.title}"`,
-  );
+  const lines = entries.map((e) => `- [${e.ref}] ${e.original} -> "${e.title}"`);
 
   const block = `\n## ${timestamp}\n\n${lines.join("\n")}\n`;
   const content = existing ? existing.trimEnd() + "\n" + block : block.trimStart();

@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { computed, type Component } from 'vue'
-import { NCard, NIcon } from 'naive-ui'
+import { computed, type Component } from "vue";
+import { NCard, NIcon } from "naive-ui";
 import {
   AntennaBars1,
   AntennaBars2,
   AntennaBars3,
   AntennaBars4,
   AntennaBars5,
-} from '@vicons/tabler'
-import type { Todo, Priority } from '@/types'
-import { PRIORITY_DISPLAY, PRIORITY_COLORS, LABEL_DISPLAY, LABEL_COLORS } from '@/types'
-import { useProjectStore } from '@/stores/project'
+} from "@vicons/tabler";
+import type { Todo, Priority } from "@/types";
+import { PRIORITY_DISPLAY, PRIORITY_COLORS, LABEL_DISPLAY, LABEL_COLORS } from "@/types";
+import { useProjectStore } from "@/stores/project";
 
 const PRIORITY_ICON: Record<Priority, Component> = {
   none: AntennaBars1,
@@ -18,30 +18,44 @@ const PRIORITY_ICON: Record<Priority, Component> = {
   medium: AntennaBars3,
   high: AntennaBars4,
   urgent: AntennaBars5,
-}
+};
 
 const props = defineProps<{
-  todo: Todo
-}>()
+  todo: Todo;
+}>();
 
-const store = useProjectStore()
+const emit = defineEmits<{
+  dragStart: [todo: Todo];
+}>();
 
-const priorityIcon = computed(() => PRIORITY_ICON[props.todo.priority])
-const priorityColor = computed(() => PRIORITY_COLORS[props.todo.priority])
-const priorityLabel = computed(() => PRIORITY_DISPLAY[props.todo.priority])
+const store = useProjectStore();
+
+const priorityIcon = computed(() => PRIORITY_ICON[props.todo.priority]);
+const priorityColor = computed(() => PRIORITY_COLORS[props.todo.priority]);
+const priorityLabel = computed(() => PRIORITY_DISPLAY[props.todo.priority]);
 
 function openDetail() {
-  store.openTodo(props.todo.number)
+  store.openTodo(props.todo.number);
+}
+
+function onDragStart(e: DragEvent) {
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", props.todo.id);
+    emit("dragStart", props.todo);
+  }
 }
 </script>
 
 <template>
   <NCard
+    draggable="true"
     size="small"
     hoverable
     class="todo-card"
     :class="{ done: todo.status === 'completed' }"
     @click="openDetail"
+    @dragstart="onDragStart"
     content-class="card-content"
   >
     <div class="card-header">
@@ -69,11 +83,14 @@ function openDetail() {
 <style scoped>
 .todo-card {
   cursor: pointer;
-  transition: transform 0.1s;
+  transition: background 0.15s;
+  border: none !important;
+  border-radius: 4px !important;
+  background: white;
 }
 
 .todo-card:hover {
-  transform: translateY(-1px);
+  background: #f5f5f5;
 }
 
 .todo-card.done {
@@ -81,7 +98,7 @@ function openDetail() {
 }
 
 .card-content {
-  padding: 14px 14px !important;
+  padding: 12px 14px !important;
 }
 
 .card-header {

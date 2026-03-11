@@ -67,10 +67,7 @@ export function isGitRepo(dir: string = process.cwd()): boolean {
  * The data.automerge file IS committed to git (not gitignored).
  * A custom git merge driver handles binary merges using Automerge.merge().
  */
-export async function initProject(
-  dir: string,
-  config: ProjectConfig,
-): Promise<TodoPaths> {
+export async function initProject(dir: string, config: ProjectConfig): Promise<TodoPaths> {
   const todoDir = join(dir, TODO_DIR);
   mkdirSync(todoDir, { recursive: true });
 
@@ -102,7 +99,10 @@ export async function initProject(
     if (!content.includes("merge=automerge-crdt")) {
       await Bun.write(
         gitattrsPath,
-        content.trimEnd() + "\n\n# CRDT merge driver for Automerge binary data\n" + mergeDriverLine + "\n",
+        content.trimEnd() +
+          "\n\n# CRDT merge driver for Automerge binary data\n" +
+          mergeDriverLine +
+          "\n",
       );
     }
   } else {
@@ -118,14 +118,10 @@ export async function initProject(
 
   // Configure the git merge driver (local repo config only)
   if (isGitRepo(dir)) {
-    const mergeDriverScript = join(
-      import.meta.dir,
-      "merge-driver.ts",
-    );
-    Bun.spawnSync(
-      ["git", "config", "merge.automerge-crdt.name", "Automerge CRDT merge driver"],
-      { cwd: dir },
-    );
+    const mergeDriverScript = join(import.meta.dir, "merge-driver.ts");
+    Bun.spawnSync(["git", "config", "merge.automerge-crdt.name", "Automerge CRDT merge driver"], {
+      cwd: dir,
+    });
     Bun.spawnSync(
       ["git", "config", "merge.automerge-crdt.driver", `bun ${mergeDriverScript} %O %A %B`],
       { cwd: dir },

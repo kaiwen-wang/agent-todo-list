@@ -23,7 +23,7 @@ export function toJSON(doc: Doc): object {
     })),
     todos: doc.todos.map((t) => ({
       id: t.id,
-      ref: `${doc.prefix}-${t.number}`,        // computed
+      ref: `${doc.prefix}-${t.number}`, // computed
       number: t.number,
       title: t.title,
       description: t.description,
@@ -31,7 +31,7 @@ export function toJSON(doc: Doc): object {
       priority: t.priority,
       labels: t.labels ? [...t.labels] : [],
       assignee: t.assignee,
-      assigneeName: t.assignee ? findMemberName(doc, t.assignee) : null,  // computed
+      assigneeName: t.assignee ? findMemberName(doc, t.assignee) : null, // computed
       branch: t.branch ?? null,
       comments: (t.comments ?? []).map((c) => ({
         id: c.id,

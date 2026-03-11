@@ -119,9 +119,7 @@ async function getProjectContext(dataPath: string): Promise<string> {
     lines.push(`Members: ${json.members.map((m) => `${m.name} (${m.role})`).join(", ")}`);
   }
 
-  const activeTodos = json.todos.filter(
-    (t) => t.status !== "archived" && t.status !== "wont_do",
-  );
+  const activeTodos = json.todos.filter((t) => t.status !== "archived" && t.status !== "wont_do");
   if (activeTodos.length > 0) {
     lines.push(`\nExisting tasks (${activeTodos.length}):`);
     for (const t of activeTodos.slice(0, 30)) {
@@ -139,10 +137,7 @@ async function getProjectContext(dataPath: string): Promise<string> {
 
 // ── Main processor ──────────────────────────────────────────────────
 
-export async function processInbox(
-  projectPath: string,
-  onEvent: EventCallback,
-): Promise<void> {
+export async function processInbox(projectPath: string, onEvent: EventCallback): Promise<void> {
   const todoDir = join(projectPath, ".todo");
   const dataPath = join(todoDir, "data.automerge");
 
@@ -167,10 +162,14 @@ export async function processInbox(
       "claude",
       "-p",
       prompt,
-      "--output-format", "stream-json",
-      "--allowedTools", "Bash(bun run agt*)",
-      "--permission-mode", "bypassPermissions",
-      "--max-budget-usd", "1.00",
+      "--output-format",
+      "stream-json",
+      "--allowedTools",
+      "Bash(bun run agt*)",
+      "--permission-mode",
+      "bypassPermissions",
+      "--max-budget-usd",
+      "1.00",
     ],
     {
       cwd: projectPath,
@@ -221,7 +220,10 @@ export async function processInbox(
   // Check stderr for errors
   const stderrText = await new Response(proc.stderr).text();
   if (exitCode !== 0 && stderrText.trim()) {
-    onEvent({ type: "brain:error", message: `Claude exited with code ${exitCode}: ${stderrText.trim()}` });
+    onEvent({
+      type: "brain:error",
+      message: `Claude exited with code ${exitCode}: ${stderrText.trim()}`,
+    });
   }
 
   // 6. Archive processed items and clear inbox
@@ -234,10 +236,12 @@ export async function processInbox(
 
     for (const task of createdTasks) {
       // Find the closest matching inbox line
-      const match = inboxLines.find((line) =>
-        task.title.toLowerCase().includes(line.toLowerCase().slice(0, 20)) ||
-        line.toLowerCase().includes(task.title.toLowerCase().slice(0, 20)),
-      ) ?? "(auto-expanded)";
+      const match =
+        inboxLines.find(
+          (line) =>
+            task.title.toLowerCase().includes(line.toLowerCase().slice(0, 20)) ||
+            line.toLowerCase().includes(task.title.toLowerCase().slice(0, 20)),
+        ) ?? "(auto-expanded)";
 
       processedEntries.push({
         original: match,

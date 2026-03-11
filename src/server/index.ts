@@ -87,7 +87,11 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
 
   function broadcast(message: string) {
     for (const ws of wsClients) {
-      try { ws.send(message); } catch { wsClients.delete(ws); }
+      try {
+        ws.send(message);
+      } catch {
+        wsClients.delete(ws);
+      }
     }
   }
 
@@ -103,7 +107,9 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
       saving = true;
       await saveDoc(dataPath, doc);
       // Small delay to let fs.watch settle before re-enabling external detection
-      setTimeout(() => { saving = false; }, 100);
+      setTimeout(() => {
+        saving = false;
+      }, 100);
       broadcast(JSON.stringify({ type: "refresh" }));
     }
   }
@@ -196,10 +202,16 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
                 if (await gitignoreFile.exists()) {
                   const content = await gitignoreFile.text();
                   if (!content.includes(".worktrees")) {
-                    await Bun.write(gitignorePath, content.trimEnd() + "\n\n# Git worktrees for todo branches\n.worktrees/\n");
+                    await Bun.write(
+                      gitignorePath,
+                      content.trimEnd() + "\n\n# Git worktrees for todo branches\n.worktrees/\n",
+                    );
                   }
                 } else {
-                  await Bun.write(gitignorePath, "# Git worktrees for todo branches\n.worktrees/\n");
+                  await Bun.write(
+                    gitignorePath,
+                    "# Git worktrees for todo branches\n.worktrees/\n",
+                  );
                 }
 
                 const worktreePath = join(projectPath, ".worktrees", branchName);
@@ -244,10 +256,11 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
                 const worktreePath = join(projectPath, ".worktrees", branchName);
 
                 if (existsSync(worktreePath)) {
-                  const result = Bun.spawnSync(
-                    ["git", "worktree", "remove", worktreePath],
-                    { cwd: projectPath, stderr: "pipe", stdout: "pipe" },
-                  );
+                  const result = Bun.spawnSync(["git", "worktree", "remove", worktreePath], {
+                    cwd: projectPath,
+                    stderr: "pipe",
+                    stdout: "pipe",
+                  });
 
                   if (result.exitCode !== 0) {
                     const stderr = result.stderr.toString().trim();
@@ -311,15 +324,19 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
                 processInbox(projectPath, (event) => {
                   broadcast(JSON.stringify(event));
                 }).catch((err) => {
-                  broadcast(JSON.stringify({
-                    type: "brain:error",
-                    message: err instanceof Error ? err.message : String(err),
-                  }));
-                  broadcast(JSON.stringify({
-                    type: "brain:done",
-                    processed: 0,
-                    tasks: [],
-                  }));
+                  broadcast(
+                    JSON.stringify({
+                      type: "brain:error",
+                      message: err instanceof Error ? err.message : String(err),
+                    }),
+                  );
+                  broadcast(
+                    JSON.stringify({
+                      type: "brain:done",
+                      processed: 0,
+                      tasks: [],
+                    }),
+                  );
                 });
                 return jsonResponse({ ok: true, message: "Brain processing started" });
               }

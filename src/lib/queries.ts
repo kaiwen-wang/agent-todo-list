@@ -22,18 +22,14 @@ export function queryTodos(doc: Doc, filter: TodoFilter = {}): Todo[] {
   // Default: exclude archived unless explicitly filtering for it
   const statusFilter = filter.status;
   if (statusFilter) {
-    const statuses = Array.isArray(statusFilter)
-      ? statusFilter
-      : [statusFilter];
+    const statuses = Array.isArray(statusFilter) ? statusFilter : [statusFilter];
     todos = todos.filter((t) => statuses.includes(t.status));
   } else {
     todos = todos.filter((t) => t.status !== "archived");
   }
 
   if (filter.priority) {
-    const priorities = Array.isArray(filter.priority)
-      ? filter.priority
-      : [filter.priority];
+    const priorities = Array.isArray(filter.priority) ? filter.priority : [filter.priority];
     todos = todos.filter((t) => priorities.includes(t.priority));
   }
 
@@ -86,10 +82,7 @@ export function parseTodoRef(ref: string, prefix: string): number | null {
 }
 
 /** Find a member by name (case-insensitive partial match) or ID. */
-export function findMember(
-  doc: Doc,
-  nameOrId: string,
-): (typeof doc.members)[number] | undefined {
+export function findMember(doc: Doc, nameOrId: string): (typeof doc.members)[number] | undefined {
   const lower = nameOrId.toLowerCase();
   return (
     doc.members.find((m) => m.id === nameOrId) ||

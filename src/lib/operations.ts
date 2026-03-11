@@ -54,11 +54,7 @@ function resolveActor(d: Project, actorId?: MemberId): MemberId {
 // ── Project operations ──────────────────────────────────────────────
 
 /** Create a brand new empty project document */
-export function createProject(
-  prefix: string,
-  name: string,
-  ownerName: string,
-): Doc {
+export function createProject(prefix: string, name: string, ownerName: string): Doc {
   const ownerId = crypto.randomUUID();
 
   return Automerge.from<Project>({
@@ -91,9 +87,18 @@ export function updateProject(
   return Automerge.change(doc, (d) => {
     const actor = resolveActor(d, actorId);
     const changed: Record<string, unknown> = {};
-    if (updates.name !== undefined) { d.name = updates.name; changed.name = updates.name; }
-    if (updates.description !== undefined) { d.description = updates.description; changed.description = updates.description; }
-    if (updates.prefix !== undefined) { d.prefix = updates.prefix.toUpperCase(); changed.prefix = d.prefix; }
+    if (updates.name !== undefined) {
+      d.name = updates.name;
+      changed.name = updates.name;
+    }
+    if (updates.description !== undefined) {
+      d.description = updates.description;
+      changed.description = updates.description;
+    }
+    if (updates.prefix !== undefined) {
+      d.prefix = updates.prefix.toUpperCase();
+      changed.prefix = d.prefix;
+    }
     audit(d, "project.updated", actor, d.name, changed);
   });
 }
@@ -153,10 +158,7 @@ export function updateTodo(
   doc: Doc,
   todoNumber: number,
   updates: Partial<
-    Pick<
-      Todo,
-      "title" | "description" | "status" | "priority" | "labels" | "assignee"
-    >
+    Pick<Todo, "title" | "description" | "status" | "priority" | "labels" | "assignee">
   >,
   actorId?: MemberId,
 ): Doc {
@@ -167,10 +169,22 @@ export function updateTodo(
     const actor = resolveActor(d, actorId);
     const changed: Record<string, unknown> = {};
 
-    if (updates.title !== undefined) { changed.title = { from: todo.title, to: updates.title }; todo.title = updates.title; }
-    if (updates.description !== undefined) { changed.description = true; todo.description = updates.description; }
-    if (updates.status !== undefined) { changed.status = { from: todo.status, to: updates.status }; todo.status = updates.status; }
-    if (updates.priority !== undefined) { changed.priority = { from: todo.priority, to: updates.priority }; todo.priority = updates.priority; }
+    if (updates.title !== undefined) {
+      changed.title = { from: todo.title, to: updates.title };
+      todo.title = updates.title;
+    }
+    if (updates.description !== undefined) {
+      changed.description = true;
+      todo.description = updates.description;
+    }
+    if (updates.status !== undefined) {
+      changed.status = { from: todo.status, to: updates.status };
+      todo.status = updates.status;
+    }
+    if (updates.priority !== undefined) {
+      changed.priority = { from: todo.priority, to: updates.priority };
+      todo.priority = updates.priority;
+    }
     if (updates.labels !== undefined) {
       changed.labels = updates.labels;
       todo.labels.splice(0, todo.labels.length);
@@ -178,7 +192,10 @@ export function updateTodo(
         todo.labels.push(label);
       }
     }
-    if (updates.assignee !== undefined) { changed.assignee = updates.assignee; todo.assignee = updates.assignee; }
+    if (updates.assignee !== undefined) {
+      changed.assignee = updates.assignee;
+      todo.assignee = updates.assignee;
+    }
     todo.updatedAt = Date.now();
 
     audit(d, "todo.updated", actor, `${d.prefix}-${todoNumber}`, changed);
@@ -200,12 +217,7 @@ export function deleteTodo(doc: Doc, todoNumber: number, actorId?: MemberId): Do
 }
 
 /** Add a comment to a todo */
-export function addComment(
-  doc: Doc,
-  todoNumber: number,
-  text: string,
-  actorId?: MemberId,
-): Doc {
+export function addComment(doc: Doc, todoNumber: number, text: string, actorId?: MemberId): Doc {
   return Automerge.change(doc, (d) => {
     const todo = d.todos.find((t) => t.number === todoNumber);
     if (!todo) throw new Error(`Todo #${todoNumber} not found`);
@@ -249,11 +261,7 @@ export function setBranch(
 }
 
 /** Clear the branch name on a todo (after worktree removal) */
-export function clearBranch(
-  doc: Doc,
-  todoNumber: number,
-  actorId?: MemberId,
-): Doc {
+export function clearBranch(doc: Doc, todoNumber: number, actorId?: MemberId): Doc {
   return Automerge.change(doc, (d) => {
     const todo = d.todos.find((t) => t.number === todoNumber);
     if (!todo) throw new Error(`Todo #${todoNumber} not found`);
@@ -324,9 +332,18 @@ export function updateMember(
     const actor = resolveActor(d, actorId);
     const changed: Record<string, unknown> = {};
 
-    if (updates.name !== undefined) { changed.name = { from: member.name, to: updates.name }; member.name = updates.name; }
-    if (updates.email !== undefined) { changed.email = updates.email; member.email = updates.email; }
-    if (updates.role !== undefined) { changed.role = { from: member.role, to: updates.role }; member.role = updates.role; }
+    if (updates.name !== undefined) {
+      changed.name = { from: member.name, to: updates.name };
+      member.name = updates.name;
+    }
+    if (updates.email !== undefined) {
+      changed.email = updates.email;
+      member.email = updates.email;
+    }
+    if (updates.role !== undefined) {
+      changed.role = { from: member.role, to: updates.role };
+      member.role = updates.role;
+    }
 
     audit(d, "member.updated", actor, member.name, changed);
   });

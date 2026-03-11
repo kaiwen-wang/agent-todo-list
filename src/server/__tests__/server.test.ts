@@ -3,7 +3,7 @@
  * Spins up a real server against a temp project, exercises both endpoints.
  */
 
-import { test, expect, beforeAll, afterAll, describe, beforeEach } from "bun:test";
+import { test, expect, beforeAll, afterAll, describe } from "bun:test";
 import { mkdtempSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -36,7 +36,7 @@ describe("GET /api/project", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("application/json");
 
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(data.name).toBe("Test Project");
     expect(data.prefix).toBe("TEST");
     expect(data.todos).toBeArray();
@@ -65,13 +65,13 @@ describe("POST /api/change", () => {
     });
 
     expect(res.status).toBe(200);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(data.ok).toBe(true);
     expect(data.number).toBeGreaterThan(0);
 
     // Verify it shows up in the project
     const projectRes = await fetch(`${baseUrl}/api/project`);
-    const project = await projectRes.json() as any;
+    const project = (await projectRes.json()) as any;
     const todo = project.todos.find((t: any) => t.title === "Buy milk");
     expect(todo).toBeDefined();
     expect(todo.priority).toBe("high");
@@ -84,7 +84,7 @@ describe("POST /api/change", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "add", title: "Update me" }),
     });
-    const { number } = await addRes.json() as any;
+    const { number } = (await addRes.json()) as any;
 
     // Now update it
     const updateRes = await fetch(`${baseUrl}/api/change`, {
@@ -98,12 +98,12 @@ describe("POST /api/change", () => {
     });
 
     expect(updateRes.status).toBe(200);
-    const data = await updateRes.json() as any;
+    const data = (await updateRes.json()) as any;
     expect(data.ok).toBe(true);
 
     // Verify the update stuck
     const projectRes = await fetch(`${baseUrl}/api/project`);
-    const project = await projectRes.json() as any;
+    const project = (await projectRes.json()) as any;
     const todo = project.todos.find((t: any) => t.number === number);
     expect(todo.title).toBe("Updated!");
     expect(todo.status).toBe("in_progress");
@@ -117,7 +117,7 @@ describe("POST /api/change", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "add", title: "Delete me" }),
     });
-    const { number } = await addRes.json() as any;
+    const { number } = (await addRes.json()) as any;
 
     // Delete it
     const deleteRes = await fetch(`${baseUrl}/api/change`, {
@@ -130,7 +130,7 @@ describe("POST /api/change", () => {
 
     // Verify it's gone
     const projectRes = await fetch(`${baseUrl}/api/project`);
-    const project = await projectRes.json() as any;
+    const project = (await projectRes.json()) as any;
     const todo = project.todos.find((t: any) => t.number === number);
     expect(todo).toBeUndefined();
   });
@@ -143,7 +143,7 @@ describe("POST /api/change", () => {
     });
 
     expect(res.status).toBe(400);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(data.error).toContain("Unknown action");
   });
 
@@ -159,7 +159,7 @@ describe("POST /api/change", () => {
     });
 
     expect(res.status).toBe(400);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     expect(data.error).toContain("not found");
   });
 });
