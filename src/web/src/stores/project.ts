@@ -39,6 +39,14 @@ export const useProjectStore = defineStore("project", () => {
         grouped[key].push(todo);
       }
     }
+    // Sort each column newest-first by createdAt
+    for (const key of Object.keys(grouped) as Status[]) {
+      grouped[key].sort((a, b) => {
+        const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return tb - ta;
+      });
+    }
     return grouped;
   });
 
