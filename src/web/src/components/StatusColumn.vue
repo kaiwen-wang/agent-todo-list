@@ -41,7 +41,7 @@ const showCreate = ref(false)
   display: flex;
   flex-direction: column;
   background: #fafafa;
-  border-radius: 8px;
+  border-radius: 4px;
   border: 1px solid #e8e8e8;
   overflow: hidden;
 }

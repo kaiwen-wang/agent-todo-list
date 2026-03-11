@@ -41,15 +41,22 @@ const menuOptions: MenuOption[] = [
 function handleMenuUpdate(key: string) {
   router.push({ name: key })
 }
+
+const themeOverrides = {
+  Layout: {
+    color: '#f0f0f0',
+    siderColor: '#f0f0f0',
+  },
+}
+
 </script>
 
 <template>
-  <NConfigProvider>
+  <NConfigProvider :theme-overrides="themeOverrides">
     <NMessageProvider>
       <NLayout has-sider class="app-layout">
         <!-- Sidebar -->
         <NLayoutSider
-          bordered
           :width="220"
           content-class="sidebar-content"
         >
@@ -158,12 +165,14 @@ body {
 
 .app-layout {
   height: 100vh;
+  background: #f0f0f0;
 }
 
 .sidebar-content {
   display: flex;
   flex-direction: column;
   height: 100%;
+  background: #f0f0f0;
 }
 
 .sidebar-header {
@@ -266,8 +275,12 @@ body {
 }
 
 .main-content {
-  height: 100vh;
+  height: calc(100vh - 16px);
   overflow: auto;
+  background: #ffffff;
+  margin: 8px;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .loading {
