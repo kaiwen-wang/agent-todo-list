@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import { RouterView, useRoute, useRouter } from "vue-router";
 import {
   NConfigProvider,
@@ -14,6 +14,7 @@ import { Inbox, LayoutKanban, Table, Users, Settings } from "@vicons/tabler";
 import { useProjectStore } from "@/stores/project";
 import { STATUSES, STATUS_DISPLAY, STATUS_COLORS } from "@/types";
 import SettingsModal from "@/components/SettingsModal.vue";
+import CreateTodoModal from "@/components/CreateTodoModal.vue";
 import TodoDetailModal from "@/components/TodoDetailModal.vue";
 
 const store = useProjectStore();
@@ -21,10 +22,36 @@ const route = useRoute();
 const router = useRouter();
 
 const showSettings = ref(false);
+const showCreate = ref(false);
+
+function isTyping(): boolean {
+  const tag = (document.activeElement as HTMLElement)?.tagName;
+  return (
+    tag === "INPUT" ||
+    tag === "TEXTAREA" ||
+    !!(document.activeElement as HTMLElement)?.isContentEditable
+  );
+}
+
+function handleGlobalKeydown(e: KeyboardEvent) {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (isTyping()) return;
+
+  // C — create new todo
+  if (e.key === "c") {
+    e.preventDefault();
+    showCreate.value = true;
+  }
+}
 
 onMounted(() => {
   store.load();
   store.connectWebSocket();
+  window.addEventListener("keydown", handleGlobalKeydown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("keydown", handleGlobalKeydown);
 });
 
 const activeKey = computed(() => (route.name as string) ?? "board");
@@ -120,6 +147,7 @@ const themeOverrides = {
         </NLayout>
       </NLayout>
       <TodoDetailModal />
+      <CreateTodoModal :open="showCreate" @close="showCreate = false" />
       <SettingsModal :open="showSettings" @close="showSettings = false" />
     </NMessageProvider>
   </NConfigProvider>

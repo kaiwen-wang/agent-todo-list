@@ -24,11 +24,11 @@ export type MemberRole = "owner" | "member" | "agent";
 export const STATUSES: readonly Status[] = [
   "none",
   "todo",
+  "needs_elaboration",
   "in_progress",
   "completed",
   "archived",
   "wont_do",
-  "needs_elaboration",
 ] as const;
 
 export const PRIORITIES: readonly Priority[] = ["none", "urgent", "high", "medium", "low"] as const;

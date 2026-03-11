@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, h, type Component } from "vue";
+import { ref, computed, watch, h, onMounted, onUnmounted, type Component } from "vue";
 import { NModal, NCard, NTag, NIcon, NSelect, NInput, NButton, useMessage } from "naive-ui";
 import {
   AntennaBars1,
@@ -156,6 +156,67 @@ function formatDate(ts: number | string): string {
   return new Date(ts).toLocaleString();
 }
 
+// ── Keyboard shortcuts (Linear-style) ──
+const statusSelectRef = ref<InstanceType<typeof NSelect> | null>(null);
+const prioritySelectRef = ref<InstanceType<typeof NSelect> | null>(null);
+const statusPickerOpen = ref(false);
+const priorityPickerOpen = ref(false);
+
+const PRIORITY_KEYS: Record<string, Priority> = {
+  "0": "none",
+  "1": "urgent",
+  "2": "high",
+  "3": "medium",
+  "4": "low",
+};
+
+// Map number keys to statuses: 0=None, 1=Todo, 2=Needs Elaboration, ...
+const STATUS_KEYS: Record<string, Status> = {};
+STATUSES.forEach((s, i) => {
+  STATUS_KEYS[String(i)] = s;
+});
+
+function isTyping(): boolean {
+  const el = document.activeElement as HTMLElement | null;
+  if (!el) return false;
+  const tag = el.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || !!el.isContentEditable;
+}
+
+function handleDetailKeydown(e: KeyboardEvent) {
+  if (!isOpen.value || !todo.value) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+  // When status picker is open, number keys select a status
+  if (statusPickerOpen.value && STATUS_KEYS[e.key]) {
+    e.preventDefault();
+    changeStatus(STATUS_KEYS[e.key]);
+    statusPickerOpen.value = false;
+    return;
+  }
+
+  // When priority picker is open, number keys select a priority
+  if (priorityPickerOpen.value && PRIORITY_KEYS[e.key]) {
+    e.preventDefault();
+    changePriority(PRIORITY_KEYS[e.key]);
+    priorityPickerOpen.value = false;
+    return;
+  }
+
+  if (isTyping()) return;
+
+  if (e.key === "s") {
+    e.preventDefault();
+    statusPickerOpen.value = true;
+  } else if (e.key === "p") {
+    e.preventDefault();
+    priorityPickerOpen.value = true;
+  }
+}
+
+onMounted(() => window.addEventListener("keydown", handleDetailKeydown));
+onUnmounted(() => window.removeEventListener("keydown", handleDetailKeydown));
+
 // ── Comments ──
 const commentText = ref("");
 const commentLoading = ref(false);
@@ -260,24 +321,30 @@ async function handleRemoveBranch() {
           <div class="meta-item">
             <label class="meta-label">Status</label>
             <NSelect
+              ref="statusSelectRef"
               :value="todo.status"
               :options="statusOptions"
               :render-label="renderStatusLabel"
               size="small"
+              :show="statusPickerOpen"
               style="width: 160px"
               @update:value="changeStatus"
+              @update:show="(v: boolean) => (statusPickerOpen = v)"
             />
           </div>
 
           <div class="meta-item">
             <label class="meta-label">Priority</label>
             <NSelect
+              ref="prioritySelectRef"
               :value="todo.priority"
               :options="priorityOptions"
               :render-label="renderPriorityLabel"
               size="small"
+              :show="priorityPickerOpen"
               style="width: 160px"
               @update:value="changePriority"
+              @update:show="(v: boolean) => (priorityPickerOpen = v)"
             />
           </div>
 

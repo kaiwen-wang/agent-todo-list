@@ -84,11 +84,11 @@ export type BrainEvent =
 export const STATUSES: Status[] = [
   "none",
   "todo",
+  "needs_elaboration",
   "in_progress",
   "completed",
   "archived",
   "wont_do",
-  "needs_elaboration",
 ];
 
 /** Statuses shown as columns on the board */

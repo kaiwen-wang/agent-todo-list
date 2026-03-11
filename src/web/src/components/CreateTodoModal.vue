@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed, h, type Component } from 'vue'
+import { ref, watch, computed, h, onMounted, onUnmounted, type Component } from "vue";
 import {
   NModal,
   NCard,
@@ -11,15 +11,15 @@ import {
   NButton,
   NSpace,
   useMessage,
-} from 'naive-ui'
+} from "naive-ui";
 import {
   AntennaBars1,
   AntennaBars2,
   AntennaBars3,
   AntennaBars4,
   AntennaBars5,
-} from '@vicons/tabler'
-import type { Status, Priority, Label } from '@/types'
+} from "@vicons/tabler";
+import type { Status, Priority, Label } from "@/types";
 import {
   STATUSES,
   PRIORITIES,
@@ -30,8 +30,8 @@ import {
   STATUS_COLORS,
   LABEL_DISPLAY,
   LABEL_COLORS,
-} from '@/types'
-import { useProjectStore } from '@/stores/project'
+} from "@/types";
+import { useProjectStore } from "@/stores/project";
 
 const PRIORITY_ICON: Record<Priority, Component> = {
   none: AntennaBars1,
@@ -39,79 +39,91 @@ const PRIORITY_ICON: Record<Priority, Component> = {
   medium: AntennaBars3,
   high: AntennaBars4,
   urgent: AntennaBars5,
-}
+};
 
 const props = defineProps<{
-  open: boolean
-  defaultStatus?: Status
-}>()
+  open: boolean;
+  defaultStatus?: Status;
+}>();
 
 const emit = defineEmits<{
-  close: []
-}>()
+  close: [];
+}>();
 
-const store = useProjectStore()
-const message = useMessage()
+const store = useProjectStore();
+const message = useMessage();
 
-const title = ref('')
-const description = ref('')
-const status = ref<Status>(props.defaultStatus ?? 'todo')
-const priority = ref<Priority>('none')
-const labels = ref<Label[]>([])
-const assignee = ref<string | null>(null)
-const submitting = ref(false)
+const title = ref("");
+const description = ref("");
+const status = ref<Status>(props.defaultStatus ?? "todo");
+const priority = ref<Priority>("none");
+const labels = ref<Label[]>([]);
+const assignee = ref<string | null>(null);
+const submitting = ref(false);
 
-const memberOptions = computed(() => store.members.map((m) => ({ label: m.name, value: m.id })))
+const memberOptions = computed(() => store.members.map((m) => ({ label: m.name, value: m.id })));
 
-const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }))
-const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }))
-const labelOptions = LABELS.map((l) => ({ label: LABEL_DISPLAY[l], value: l }))
+const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }));
+const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }));
+const labelOptions = LABELS.map((l) => ({ label: LABEL_DISPLAY[l], value: l }));
 
 function renderStatusLabel(option: { label: string; value: string }) {
-  const s = option.value as Status
-  return h('span', { style: 'display: flex; align-items: center; gap: 8px' }, [
-    h('span', {
+  const s = option.value as Status;
+  return h("span", { style: "display: flex; align-items: center; gap: 8px" }, [
+    h("span", {
       style: `width: 8px; height: 8px; border-radius: 50%; background: ${STATUS_COLORS[s]}; flex-shrink: 0`,
     }),
     option.label,
-  ])
+  ]);
 }
 
 function renderPriorityLabel(option: { label: string; value: string }) {
-  const p = option.value as Priority
-  return h('span', { style: 'display: flex; align-items: center; gap: 8px' }, [
+  const p = option.value as Priority;
+  return h("span", { style: "display: flex; align-items: center; gap: 8px" }, [
     h(NIcon, { size: 16, color: PRIORITY_COLORS[p] }, { default: () => h(PRIORITY_ICON[p]) }),
     option.label,
-  ])
+  ]);
 }
 
 function renderLabelTag(option: { label: string; value: string }) {
-  const l = option.value as Label
-  return h('span', { style: 'display: flex; align-items: center; gap: 6px' }, [
-    h('span', {
+  const l = option.value as Label;
+  return h("span", { style: "display: flex; align-items: center; gap: 6px" }, [
+    h("span", {
       style: `width: 8px; height: 8px; border-radius: 50%; background: ${LABEL_COLORS[l]}; flex-shrink: 0`,
     }),
     option.label,
-  ])
+  ]);
 }
 
 watch(
   () => props.open,
   (isOpen) => {
     if (isOpen) {
-      title.value = ''
-      description.value = ''
-      status.value = props.defaultStatus ?? 'todo'
-      priority.value = 'none'
-      labels.value = []
-      assignee.value = null
+      title.value = "";
+      description.value = "";
+      status.value = props.defaultStatus ?? "todo";
+      priority.value = "none";
+      labels.value = [];
+      assignee.value = null;
     }
   },
-)
+);
+
+// Cmd+Enter / Ctrl+Enter to submit from anywhere in the modal
+function handleKeydown(e: KeyboardEvent) {
+  if (!props.open) return;
+  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+    e.preventDefault();
+    submit();
+  }
+}
+
+onMounted(() => window.addEventListener("keydown", handleKeydown));
+onUnmounted(() => window.removeEventListener("keydown", handleKeydown));
 
 async function submit() {
-  if (!title.value.trim()) return
-  submitting.value = true
+  if (!title.value.trim()) return;
+  submitting.value = true;
   try {
     await store.addTodo({
       title: title.value.trim(),
@@ -120,13 +132,13 @@ async function submit() {
       priority: priority.value,
       labels: labels.value.length ? labels.value : undefined,
       assignee: assignee.value,
-    })
-    message.success('Todo created')
-    emit('close')
+    });
+    message.success("Todo created");
+    emit("close");
   } catch {
-    message.error('Failed to create todo')
+    message.error("Failed to create todo");
   } finally {
-    submitting.value = false
+    submitting.value = false;
   }
 }
 </script>
