@@ -2,7 +2,7 @@
 
 import { ref, computed } from "vue";
 import { defineStore } from "pinia";
-import type { Project, Todo, Status } from "@/types";
+import type { Project, Todo, Status, BrainEvent } from "@/types";
 import * as api from "@/api";
 
 export const useProjectStore = defineStore("project", () => {
@@ -16,6 +16,12 @@ export const useProjectStore = defineStore("project", () => {
   const projectName = computed(() => project.value?.name ?? "");
   const prefix = computed(() => project.value?.prefix ?? "");
   const auditLog = computed(() => project.value?.auditLog ?? []);
+  const inboxText = computed(() => project.value?.inboxText ?? "");
+  const inboxProcessed = computed(() => project.value?.inboxProcessed ?? "");
+
+  // ── Brain state ──
+  const brainProcessing = ref(false);
+  const brainLogs = ref<BrainEvent[]>([]);
 
   /** Todos grouped by status for the board view */
   const todosByStatus = computed(() => {
@@ -156,6 +162,40 @@ export const useProjectStore = defineStore("project", () => {
     }
   }
 
+  // ── Inbox actions ──
+
+  async function updateInbox(text: string) {
+    error.value = null;
+    try {
+      await api.updateInbox(text);
+      // Update local state immediately (no full reload needed)
+      if (project.value) {
+        project.value.inboxText = text;
+      }
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
+  async function startBrainProcess() {
+    error.value = null;
+    brainProcessing.value = true;
+    brainLogs.value = [];
+    try {
+      await api.triggerBrainProcess();
+      // Brain events will arrive via WebSocket — the API just kicks it off
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e);
+      brainProcessing.value = false;
+      throw e;
+    }
+  }
+
+  function clearBrainLogs() {
+    brainLogs.value = [];
+  }
+
   // ── Member actions ──
 
   async function addMember(params: api.AddMemberParams) {
@@ -204,8 +244,31 @@ export const useProjectStore = defineStore("project", () => {
     ws = new WebSocket(`${proto}//${location.host}/ws`);
 
     ws.onmessage = (event) => {
-      if (event.data === "refresh") {
-        load();
+      try {
+        const msg = JSON.parse(event.data);
+        switch (msg.type) {
+          case "refresh":
+            load();
+            break;
+          case "brain:log":
+          case "brain:task":
+            brainLogs.value.push(msg);
+            break;
+          case "brain:error":
+            brainLogs.value.push(msg);
+            brainProcessing.value = false;
+            break;
+          case "brain:done":
+            brainLogs.value.push(msg);
+            brainProcessing.value = false;
+            load(); // Refresh to see newly created tasks + cleared inbox
+            break;
+        }
+      } catch {
+        // Legacy plain-text messages (backward compat)
+        if (event.data === "refresh") {
+          load();
+        }
       }
     };
 
@@ -248,6 +311,10 @@ export const useProjectStore = defineStore("project", () => {
     todosByStatus,
     activeTodos,
     statusCounts,
+    inboxText,
+    inboxProcessed,
+    brainProcessing,
+    brainLogs,
     selectedTodoNumber,
     load,
     addTodo,
@@ -258,6 +325,9 @@ export const useProjectStore = defineStore("project", () => {
     createBranch,
     removeBranch,
     updateProjectSettings,
+    updateInbox,
+    startBrainProcess,
+    clearBrainLogs,
     addMember,
     removeMember,
     updateMember,

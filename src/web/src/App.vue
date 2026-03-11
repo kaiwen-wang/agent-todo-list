@@ -10,7 +10,7 @@ import {
   NTag,
   NIcon,
 } from "naive-ui";
-import { LayoutKanban, Table, Users, Settings } from "@vicons/tabler";
+import { Inbox, LayoutKanban, Table, Users, Settings } from "@vicons/tabler";
 import { useProjectStore } from "@/stores/project";
 import { STATUSES, STATUS_DISPLAY, STATUS_COLORS } from "@/types";
 import SettingsModal from "@/components/SettingsModal.vue";
@@ -30,6 +30,7 @@ onMounted(() => {
 const activeKey = computed(() => (route.name as string) ?? "board");
 
 const navItems = [
+  { label: "Inbox", key: "inbox", icon: Inbox },
   { label: "Board", key: "board", icon: LayoutKanban },
   { label: "Table", key: "list", icon: Table },
   { label: "Members", key: "members", icon: Users },

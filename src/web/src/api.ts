@@ -187,3 +187,31 @@ export async function updateMemberApi(
   }
   return res.json();
 }
+
+// ── Inbox API ──
+
+export async function updateInbox(text: string): Promise<{ ok: boolean }> {
+  const res = await fetch(`${BASE}/api/change`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "updateInbox", text }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || "Failed to update inbox");
+  }
+  return res.json();
+}
+
+export async function triggerBrainProcess(): Promise<{ ok: boolean }> {
+  const res = await fetch(`${BASE}/api/change`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "processInbox" }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || "Failed to start brain processing");
+  }
+  return res.json();
+}
