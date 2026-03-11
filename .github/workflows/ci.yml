@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      # Root: lib, cli, server
+      - name: Lint (lib/cli/server)
+        run: bun run lint
+
+      - name: Format check (lib/cli/server)
+        run: bunx oxfmt --check src/lib src/cli src/server
+
+      - name: Type check (lib/cli/server)
+        run: bun run type-check
+
+      - name: Test (lib/cli/server)
+        run: bun test
+
+      # Web
+      - name: Lint (web)
+        run: bun run --cwd src/web lint
+
+      - name: Format check (web)
+        run: bunx oxfmt --check src/web/src
+
+      - name: Type check (web)
+        run: bun run --cwd src/web type-check
+
+      - name: Test (web)
+        run: bun run --cwd src/web test:unit -- --run
