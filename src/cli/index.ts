@@ -12,7 +12,7 @@ import { registerShow } from "./commands/show.js";
 import { registerUpdate } from "./commands/update.js";
 import { registerAssign } from "./commands/assign.js";
 import { registerExport } from "./commands/export.js";
-import { registerBrowser } from "./commands/browser.js";
+import { registerServe } from "./commands/browser.js";
 
 const program = new Command();
 
@@ -29,6 +29,6 @@ registerShow(program);
 registerUpdate(program);
 registerAssign(program);
 registerExport(program);
-registerBrowser(program);
+registerServe(program);
 
 program.parse();

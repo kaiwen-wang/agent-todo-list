@@ -167,7 +167,7 @@ agent-todo-list/
         update.ts           # `agt update ABC-1 --status done`
         show.ts             # `agt show ABC-1`
         assign.ts           # `agt assign ABC-1 kaiwen`
-        browser.ts          # `agt browser` — open web dashboard in browser
+        browser.ts          # `agt serve` — start web dashboard server
         export.ts           # `agt export --format md`
       output.ts             # Terminal formatting (tables, colors)
 
@@ -239,8 +239,8 @@ agt archive ABC-1                    # Shorthand for --status archived
 agt batch --file changes.json         # Apply multiple ops from JSON
 
 # Web dashboard
-agt browser                            # Open web dashboard in browser
-agt browser --port 8080                # Custom port
+agt serve                              # Start web dashboard server
+agt serve --port 8080                  # Custom port
 
 # Export
 agt export --format md                # Print markdown to stdout
@@ -301,7 +301,7 @@ The original architecture planned a WebSocket sync server. Git sync is better be
 - **Simpler** — no sync protocol code, no server process, no connection management.
 - **Auditable** — sync history is git history.
 
-The `agt browser` command starts a local-only server for the web dashboard UI. It reads
+The `agt serve` command starts a local-only server for the web dashboard UI. It reads
 from disk — no WebSocket sync needed.
 
 ## Web Dashboard
@@ -339,7 +339,7 @@ returns a new document object. Vue detects the reference change and re-renders.
 ### Browser Command
 
 ```bash
-agt browser --port 3000
+agt serve --port 3000
 ```
 
 Starts a local Bun server which:
@@ -351,7 +351,7 @@ Starts a local Bun server which:
 ## Implementation Order
 
 1. **lib/** — Schema types, Automerge operations, storage, project config, merge driver
-2. **cli/** — `init`, `add`, `list`, `update`, `show`, `browser` commands
+2. **cli/** — `init`, `add`, `list`, `update`, `show`, `serve` commands
 3. **server/** — `Bun.serve()` local web dashboard server
 4. **web/** — Vue dashboard (kanban board, todo detail)
 5. **Polish** — `--json` flag, `agt batch`, `agt export`, error handling

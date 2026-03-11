@@ -1,6 +1,5 @@
 /**
- * `agt browser` — Open the web dashboard in a browser.
- * Starts a local Bun server and opens the default browser.
+ * `agt serve` — Start the web dashboard server and open browser.
  */
 
 import type { Command } from "commander";
@@ -8,10 +7,10 @@ import { findProject } from "../../lib/project.js";
 import { error } from "../output.js";
 import { startServer } from "../../server/index.js";
 
-export function registerBrowser(program: Command): void {
+export function registerServe(program: Command): void {
   program
-    .command("browser")
-    .description("Open the web dashboard in a browser")
+    .command("serve")
+    .description("Start the web dashboard and open it in a browser")
     .option("--port <port>", "Port to listen on", "3000")
     .option("--no-open", "Don't automatically open the browser")
     .action(async (opts: { port: string; open: boolean }) => {
@@ -26,7 +25,6 @@ export function registerBrowser(program: Command): void {
       console.log("Press Ctrl+C to stop.\n");
 
       if (opts.open) {
-        // Open browser (macOS: open, Linux: xdg-open)
         const cmd = process.platform === "darwin" ? "open" : "xdg-open";
         Bun.spawn([cmd, url]);
       }
