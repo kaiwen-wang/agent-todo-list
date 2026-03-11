@@ -275,12 +275,12 @@ body {
 }
 
 .main-content {
-  height: calc(100vh - 16px);
+  height: calc(100vh - 20px);
   overflow: auto;
   background: #ffffff;
-  margin: 8px;
+  margin: 10px;
   border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid #d9d9d9;
 }
 
 .loading {
