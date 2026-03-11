@@ -158,7 +158,7 @@ async function handleEdit() {
       updates.email = newEmail
     }
     if (Object.keys(updates).length > 0) {
-      await store.updateMember(editingMember.value.id, updates as any)
+      await store.updateMember(editingMember.value.id, updates)
       message.success('Member updated')
     }
     showEditModal.value = false
