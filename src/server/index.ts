@@ -31,6 +31,8 @@ import { findMember } from "../lib/queries.js";
 import { toJSON } from "../lib/export.js";
 import { syncConfig } from "../lib/project.js";
 import { migrateDoc, needsMigration } from "../lib/migrate.js";
+import { readInbox, writeInbox, readProcessed, ensureInboxFiles } from "../lib/inbox.js";
+import { processInbox } from "../lib/brain.js";
 
 type Doc = Automerge.Doc<Project>;
 
@@ -72,8 +74,9 @@ async function loadAndMigrate(dataPath: string): Promise<Doc | null> {
 }
 
 export async function startServer(projectPath: string, port = 3000, opts: ServerOptions = {}) {
-  const dataPath = join(projectPath, ".todo", "data.automerge");
-  const configPath = join(projectPath, ".todo", "config.toml");
+  const todoDir = join(projectPath, ".todo");
+  const dataPath = join(todoDir, "data.automerge");
+  const configPath = join(todoDir, "config.toml");
   const distDir = join(import.meta.dir, "..", "web", "dist");
   let doc: Doc | null = await loadAndMigrate(dataPath);
 
@@ -101,7 +104,7 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
       await saveDoc(dataPath, doc);
       // Small delay to let fs.watch settle before re-enabling external detection
       setTimeout(() => { saving = false; }, 100);
-      broadcast("refresh");
+      broadcast(JSON.stringify({ type: "refresh" }));
     }
   }
 
@@ -112,7 +115,7 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
       if (saving) return; // ignore our own writes
       if (eventType === "change") {
         await reload();
-        broadcast("refresh");
+        broadcast(JSON.stringify({ type: "refresh" }));
       }
     });
   } catch {
@@ -127,7 +130,10 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
         async GET() {
           await reload();
           if (!doc) return jsonResponse({ error: "No data" }, 500);
-          return jsonResponse(toJSON(doc));
+          await ensureInboxFiles(todoDir);
+          const inboxText = await readInbox(todoDir);
+          const inboxProcessed = await readProcessed(todoDir);
+          return jsonResponse({ ...toJSON(doc), inboxText, inboxProcessed });
         },
       },
 
@@ -291,6 +297,31 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
                 doc = updateMember(doc, target.id, body.updates ?? {});
                 await save();
                 return jsonResponse({ ok: true });
+              }
+
+              case "updateInbox": {
+                await ensureInboxFiles(todoDir);
+                await writeInbox(todoDir, body.text ?? "");
+                return jsonResponse({ ok: true });
+              }
+
+              case "processInbox": {
+                await ensureInboxFiles(todoDir);
+                // Start brain processing in background — events stream over WebSocket
+                processInbox(projectPath, (event) => {
+                  broadcast(JSON.stringify(event));
+                }).catch((err) => {
+                  broadcast(JSON.stringify({
+                    type: "brain:error",
+                    message: err instanceof Error ? err.message : String(err),
+                  }));
+                  broadcast(JSON.stringify({
+                    type: "brain:done",
+                    processed: 0,
+                    tasks: [],
+                  }));
+                });
+                return jsonResponse({ ok: true, message: "Brain processing started" });
               }
 
               default:
