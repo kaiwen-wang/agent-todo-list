@@ -21,7 +21,7 @@ Default to using Bun instead of Node.js.
 
 ## Testing
 
-Use `bun test` to run tests.
+Use `bun test` for lib/ and cli/ tests:
 
 ```ts#index.test.ts
 import { test, expect } from "bun:test";
@@ -31,9 +31,21 @@ test("hello world", () => {
 });
 ```
 
+Use Vitest for `src/web/` tests only. Vue Single File Components (`.vue` files) require
+Vite's plugin pipeline to compile, so Vitest is needed there. Do not use Vitest for
+lib/ or cli/ code.
+
+## CLI
+
+The CLI command is `agt` (short for agent-todo). Run via `bun run agt` during development.
+
 ## Frontend
 
-Use HTML imports with `Bun.serve()`. Don't use `vite`. HTML imports fully support React, CSS, Tailwind.
+The web dashboard uses Vue 3 + Vite (exception to the "don't use vite" rule below).
+Vue SFCs require Vite's compiler toolchain. Bun.serve() serves the built Vue app as
+static files in production, but Vite handles the dev/build pipeline.
+
+For non-Vue frontends, use HTML imports with `Bun.serve()`. Don't use `vite`. HTML imports fully support React, CSS, Tailwind.
 
 Server:
 

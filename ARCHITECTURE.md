@@ -15,30 +15,42 @@ conflict-free sync.
 
 ## Tech Stack
 
-| Layer       | Technology                              |
-| ----------- | --------------------------------------- |
-| Runtime     | Bun                                     |
-| Language    | TypeScript                              |
-| CRDT        | Automerge (`@automerge/automerge`)      |
-| CLI         | `commander` (or raw `process.argv`)     |
-| Server      | `Bun.serve()` (native HTTP + WebSocket) |
-| Frontend    | Vue 3 + Vite + Pinia                    |
-| Linting     | oxlint                                  |
-| Formatting  | oxfmt                                   |
-| Testing     | Vitest                                  |
+| Layer       | Technology                                        |
+| ----------- | ------------------------------------------------- |
+| Runtime     | Bun                                               |
+| Language    | TypeScript                                        |
+| CRDT        | Automerge (`@automerge/automerge`)                |
+| CLI         | `commander` (or raw `process.argv`)               |
+| Server      | `Bun.serve()` (native HTTP + WebSocket)           |
+| Frontend    | Vue 3 + Vite + Pinia                              |
+| Linting     | oxlint                                            |
+| Formatting  | oxfmt                                             |
+| Testing     | `bun test` (lib/cli) + Vitest (web)               |
+
+### Why two test runners?
+
+Vue Single File Components (`.vue` files) combine template, script, and style in one
+file. To test them, the runner must compile `.vue` into JavaScript. Vitest shares Vite's
+plugin pipeline (`@vitejs/plugin-vue`), so SFCs work automatically. `bun test` doesn't
+understand `.vue` files without a custom preload plugin.
+
+For `lib/` and `cli/` (pure TypeScript, no `.vue` files), `bun test` is simpler, faster,
+and has zero config.
 
 ## Data Model
 
 Every project is a single Automerge document containing all todos, members, and metadata.
 
 ```typescript
+import { Counter } from '@automerge/automerge'
+
 interface Project {
   _version: number          // Schema version for migrations
   id: string                // UUID
   prefix: string            // e.g. "ABC" — for issue IDs like ABC-1
   name: string
   description: string
-  counter: number           // Auto-incrementing (Automerge Counter) for issue numbers
+  counter: Counter          // CRDT-safe auto-incrementing counter for issue numbers
   createdAt: string         // ISO 8601
 
   members: Member[]
@@ -70,6 +82,19 @@ interface Member {
 }
 ```
 
+### Automerge Counter
+
+The `counter` field uses `Automerge.Counter` instead of a plain `number`. This is a
+CRDT-native type — concurrent increments from different peers merge correctly via
+commutative addition. With a plain number, two agents adding todos simultaneously would
+both read the same value and produce duplicate todo numbers.
+
+```typescript
+// Inside an Automerge.change() callback:
+d.counter.increment(1)        // CRDT-safe increment
+const num = d.counter.value   // read the current value
+```
+
 ### Schema Migrations
 
 Automerge is schema-less. Migrations are handled at read-time:
@@ -86,7 +111,7 @@ Automerge is schema-less. Migrations are handled at read-time:
 ```
 my-project/                     # Any git repository
   .git/
-  .todo/                        # Created by `todo init`
+  .todo/                        # Created by `agt init`
     config.toml                 # Project config (prefix, name) — safe to commit
     data.automerge              # CRDT binary document — gitignored
   .gitignore                    # Should include .todo/data.automerge
@@ -94,6 +119,10 @@ my-project/                     # Any git repository
   ...
 ```
 
+- One project per git repo. `.todo/` is created at the git root (same level as `.git/`).
+- `agt init` warns if no `.git/` is found but still allows creation (for quick experiments).
+  This prevents accidentally creating `.todo/` in a home directory while still supporting
+  non-git use cases.
 - `.todo/config.toml` is small, human-readable, and can be committed so collaborators
   share the project prefix and name.
 - `.todo/data.automerge` is a binary blob. It should be gitignored. Sync happens via
@@ -134,14 +163,14 @@ agent-todo-list/
     cli/                    # CLI application
       index.ts              # Entry point, command router
       commands/
-        init.ts             # `todo init` — create .todo/ in current repo
-        add.ts              # `todo add "title"`
-        list.ts             # `todo list`
-        update.ts           # `todo update ABC-1 --status done`
-        show.ts             # `todo show ABC-1`
-        assign.ts           # `todo assign ABC-1 kaiwen`
-        serve.ts            # `todo serve` — start server + web dashboard
-        export.ts           # `todo export --format md`
+        init.ts             # `agt init` — create .todo/ in current repo
+        add.ts              # `agt add "title"`
+        list.ts             # `agt list`
+        update.ts           # `agt update ABC-1 --status done`
+        show.ts             # `agt show ABC-1`
+        assign.ts           # `agt assign ABC-1 kaiwen`
+        serve.ts            # `agt serve` — start server + web dashboard
+        export.ts           # `agt export --format md`
       output.ts             # Terminal formatting (tables, colors)
 
     server/                 # Bun.serve() — sync hub + static file server
@@ -177,43 +206,46 @@ profiles — web needs Vue/Vite, server doesn't).
 
 ## CLI Interface
 
+The CLI command is **`agt`** (short for agent-todo). Run via `bun run agt` during
+development, or install globally via `bun link`.
+
 ```bash
 # Project setup
-todo init --name "My Project" --prefix ABC
-  # Checks for .git/ (warns if missing)
+agt init --name "My Project" --prefix ABC
+  # Warns if no .git/ found (but still allows creation)
   # Creates .todo/ directory with config.toml + data.automerge
   # Adds .todo/data.automerge to .gitignore
 
 # Creating todos
-todo add "Fix authentication bug" --priority high --tags auth,security
-todo add "Write tests" --status todo --assignee "Kaiwen"
+agt add "Fix authentication bug" --priority high --tags auth,security
+agt add "Write tests" --status todo --assignee "Kaiwen"
 
 # Listing and filtering
-todo list                              # All non-archived todos
-todo list --status in_progress         # Filter by status
-todo list --assignee kaiwen            # Filter by assignee
-todo list --tag auth                   # Filter by tag
-todo list --json                       # JSON output (for agents)
+agt list                              # All non-archived todos
+agt list --status in_progress         # Filter by status
+agt list --assignee kaiwen            # Filter by assignee
+agt list --tag auth                   # Filter by tag
+agt list --json                       # JSON output (for agents)
 
 # Viewing details
-todo show ABC-1                        # Full detail for a single todo
+agt show ABC-1                        # Full detail for a single todo
 
 # Updating
-todo update ABC-1 --status done
-todo update ABC-1 --title "New title" --priority urgent
-todo assign ABC-1 kaiwen              # Shorthand
-todo archive ABC-1                    # Shorthand for --status archived
+agt update ABC-1 --status done
+agt update ABC-1 --title "New title" --priority urgent
+agt assign ABC-1 kaiwen              # Shorthand
+agt archive ABC-1                    # Shorthand for --status archived
 
 # Bulk operations (agent-friendly)
-todo batch --file changes.json         # Apply multiple ops from JSON
+agt batch --file changes.json         # Apply multiple ops from JSON
 
 # Web dashboard
-todo serve                             # Start server on default port
-todo serve --port 8080                 # Custom port
+agt serve                             # Start server on default port
+agt serve --port 8080                 # Custom port
 
 # Export
-todo export --format md                # Print markdown to stdout
-todo export --format json              # Print JSON to stdout
+agt export --format md                # Print markdown to stdout
+agt export --format json              # Print JSON to stdout
 ```
 
 ### Agent-Friendly Design
@@ -221,7 +253,7 @@ todo export --format json              # Print JSON to stdout
 - All commands support `--json` flag for structured output
 - Exit codes: 0 = success, 1 = error, 2 = not found
 - No interactive prompts — all parameters are flags/arguments
-- `todo batch` supports bulk operations from a JSON file (agents can write the file
+- `agt batch` supports bulk operations from a JSON file (agents can write the file
   and apply many changes in one call)
 
 ## Sync Architecture
@@ -254,11 +286,16 @@ The Automerge sync protocol is built into `@automerge/automerge`. It handles:
 
 2. **CLI** — Works in two modes:
    - **Offline (default):** Reads/writes `.todo/data.automerge` directly. No server needed.
-   - **Connected:** If `todo serve` is running, the CLI can optionally connect via
+   - **Connected:** If `agt serve` is running, the CLI can optionally connect via
      WebSocket to sync changes in real-time.
 
 3. **Web dashboard** — Always connects to the server via WebSocket. Holds its own
    Automerge document in memory. Mutations are local-first (instant UI), then synced.
+
+4. **File watcher** — When the server is running, it watches `.todo/data.automerge`
+   for changes. If the CLI writes to disk while the server is up, the server detects
+   the change, reloads the file, merges via Automerge, and broadcasts to connected
+   WebSocket clients. This bridges the gap between offline CLI usage and live server.
 
 ### Sync Protocol Flow
 
@@ -321,13 +358,14 @@ returns a new document object. Vue detects the reference change and re-renders.
 ### Server Command
 
 ```bash
-todo serve --port 3000
+agt serve --port 3000
 ```
 
 Starts the Bun server which:
 1. Serves the built Vue app as static files
 2. Runs the WebSocket sync endpoint at `/sync`
-3. Opens the browser automatically (like `backlog browser`)
+3. Watches `.todo/data.automerge` for CLI-driven changes
+4. Opens the browser automatically
 
 ## Implementation Order
 
@@ -335,5 +373,32 @@ Starts the Bun server which:
 2. **cli/** — `init`, `add`, `list`, `update`, `show` commands
 3. **server/** — `Bun.serve()` with WebSocket sync + static file serving
 4. **web/** — Vue dashboard (kanban board, todo detail)
-5. **Polish** — `--json` flag, `todo batch`, `todo export`, error handling
+5. **Polish** — `--json` flag, `agt batch`, `agt export`, error handling
 6. **Multi-user** — Deploy server, add auth, multiple peers sync
+
+## Open Questions
+
+### automerge-repo
+
+[`@automerge/automerge-repo`](https://github.com/automerge/automerge-repo) is the
+official higher-level wrapper around Automerge. It provides pluggable network adapters
+(WebSocket, MessageChannel), storage adapters (NodeFS, IndexedDB), and multi-document
+management with automatic sync.
+
+Using it would replace the hand-rolled sync code (`sync.ts`, manual `SyncState`
+management, `generateSyncMessage`/`receiveSyncMessage` calls). The tradeoff:
+
+**Pros:**
+- Battle-tested sync protocol implementation
+- Storage adapters handle persistence
+- Less custom code to maintain
+
+**Cons:**
+- WebSocket adapter uses `isomorphic-ws` (depends on `ws` package). Bun has its own
+  native WebSocket — compatibility needs testing.
+- Designed for multi-document repos. We have one document per project. May be overkill.
+- Additional dependency surface
+
+**Status:** Pending Bun compatibility spike before committing to this approach. If it
+works on Bun, use it. If not, hand-roll sync using the low-level Automerge sync API
+(which is straightforward — ~100 lines of code).
