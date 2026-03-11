@@ -124,6 +124,24 @@ export async function initProject(
 }
 
 /**
+ * Write config.toml to keep it in sync with the Automerge doc.
+ * Called after any project-level metadata change (name, prefix).
+ * Preserves the existing config ID — only updates name and prefix.
+ */
+export async function syncConfig(
+  configPath: string,
+  fields: { prefix: string; name: string },
+): Promise<void> {
+  const existing = await readConfig(configPath);
+  const toml = [
+    `id = "${existing.id}"`,
+    `prefix = "${fields.prefix}"`,
+    `name = "${fields.name}"`,
+  ].join("\n");
+  await Bun.write(configPath, toml + "\n");
+}
+
+/**
  * Read the config.toml file and parse it (simple TOML — just key = "value" lines).
  */
 export async function readConfig(configPath: string): Promise<ProjectConfig> {

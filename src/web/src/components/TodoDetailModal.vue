@@ -1,19 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import {
   NModal,
   NCard,
-  NButton,
-  NSpace,
   NTag,
-  NForm,
-  NFormItem,
-  NInput,
+  NSpace,
   NSelect,
-  NDescriptions,
-  NDescriptionsItem,
-  NPopconfirm,
+  NInput,
   NButtonGroup,
+  NButton,
+  NPopconfirm,
   useMessage,
 } from 'naive-ui'
 import { useProjectStore } from '@/stores/project'
@@ -23,20 +19,11 @@ import {
   PRIORITIES,
   STATUS_DISPLAY,
   PRIORITY_DISPLAY,
-  STATUS_COLORS,
   PRIORITY_COLORS,
 } from '@/types'
 
 const store = useProjectStore()
 const message = useMessage()
-
-const editing = ref(false)
-const editTitle = ref('')
-const editDescription = ref('')
-const editPriority = ref<Priority>('medium')
-const editStatus = ref<Status>('todo')
-const editTags = ref('')
-const saving = ref(false)
 
 const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }))
 const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }))
@@ -48,51 +35,61 @@ const todo = computed(() =>
     : undefined,
 )
 
-// Reset edit mode when modal opens/closes
-watch(isOpen, (open) => {
-  if (!open) editing.value = false
-})
+// Local editable copies
+const title = ref('')
+const description = ref('')
+const tagsInput = ref('')
+
+// Sync local state when a different todo is opened
+watch(
+  () => store.selectedTodoNumber,
+  () => {
+    if (todo.value) {
+      title.value = todo.value.title
+      description.value = todo.value.description
+      tagsInput.value = todo.value.tags.join(', ')
+    }
+  },
+)
 
 function close() {
   store.closeTodo()
 }
 
-function startEdit() {
+async function saveField(field: string, value: unknown) {
   if (!todo.value) return
-  editTitle.value = todo.value.title
-  editDescription.value = todo.value.description
-  editPriority.value = todo.value.priority
-  editStatus.value = todo.value.status
-  editTags.value = todo.value.tags.join(', ')
-  editing.value = true
-}
-
-async function saveEdit() {
-  if (!todo.value) return
-  saving.value = true
   try {
-    const tags = editTags.value
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean)
-    await store.updateTodo(todo.value.number, {
-      title: editTitle.value.trim(),
-      description: editDescription.value.trim(),
-      priority: editPriority.value,
-      status: editStatus.value,
-      tags,
-    })
-    editing.value = false
-    message.success('Todo updated')
+    await store.updateTodo(todo.value.number, { [field]: value })
   } catch {
-    message.error('Failed to update todo')
-  } finally {
-    saving.value = false
+    message.error('Failed to update')
   }
 }
 
-function cancelEdit() {
-  editing.value = false
+function commitTitle() {
+  const trimmed = title.value.trim()
+  if (!todo.value || trimmed === todo.value.title) return
+  if (!trimmed) {
+    title.value = todo.value.title
+    return
+  }
+  saveField('title', trimmed)
+}
+
+function commitDescription() {
+  const trimmed = description.value.trim()
+  if (!todo.value || trimmed === todo.value.description) return
+  saveField('description', trimmed)
+}
+
+function commitTags() {
+  if (!todo.value) return
+  const tags = tagsInput.value
+    .split(',')
+    .map((t) => t.trim())
+    .filter(Boolean)
+  const current = todo.value.tags
+  if (tags.length === current.length && tags.every((t, i) => t === current[i])) return
+  saveField('tags', tags)
 }
 
 async function changeStatus(status: Status) {
@@ -102,6 +99,11 @@ async function changeStatus(status: Status) {
   } catch {
     message.error('Failed to update status')
   }
+}
+
+async function changePriority(priority: Priority) {
+  if (!todo.value || priority === todo.value.priority) return
+  saveField('priority', priority)
 }
 
 async function handleDelete() {
@@ -133,29 +135,30 @@ function formatDate(iso: string): string {
         <p>Todo not found.</p>
       </div>
 
-      <div v-else-if="!editing">
-        <!-- View mode -->
+      <div v-else>
+        <!-- Header: ref + title -->
         <div class="detail-header">
-          <div class="detail-header-left">
-            <NTag size="small" :bordered="false" style="font-family: monospace">
-              {{ todo.ref }}
-            </NTag>
-            <h1 class="detail-title">{{ todo.title }}</h1>
-          </div>
-          <NSpace :size="8">
-            <NButton size="small" @click="startEdit">Edit</NButton>
-            <NPopconfirm @positive-click="handleDelete">
-              <template #trigger>
-                <NButton size="small" type="error" ghost>Delete</NButton>
-              </template>
-              Delete this todo permanently?
-            </NPopconfirm>
-          </NSpace>
+          <NTag size="small" :bordered="false" style="font-family: monospace; flex-shrink: 0">
+            {{ todo.ref }}
+          </NTag>
+          <NPopconfirm @positive-click="handleDelete">
+            <template #trigger>
+              <NButton size="tiny" quaternary type="error" style="flex-shrink: 0">Delete</NButton>
+            </template>
+            Delete this todo permanently?
+          </NPopconfirm>
         </div>
 
-        <!-- Status buttons -->
-        <NCard size="small" class="detail-meta">
-          <div class="meta-section">
+        <input
+          v-model="title"
+          class="inline-title"
+          @blur="commitTitle"
+          @keydown.enter="($event.target as HTMLInputElement).blur()"
+        />
+
+        <!-- Meta row -->
+        <div class="meta-grid">
+          <div class="meta-item">
             <label class="meta-label">Status</label>
             <NButtonGroup size="tiny">
               <NButton
@@ -170,74 +173,56 @@ function formatDate(iso: string): string {
             </NButtonGroup>
           </div>
 
-          <NDescriptions :column="4" label-placement="top" size="small" class="meta-descriptions">
-            <NDescriptionsItem label="Priority">
-              <NSpace :size="6" align="center">
-                <span
-                  class="priority-dot"
-                  :style="{ background: PRIORITY_COLORS[todo.priority] }"
-                />
-                {{ PRIORITY_DISPLAY[todo.priority] }}
-              </NSpace>
-            </NDescriptionsItem>
-            <NDescriptionsItem label="Assignee">
-              {{ todo.assigneeName || 'Unassigned' }}
-            </NDescriptionsItem>
-            <NDescriptionsItem label="Created">
-              {{ formatDate(todo.createdAt) }}
-            </NDescriptionsItem>
-            <NDescriptionsItem label="Updated">
-              {{ formatDate(todo.updatedAt) }}
-            </NDescriptionsItem>
-          </NDescriptions>
-
-          <div v-if="todo.tags.length > 0" class="meta-section">
-            <label class="meta-label">Tags</label>
-            <NSpace :size="6">
-              <NTag v-for="tag in todo.tags" :key="tag" size="small" round :bordered="false">
-                {{ tag }}
-              </NTag>
-            </NSpace>
+          <div class="meta-item">
+            <label class="meta-label">Priority</label>
+            <NSelect
+              :value="todo.priority"
+              :options="priorityOptions"
+              size="small"
+              style="width: 130px"
+              @update:value="changePriority"
+            />
           </div>
-        </NCard>
+
+          <div class="meta-item">
+            <label class="meta-label">Assignee</label>
+            <span class="meta-value">{{ todo.assigneeName || 'Unassigned' }}</span>
+          </div>
+
+          <div class="meta-item">
+            <label class="meta-label">Created</label>
+            <span class="meta-value">{{ formatDate(todo.createdAt) }}</span>
+          </div>
+
+          <div class="meta-item">
+            <label class="meta-label">Updated</label>
+            <span class="meta-value">{{ formatDate(todo.updatedAt) }}</span>
+          </div>
+        </div>
+
+        <!-- Tags -->
+        <div class="field-group">
+          <label class="meta-label">Tags</label>
+          <NInput
+            v-model:value="tagsInput"
+            size="small"
+            placeholder="comma-separated tags"
+            @blur="commitTags"
+            @keydown.enter="($event.target as HTMLInputElement).blur()"
+          />
+        </div>
 
         <!-- Description -->
-        <NCard size="small" title="Description" class="detail-description">
-          <div v-if="todo.description" class="description-body">{{ todo.description }}</div>
-          <div v-else class="description-empty">No description provided.</div>
-        </NCard>
-      </div>
-
-      <!-- Edit mode -->
-      <div v-else>
-        <h3 style="margin-bottom: 16px">Edit Todo</h3>
-        <NForm label-placement="top" @submit.prevent="saveEdit">
-          <NFormItem label="Title">
-            <NInput v-model:value="editTitle" />
-          </NFormItem>
-
-          <NFormItem label="Description">
-            <NInput v-model:value="editDescription" type="textarea" :rows="5" />
-          </NFormItem>
-
-          <NSpace :size="12">
-            <NFormItem label="Status" style="flex: 1">
-              <NSelect v-model:value="editStatus" :options="statusOptions" />
-            </NFormItem>
-            <NFormItem label="Priority" style="flex: 1">
-              <NSelect v-model:value="editPriority" :options="priorityOptions" />
-            </NFormItem>
-          </NSpace>
-
-          <NFormItem label="Tags">
-            <NInput v-model:value="editTags" placeholder="comma-separated" />
-          </NFormItem>
-
-          <NSpace justify="end" :size="8">
-            <NButton @click="cancelEdit">Cancel</NButton>
-            <NButton type="primary" @click="saveEdit" :loading="saving">Save Changes</NButton>
-          </NSpace>
-        </NForm>
+        <div class="field-group">
+          <label class="meta-label">Description</label>
+          <NInput
+            v-model:value="description"
+            type="textarea"
+            :autosize="{ minRows: 3, maxRows: 12 }"
+            placeholder="Add a description..."
+            @blur="commitDescription"
+          />
+        </div>
       </div>
     </NCard>
   </NModal>
@@ -252,71 +237,63 @@ function formatDate(iso: string): string {
 
 .detail-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
-  gap: 16px;
+  margin-bottom: 8px;
 }
 
-.detail-header-left {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 1;
-}
-
-.detail-title {
+.inline-title {
+  width: 100%;
   font-size: 22px;
   font-weight: 700;
   line-height: 1.3;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 4px 0;
+  margin-bottom: 16px;
+  color: inherit;
+  font-family: inherit;
+  border-bottom: 2px solid transparent;
+  transition: border-color 0.15s;
 }
 
-.detail-meta {
+.inline-title:focus {
+  border-bottom-color: var(--n-primary-color, #18a058);
+}
+
+.meta-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
   margin-bottom: 16px;
 }
 
-.meta-section {
-  margin-bottom: 12px;
-}
-
-.meta-section:last-child {
-  margin-bottom: 0;
+.meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .meta-label {
-  display: block;
   font-size: 11px;
   font-weight: 600;
   opacity: 0.5;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 6px;
 }
 
-.meta-descriptions {
-  margin-top: 12px;
-}
-
-.priority-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.detail-description {
-  margin-top: 16px;
-}
-
-.description-body {
-  font-size: 14px;
-  line-height: 1.6;
-  white-space: pre-wrap;
-}
-
-.description-empty {
+.meta-value {
   font-size: 13px;
-  opacity: 0.35;
-  font-style: italic;
+  line-height: 28px; /* align with input heights */
+}
+
+.field-group {
+  margin-bottom: 16px;
+}
+
+.field-group .meta-label {
+  margin-bottom: 6px;
+  display: block;
 }
 </style>

@@ -25,6 +25,7 @@ const message = useMessage()
 
 const name = ref('')
 const prefix = ref('')
+const description = ref('')
 const submitting = ref(false)
 
 watch(
@@ -33,6 +34,7 @@ watch(
     if (isOpen && store.project) {
       name.value = store.project.name
       prefix.value = store.project.prefix
+      description.value = store.project.description ?? ''
     }
   },
 )
@@ -47,6 +49,9 @@ async function submit() {
     }
     if (prefix.value.trim().toUpperCase() !== store.project?.prefix) {
       updates.prefix = prefix.value.trim()
+    }
+    if (description.value.trim() !== (store.project?.description ?? '')) {
+      updates.description = description.value.trim()
     }
     if (Object.keys(updates).length > 0) {
       await store.updateProjectSettings(updates)
@@ -91,6 +96,15 @@ async function submit() {
           <template #feedback>
             Used for todo references like {{ (prefix || 'TODO').toUpperCase() }}-1, {{ (prefix || 'TODO').toUpperCase() }}-2, etc.
           </template>
+        </NFormItem>
+
+        <NFormItem label="Description">
+          <NInput
+            v-model:value="description"
+            type="textarea"
+            placeholder="Brief project description"
+            :rows="3"
+          />
         </NFormItem>
 
         <NSpace justify="end" :size="8" style="margin-top: 8px">

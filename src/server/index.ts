@@ -14,6 +14,7 @@ import type { Project } from "../lib/schema.js";
 import { loadDoc, saveDoc } from "../lib/storage.js";
 import { addTodo, updateTodo, deleteTodo, updateProject } from "../lib/operations.js";
 import { toJSON } from "../lib/export.js";
+import { syncConfig } from "../lib/project.js";
 
 type Doc = Automerge.Doc<Project>;
 
@@ -39,6 +40,7 @@ export interface ServerOptions {
 
 export async function startServer(projectPath: string, port = 3000, opts: ServerOptions = {}) {
   const dataPath = join(projectPath, ".todo", "data.automerge");
+  const configPath = join(projectPath, ".todo", "config.toml");
   const distDir = join(import.meta.dir, "..", "web", "dist");
   let doc: Doc | null = await loadDoc(dataPath);
 
@@ -96,6 +98,11 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
               case "updateProject": {
                 doc = updateProject(doc, body.updates ?? {});
                 await save();
+                // Keep config.toml in sync with the CRDT
+                await syncConfig(configPath, {
+                  prefix: doc.prefix,
+                  name: doc.name,
+                });
                 return jsonResponse({ ok: true });
               }
 
