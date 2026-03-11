@@ -8,7 +8,6 @@ import {
   NInput,
   NButtonGroup,
   NButton,
-  NPopconfirm,
   useMessage,
 } from 'naive-ui'
 import { useProjectStore } from '@/stores/project'
@@ -35,8 +34,6 @@ const todo = computed(() =>
 // Local editable copies
 const title = ref('')
 const description = ref('')
-const tagsInput = ref('')
-
 // Sync local state when a different todo is opened
 watch(
   () => store.selectedTodoNumber,
@@ -44,7 +41,6 @@ watch(
     if (todo.value) {
       title.value = todo.value.title
       description.value = todo.value.description
-      tagsInput.value = todo.value.tags.join(', ')
     }
   },
 )
@@ -78,17 +74,6 @@ function commitDescription() {
   saveField('description', trimmed)
 }
 
-function commitTags() {
-  if (!todo.value) return
-  const tags = tagsInput.value
-    .split(',')
-    .map((t) => t.trim())
-    .filter(Boolean)
-  const current = todo.value.tags
-  if (tags.length === current.length && tags.every((t, i) => t === current[i])) return
-  saveField('tags', tags)
-}
-
 async function changeStatus(status: Status) {
   if (!todo.value) return
   try {
@@ -103,14 +88,14 @@ async function changePriority(priority: Priority) {
   saveField('priority', priority)
 }
 
-async function handleDelete() {
+async function handleArchive() {
   if (!todo.value) return
   try {
-    await store.deleteTodo(todo.value.number)
-    message.success('Todo deleted')
+    await store.moveTodo(todo.value.number, 'archived')
+    message.success('Todo moved to trash')
     close()
   } catch {
-    message.error('Failed to delete todo')
+    message.error('Failed to archive todo')
   }
 }
 
@@ -123,9 +108,7 @@ function formatDate(iso: string): string {
   <NModal :show="isOpen" @update:show="(v: boolean) => !v && close()">
     <NCard
       :bordered="true"
-      closable
-      @close="close"
-      style="width: 680px; max-width: 95vw"
+      style="width: 680px; max-width: 95vw; min-height: 520px"
       role="dialog"
     >
       <div v-if="!todo" class="not-found">
@@ -138,12 +121,18 @@ function formatDate(iso: string): string {
           <NTag size="small" :bordered="false" style="font-family: monospace; flex-shrink: 0">
             {{ todo.ref }}
           </NTag>
-          <NPopconfirm @positive-click="handleDelete">
-            <template #trigger>
-              <NButton size="tiny" quaternary type="error" style="flex-shrink: 0">Delete</NButton>
+          <NButton
+            v-if="todo.status !== 'archived'"
+            size="tiny"
+            quaternary
+            type="error"
+            style="flex-shrink: 0"
+            @click="handleArchive"
+          >
+            <template #icon>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
             </template>
-            Delete this todo permanently?
-          </NPopconfirm>
+          </NButton>
         </div>
 
         <input
@@ -197,25 +186,13 @@ function formatDate(iso: string): string {
           </div>
         </div>
 
-        <!-- Tags -->
-        <div class="field-group">
-          <label class="meta-label">Tags</label>
-          <NInput
-            v-model:value="tagsInput"
-            size="small"
-            placeholder="comma-separated tags"
-            @blur="commitTags"
-            @keydown.enter="($event.target as HTMLInputElement).blur()"
-          />
-        </div>
-
         <!-- Description -->
         <div class="field-group">
           <label class="meta-label">Description</label>
           <NInput
             v-model:value="description"
             type="textarea"
-            :autosize="{ minRows: 3, maxRows: 12 }"
+            :autosize="{ minRows: 6, maxRows: 16 }"
             placeholder="Add a description..."
             @blur="commitDescription"
           />
