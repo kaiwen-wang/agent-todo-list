@@ -21,7 +21,7 @@ export function registerServe(program: Command): void {
       const server = await startServer(paths!.root, port);
       const url = `http://localhost:${server.port}`;
 
-      console.log(`Dashboard running at ${url}`);
+      console.log(`\nDashboard running at ${url}`);
       console.log("Press Ctrl+C to stop.\n");
 
       if (opts.open) {

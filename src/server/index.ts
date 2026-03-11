@@ -30,7 +30,14 @@ function jsonResponse(data: unknown, status = 200): Response {
   });
 }
 
-export async function startServer(projectPath: string, port = 3000) {
+export interface ServerOptions {
+  /** When true, non-API requests redirect to the Vite dev server instead of serving dist/. */
+  dev?: boolean;
+  /** Port the Vite dev server is on (default 5173). Only used when dev=true. */
+  vitePort?: number;
+}
+
+export async function startServer(projectPath: string, port = 3000, opts: ServerOptions = {}) {
   const dataPath = join(projectPath, ".todo", "data.automerge");
   const distDir = join(import.meta.dir, "..", "web", "dist");
   let doc: Doc | null = await loadDoc(dataPath);
@@ -103,12 +110,18 @@ export async function startServer(projectPath: string, port = 3000) {
         return new Response(null, { headers: CORS_HEADERS });
       }
 
+      // In dev mode, redirect non-API requests to the Vite dev server
+      if (opts.dev) {
+        const url = new URL(req.url);
+        url.port = String(opts.vitePort ?? 5173);
+        return Response.redirect(url.toString(), 307);
+      }
+
       const url = new URL(req.url);
       return serveStatic(url.pathname, distDir);
     },
   });
 
-  console.log(`Dashboard: http://localhost:${port}`);
   return server;
 }
 
@@ -132,5 +145,6 @@ if (import.meta.main) {
     console.error("Not in an agt project. Run 'agt init' first.");
     process.exit(1);
   }
-  await startServer(paths.root);
+  const server = await startServer(paths.root);
+  console.log(`Dashboard: http://localhost:${server.port}`);
 }
