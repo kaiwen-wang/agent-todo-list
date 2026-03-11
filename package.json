@@ -1,12 +1,24 @@
 {
   "name": "agent-todo-list",
-  "module": "index.ts",
   "type": "module",
   "private": true,
-  "devDependencies": {
-    "@types/bun": "latest"
+  "workspaces": ["src/web"],
+  "scripts": {
+    "dev": "bun run --cwd src/web dev",
+    "build": "bun run --cwd src/web build",
+    "serve": "bun src/server/index.ts",
+    "todo": "bun src/cli/index.ts"
   },
-  "peerDependencies": {
-    "typescript": "^5"
+  "dependencies": {
+    "@automerge/automerge": "^3.2.4",
+    "commander": "^14.0.0",
+    "chalk": "^5.4.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.0",
+    "oxlint": "^1.53.0",
+    "oxfmt": "^0.38.0",
+    "vitest": "^4.0.0"
   }
 }
