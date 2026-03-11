@@ -33,15 +33,15 @@ export function registerShow(program: Command): void {
       }
 
       if (opts.json) {
-        const member = todo.assignee
-          ? findMember(doc, todo.assignee)
-          : undefined;
+        const member = todo.assignee ? findMember(doc, todo.assignee) : undefined;
         console.log(
           JSON.stringify(
             {
-              ref: `${config.prefix}-${todo.number}`,
               ...todo,
+              ref: `${config.prefix}-${todo.number}`,
               assigneeName: member?.name ?? null,
+              comments: todo.comments ?? [],
+              branch: todo.branch ?? null,
             },
             null,
             2,
@@ -50,9 +50,7 @@ export function registerShow(program: Command): void {
         return;
       }
 
-      const member = todo.assignee
-        ? findMember(doc, todo.assignee)
-        : undefined;
+      const member = todo.assignee ? findMember(doc, todo.assignee) : undefined;
       console.log(formatTodoDetail(todo, config.prefix, member?.name));
     });
 }

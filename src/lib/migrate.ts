@@ -23,11 +23,41 @@ type MigrationFn = (d: Project) => void;
  * e.g. migrations[1] upgrades from v1 → v2.
  */
 const migrations: Record<number, MigrationFn> = {
-  // Example for future use:
-  // 1: (d) => {
-  //   // Rename a field, add a new field, etc.
-  //   d._version = 2;
-  // },
+  1: (d) => {
+    // v1 → v2:
+    //   - Convert all timestamps from ISO strings to Unix ms numbers
+    //   - Add auditLog[] to project
+    //   - Add comments[] and branch to each todo
+
+    // Project timestamp
+    const projectTs = d.createdAt as unknown;
+    if (typeof projectTs === "string") {
+      (d as any).createdAt = new Date(projectTs as string).getTime();
+    }
+
+    // Todo timestamps + new fields
+    for (const todo of d.todos) {
+      const created = todo.createdAt as unknown;
+      if (typeof created === "string") {
+        (todo as any).createdAt = new Date(created as string).getTime();
+      }
+      const updated = todo.updatedAt as unknown;
+      if (typeof updated === "string") {
+        (todo as any).updatedAt = new Date(updated as string).getTime();
+      }
+      if (!(todo as any).comments) {
+        (todo as any).comments = [];
+      }
+      if ((todo as any).branch === undefined) {
+        (todo as any).branch = null;
+      }
+    }
+
+    // Audit log
+    if (!(d as any).auditLog) {
+      (d as any).auditLog = [];
+    }
+  },
 };
 
 /**

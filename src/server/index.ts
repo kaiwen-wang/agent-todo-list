@@ -1,21 +1,33 @@
 /**
  * agt browser server — minimal local dashboard.
  *
- * Two API endpoints:
+ * API endpoints:
  *   GET  /api/project — returns everything as JSON
  *   POST /api/change  — applies a single mutation
  *
- * Serves the Vue dist/ as static files. That's it.
+ * Serves the Vue dist/ as static files.
  */
 
 import * as Automerge from "@automerge/automerge";
 import { join } from "node:path";
+import { existsSync } from "node:fs";
 import type { Project } from "../lib/schema.js";
 import { loadDoc, saveDoc } from "../lib/storage.js";
-import { addTodo, updateTodo, deleteTodo, updateProject, addMember, removeMember, updateMember } from "../lib/operations.js";
+import {
+  addTodo,
+  updateTodo,
+  deleteTodo,
+  updateProject,
+  addMember,
+  removeMember,
+  updateMember,
+  addComment,
+  setBranch,
+} from "../lib/operations.js";
 import { findMember } from "../lib/queries.js";
 import { toJSON } from "../lib/export.js";
 import { syncConfig } from "../lib/project.js";
+import { migrateDoc, needsMigration } from "../lib/migrate.js";
 
 type Doc = Automerge.Doc<Project>;
 
@@ -33,19 +45,40 @@ function jsonResponse(data: unknown, status = 200): Response {
 }
 
 export interface ServerOptions {
-  /** When true, non-API requests redirect to the Vite dev server instead of serving dist/. */
   dev?: boolean;
-  /** Port the Vite dev server is on (default 5173). Only used when dev=true. */
   vitePort?: number;
+}
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 60);
+}
+
+/** Load and auto-migrate the document from disk. */
+async function loadAndMigrate(dataPath: string): Promise<Doc | null> {
+  let doc = await loadDoc(dataPath);
+  if (!doc) return null;
+  if (needsMigration(doc)) {
+    doc = migrateDoc(doc);
+    await saveDoc(dataPath, doc);
+  }
+  return doc;
 }
 
 export async function startServer(projectPath: string, port = 3000, opts: ServerOptions = {}) {
   const dataPath = join(projectPath, ".todo", "data.automerge");
   const configPath = join(projectPath, ".todo", "config.toml");
   const distDir = join(import.meta.dir, "..", "web", "dist");
-  let doc: Doc | null = await loadDoc(dataPath);
+  let doc: Doc | null = await loadAndMigrate(dataPath);
 
   if (!doc) throw new Error(`Cannot load project data from ${dataPath}`);
+
+  async function reload() {
+    doc = await loadAndMigrate(dataPath);
+  }
 
   async function save() {
     if (doc) await saveDoc(dataPath, doc);
@@ -57,7 +90,7 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
     routes: {
       "/api/project": {
         async GET() {
-          doc = await loadDoc(dataPath);
+          await reload();
           if (!doc) return jsonResponse({ error: "No data" }, 500);
           return jsonResponse(toJSON(doc));
         },
@@ -65,7 +98,7 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
 
       "/api/change": {
         async POST(req) {
-          doc = await loadDoc(dataPath);
+          await reload();
           if (!doc) return jsonResponse({ error: "No data" }, 500);
 
           const body = await req.json();
@@ -97,10 +130,68 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
                 return jsonResponse({ ok: true });
               }
 
+              case "addComment": {
+                doc = addComment(doc, body.number, body.text ?? "");
+                await save();
+                return jsonResponse({ ok: true });
+              }
+
+              case "createBranch": {
+                const todoNum = body.number;
+                const todo = doc.todos.find((t) => t.number === todoNum);
+                if (!todo) return jsonResponse({ error: `Todo #${todoNum} not found` }, 400);
+
+                if (todo.branch) {
+                  return jsonResponse({ ok: true, branch: todo.branch, alreadyExists: true });
+                }
+
+                const slug = slugify(todo.title);
+                const branchName = `${doc.prefix.toLowerCase()}-${todoNum}-${slug}`;
+
+                // Ensure .worktrees/ is gitignored
+                const gitignorePath = join(projectPath, ".gitignore");
+                const gitignoreFile = Bun.file(gitignorePath);
+                if (await gitignoreFile.exists()) {
+                  const content = await gitignoreFile.text();
+                  if (!content.includes(".worktrees")) {
+                    await Bun.write(gitignorePath, content.trimEnd() + "\n\n# Git worktrees for todo branches\n.worktrees/\n");
+                  }
+                } else {
+                  await Bun.write(gitignorePath, "# Git worktrees for todo branches\n.worktrees/\n");
+                }
+
+                const worktreePath = join(projectPath, ".worktrees", branchName);
+
+                if (existsSync(worktreePath)) {
+                  return jsonResponse({ error: `Worktree path already exists` }, 400);
+                }
+
+                const result = Bun.spawnSync(
+                  ["git", "worktree", "add", "-b", branchName, worktreePath],
+                  { cwd: projectPath, stderr: "pipe", stdout: "pipe" },
+                );
+
+                if (result.exitCode !== 0) {
+                  const stderr = result.stderr.toString().trim();
+                  return jsonResponse({ error: `Failed to create worktree: ${stderr}` }, 500);
+                }
+
+                doc = setBranch(doc, todoNum, branchName);
+                if (todo.status === "none" || todo.status === "todo") {
+                  doc = updateTodo(doc, todoNum, { status: "in_progress" });
+                }
+                await save();
+
+                return jsonResponse({
+                  ok: true,
+                  branch: branchName,
+                  worktree: `.worktrees/${branchName}`,
+                });
+              }
+
               case "updateProject": {
                 doc = updateProject(doc, body.updates ?? {});
                 await save();
-                // Keep config.toml in sync with the CRDT
                 await syncConfig(configPath, {
                   prefix: doc.prefix,
                   name: doc.name,
@@ -148,12 +239,10 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
     },
 
     fetch(req) {
-      // CORS preflight
       if (req.method === "OPTIONS") {
         return new Response(null, { headers: CORS_HEADERS });
       }
 
-      // In dev mode, redirect non-API requests to the Vite dev server
       if (opts.dev) {
         const url = new URL(req.url);
         url.port = String(opts.vitePort ?? 5173);
@@ -173,14 +262,13 @@ async function serveStatic(pathname: string, distDir: string) {
   let file = Bun.file(join(distDir, filePath));
   if (await file.exists()) return new Response(file);
 
-  // SPA fallback
   file = Bun.file(join(distDir, "index.html"));
   if (await file.exists()) return new Response(file);
 
   return new Response("Not Found", { status: 404 });
 }
 
-/* ── Run standalone when executed directly (`bun src/server/index.ts`) ── */
+/* ── Run standalone ── */
 if (import.meta.main) {
   const { findProject } = await import("../lib/project.js");
   const paths = findProject();

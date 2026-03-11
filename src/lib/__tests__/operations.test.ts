@@ -20,7 +20,7 @@ describe("createProject", () => {
     expect(doc.members[0]!.name).toBe("Alice");
     expect(doc.members[0]!.role).toBe("owner");
     expect(doc.todos).toHaveLength(0);
-    expect(doc._version).toBe(1);
+    expect(doc._version).toBe(2);
   });
 
   test("uppercases the prefix", () => {
@@ -39,7 +39,7 @@ describe("addTodo", () => {
     expect(r1.doc.todos).toHaveLength(1);
     expect(r1.doc.todos[0]!.title).toBe("First task");
     expect(r1.doc.todos[0]!.status).toBe("todo");
-    expect(r1.doc.todos[0]!.priority).toBe("medium");
+    expect(r1.doc.todos[0]!.priority).toBe("none");
   });
 
   test("increments counter for each todo", () => {
@@ -113,9 +113,7 @@ describe("updateTodo", () => {
 
   test("throws on nonexistent todo", () => {
     const doc = createProject("TST", "Test", "Alice");
-    expect(() => updateTodo(doc, 999, { title: "Nope" })).toThrow(
-      "Todo #999 not found",
-    );
+    expect(() => updateTodo(doc, 999, { title: "Nope" })).toThrow("Todo #999 not found");
   });
 
   test("sets updatedAt timestamp", () => {

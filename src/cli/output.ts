@@ -4,7 +4,8 @@
  */
 
 import chalk from "chalk";
-import type { Todo, Status, Priority } from "../lib/schema.js";
+import type { Todo, Status, Priority, Timestamp } from "../lib/schema.js";
+import { LABEL_DISPLAY } from "../lib/schema.js";
 
 const STATUS_COLORS: Record<Status, (s: string) => string> = {
   none: chalk.gray,
@@ -75,6 +76,15 @@ export function formatTodoDetail(
     lines.push(`  Assignee: ${memberName ?? todo.assignee}`);
   }
 
+  if (todo.branch) {
+    lines.push(`  Branch:   ${chalk.cyan(todo.branch)}`);
+  }
+
+  if (todo.labels && todo.labels.length > 0) {
+    const labelStrs = todo.labels.map((l) => LABEL_DISPLAY[l] ?? l);
+    lines.push(`  Labels:   ${labelStrs.join(", ")}`);
+  }
+
   lines.push(`  Created:  ${formatDate(todo.createdAt)}`);
   if (todo.updatedAt !== todo.createdAt) {
     lines.push(`  Updated:  ${formatDate(todo.updatedAt)}`);
@@ -85,12 +95,24 @@ export function formatTodoDetail(
     lines.push(todo.description);
   }
 
+  // Comments
+  const comments = todo.comments ?? [];
+  if (comments.length > 0) {
+    lines.push("");
+    lines.push(chalk.dim(`--- Comments (${comments.length}) ---`));
+    for (const c of comments) {
+      lines.push(`  ${chalk.bold(c.authorName)} ${chalk.dim(formatDate(c.createdAt))}`);
+      lines.push(`  ${c.text}`);
+      lines.push("");
+    }
+  }
+
   return lines.join("\n");
 }
 
-/** Format an ISO date string to a shorter form. */
-function formatDate(iso: string): string {
-  const d = new Date(iso);
+/** Format a timestamp (Unix ms or ISO string) to a shorter form. */
+export function formatDate(ts: Timestamp | string): string {
+  const d = typeof ts === "number" ? new Date(ts) : new Date(ts);
   return d.toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",

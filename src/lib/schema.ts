@@ -5,6 +5,16 @@
 
 import type { Counter } from "@automerge/automerge";
 
+// ── Branded primitives ──────────────────────────────────────────────
+
+/** Member ID (UUID string) — references a member in the project */
+export type MemberId = string;
+
+/** Unix timestamp in milliseconds (Date.now()) */
+export type Timestamp = number;
+
+// ── Enums ───────────────────────────────────────────────────────────
+
 export type Status = "none" | "todo" | "in_progress" | "completed" | "archived" | "wont_do";
 export type Priority = "none" | "low" | "medium" | "high" | "urgent";
 export type Label = "new_feature" | "bug" | "feature_plus";
@@ -56,20 +66,42 @@ export const PRIORITY_DISPLAY: Record<Priority, string> = {
   urgent: "Urgent",
 };
 
+// ── Sub-document types ──────────────────────────────────────────────
+
+export interface Comment {
+  id: string;
+  author: MemberId;
+  authorName: string;     // snapshot at creation time (survives member rename/delete)
+  text: string;
+  createdAt: Timestamp;
+}
+
+export interface AuditEntry {
+  id: string;
+  action: string;         // e.g. "todo.created", "todo.updated", "todo.deleted"
+  actor: MemberId;
+  actorName: string;      // snapshot at creation time
+  target: string;         // e.g. "TODO-1" or member name
+  details: string;        // JSON string describing what changed
+  timestamp: Timestamp;
+}
+
+// ── Core entities ───────────────────────────────────────────────────
+
 export interface Todo {
   id: string;
-  ref: string;
   number: number;
   title: string;
   description: string;
   status: Status;
   priority: Priority;
   labels: Label[];
-  assignee: string | null;
-  assigneeName: string | null;
-  createdAt: string;
-  updatedAt: string;
-  createdBy: string;
+  assignee: MemberId | null;
+  branch: string | null;
+  comments: Comment[];
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  createdBy: MemberId;
 }
 
 export interface Member {
@@ -86,13 +118,14 @@ export interface Project extends Record<string, unknown> {
   name: string;
   description: string;
   counter: Counter;
-  createdAt: string;
+  createdAt: Timestamp;
   members: Member[];
   todos: Todo[];
+  auditLog: AuditEntry[];
 }
 
 /** Current schema version — increment when making breaking changes */
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 /** Config stored in .todo/config.toml (committed to git) */
 export interface ProjectConfig {

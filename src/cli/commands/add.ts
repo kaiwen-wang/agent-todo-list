@@ -7,8 +7,8 @@ import { findProject, readConfig } from "../../lib/project.js";
 import { loadDoc, saveDoc } from "../../lib/storage.js";
 import { addTodo } from "../../lib/operations.js";
 import { findMember } from "../../lib/queries.js";
-import type { Status, Priority } from "../../lib/schema.js";
-import { STATUSES, PRIORITIES } from "../../lib/schema.js";
+import type { Status, Priority, Label } from "../../lib/schema.js";
+import { STATUSES, PRIORITIES, LABELS } from "../../lib/schema.js";
 import { error, success } from "../output.js";
 
 export function registerAdd(program: Command): void {
@@ -20,6 +20,7 @@ export function registerAdd(program: Command): void {
     .option("-s, --status <status>", "Initial status", "todo")
     .option("-p, --priority <priority>", "Priority level", "none")
     .option("-a, --assignee <name>", "Assignee name")
+    .option("-l, --labels <labels>", "Labels (comma-separated: bug,new_feature,feature_plus)")
     .option("--json", "Output as JSON")
     .action(
       async (
@@ -29,6 +30,7 @@ export function registerAdd(program: Command): void {
           status: string;
           priority: string;
           assignee?: string;
+          labels?: string;
           json?: boolean;
         },
       ) => {
@@ -46,9 +48,18 @@ export function registerAdd(program: Command): void {
 
         // Validate priority
         if (!PRIORITIES.includes(opts.priority as Priority)) {
-          error(
-            `Invalid priority "${opts.priority}". Valid: ${PRIORITIES.join(", ")}`,
-          );
+          error(`Invalid priority "${opts.priority}". Valid: ${PRIORITIES.join(", ")}`);
+        }
+
+        // Validate labels
+        let parsedLabels: Label[] | undefined;
+        if (opts.labels) {
+          parsedLabels = opts.labels.split(",").map((l) => l.trim()) as Label[];
+          for (const label of parsedLabels) {
+            if (!LABELS.includes(label)) {
+              error(`Invalid label "${label}". Valid: ${LABELS.join(", ")}`);
+            }
+          }
         }
 
         // Resolve assignee to member ID
@@ -68,6 +79,7 @@ export function registerAdd(program: Command): void {
           description: opts.description,
           status: opts.status as Status,
           priority: opts.priority as Priority,
+          labels: parsedLabels,
           assignee: assigneeId,
         });
 

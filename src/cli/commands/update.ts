@@ -7,8 +7,8 @@ import { findProject, readConfig } from "../../lib/project.js";
 import { loadDoc, saveDoc } from "../../lib/storage.js";
 import { updateTodo } from "../../lib/operations.js";
 import { parseTodoRef, findTodoByNumber, findMember } from "../../lib/queries.js";
-import type { Status, Priority, Todo } from "../../lib/schema.js";
-import { STATUSES, PRIORITIES } from "../../lib/schema.js";
+import type { Status, Priority, Label, Todo } from "../../lib/schema.js";
+import { STATUSES, PRIORITIES, LABELS } from "../../lib/schema.js";
 import { error, success } from "../output.js";
 
 export function registerUpdate(program: Command): void {
@@ -21,6 +21,7 @@ export function registerUpdate(program: Command): void {
     .option("-s, --status <status>", "New status")
     .option("-p, --priority <priority>", "New priority")
     .option("-a, --assignee <name>", "New assignee")
+    .option("-l, --labels <labels>", "Labels (comma-separated: bug,new_feature,feature_plus)")
     .option("--json", "Output as JSON")
     .action(
       async (
@@ -31,6 +32,7 @@ export function registerUpdate(program: Command): void {
           status?: string;
           priority?: string;
           assignee?: string;
+          labels?: string;
           json?: boolean;
         },
       ) => {
@@ -53,10 +55,7 @@ export function registerUpdate(program: Command): void {
 
         // Build updates
         const updates: Partial<
-          Pick<
-            Todo,
-            "title" | "description" | "status" | "priority" | "assignee"
-          >
+          Pick<Todo, "title" | "description" | "status" | "priority" | "labels" | "assignee">
         > = {};
 
         if (opts.title !== undefined) updates.title = opts.title;
@@ -64,18 +63,14 @@ export function registerUpdate(program: Command): void {
 
         if (opts.status !== undefined) {
           if (!STATUSES.includes(opts.status as Status)) {
-            error(
-              `Invalid status "${opts.status}". Valid: ${STATUSES.join(", ")}`,
-            );
+            error(`Invalid status "${opts.status}". Valid: ${STATUSES.join(", ")}`);
           }
           updates.status = opts.status as Status;
         }
 
         if (opts.priority !== undefined) {
           if (!PRIORITIES.includes(opts.priority as Priority)) {
-            error(
-              `Invalid priority "${opts.priority}". Valid: ${PRIORITIES.join(", ")}`,
-            );
+            error(`Invalid priority "${opts.priority}". Valid: ${PRIORITIES.join(", ")}`);
           }
           updates.priority = opts.priority as Priority;
         }
@@ -86,6 +81,16 @@ export function registerUpdate(program: Command): void {
             error(`Member "${opts.assignee}" not found.`);
           }
           updates.assignee = member.id;
+        }
+
+        if (opts.labels !== undefined) {
+          const parsed = opts.labels.split(",").map((l) => l.trim()) as Label[];
+          for (const label of parsed) {
+            if (!LABELS.includes(label)) {
+              error(`Invalid label "${label}". Valid: ${LABELS.join(", ")}`);
+            }
+          }
+          updates.labels = parsed;
         }
 
         if (Object.keys(updates).length === 0) {

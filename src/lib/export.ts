@@ -1,5 +1,6 @@
 /**
  * Serialization helpers for the Project document.
+ * Converts Automerge doc → plain JSON-safe objects, adding computed fields.
  */
 
 import type * as Automerge from "@automerge/automerge";
@@ -22,7 +23,7 @@ export function toJSON(doc: Doc): object {
     })),
     todos: doc.todos.map((t) => ({
       id: t.id,
-      ref: `${doc.prefix}-${t.number}`,
+      ref: `${doc.prefix}-${t.number}`,        // computed
       number: t.number,
       title: t.title,
       description: t.description,
@@ -30,10 +31,27 @@ export function toJSON(doc: Doc): object {
       priority: t.priority,
       labels: t.labels ? [...t.labels] : [],
       assignee: t.assignee,
-      assigneeName: t.assignee ? findMemberName(doc, t.assignee) : null,
+      assigneeName: t.assignee ? findMemberName(doc, t.assignee) : null,  // computed
+      branch: t.branch ?? null,
+      comments: (t.comments ?? []).map((c) => ({
+        id: c.id,
+        author: c.author,
+        authorName: c.authorName,
+        text: c.text,
+        createdAt: c.createdAt,
+      })),
       createdAt: t.createdAt,
       updatedAt: t.updatedAt,
       createdBy: t.createdBy,
+    })),
+    auditLog: (doc.auditLog ?? []).map((e) => ({
+      id: e.id,
+      action: e.action,
+      actor: e.actor,
+      actorName: e.actorName,
+      target: e.target,
+      details: e.details,
+      timestamp: e.timestamp,
     })),
   };
 }
