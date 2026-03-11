@@ -85,6 +85,11 @@ const filteredTodos = computed(() => {
     );
   }
   return [...list].sort((a, b) => {
+    // Primary: group by status in board order
+    const sa = BOARD_STATUSES.indexOf(a.status as Status);
+    const sb = BOARD_STATUSES.indexOf(b.status as Status);
+    if (sa !== sb) return sa - sb;
+    // Secondary: newest first within each status
     const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
     const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
     return tb - ta;
@@ -257,5 +262,14 @@ const rowProps = (row: Todo) => ({
   flex: 1;
   padding: 0 24px 24px;
   overflow: auto;
+}
+
+.list-table-container :deep(td) {
+  vertical-align: middle !important;
+}
+
+.list-table-container :deep(td .n-icon) {
+  display: block !important;
+  margin: 0 auto;
 }
 </style>
