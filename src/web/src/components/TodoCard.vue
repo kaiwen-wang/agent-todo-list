@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { NCard, NTag, NSpace } from 'naive-ui'
+import { NCard } from 'naive-ui'
 import type { Todo } from '@/types'
 import { PRIORITY_DISPLAY, PRIORITY_COLORS } from '@/types'
 import { useProjectStore } from '@/stores/project'
@@ -33,12 +33,9 @@ function openDetail() {
       <span class="priority-dot" :style="{ background: priorityColor }" :title="priorityLabel" />
     </div>
     <div class="card-title">{{ todo.title }}</div>
-    <NSpace v-if="todo.tags.length || todo.assigneeName" :size="4" class="card-footer">
-      <NTag v-for="tag in todo.tags" :key="tag" size="tiny" round :bordered="false">
-        {{ tag }}
-      </NTag>
-      <span v-if="todo.assigneeName" class="card-assignee">{{ todo.assigneeName }}</span>
-    </NSpace>
+    <div v-if="todo.assigneeName" class="card-footer">
+      <span class="card-assignee">{{ todo.assigneeName }}</span>
+    </div>
   </NCard>
 </template>
 
@@ -57,14 +54,14 @@ function openDetail() {
 }
 
 .card-content {
-  padding: 10px 12px !important;
+  padding: 14px 14px !important;
 }
 
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .todo-ref {
@@ -82,9 +79,9 @@ function openDetail() {
 }
 
 .card-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
-  line-height: 1.4;
+  line-height: 1.5;
   word-break: break-word;
 }
 
