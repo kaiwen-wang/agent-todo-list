@@ -18,15 +18,18 @@ import {
   AntennaBars5,
 } from "@vicons/tabler";
 import { useProjectStore } from "@/stores/project";
-import type { Todo, Status, Priority, Label } from "@/types";
+import type { Todo, Status, Priority, Difficulty, Label } from "@/types";
 import {
   STATUSES,
   BOARD_STATUSES,
   PRIORITIES,
+  DIFFICULTIES,
   STATUS_DISPLAY,
   PRIORITY_DISPLAY,
   STATUS_COLORS,
   PRIORITY_COLORS,
+  DIFFICULTY_DISPLAY,
+  DIFFICULTY_COLORS,
   LABEL_DISPLAY,
   LABEL_COLORS,
 } from "@/types";
@@ -58,10 +61,15 @@ const store = useProjectStore();
 const showCreate = ref(false);
 const filterStatus = ref<Status | null>(null);
 const filterPriority = ref<Priority | null>(null);
+const filterDifficulty = ref<Difficulty | null>(null);
 const searchQuery = ref("");
 
 const statusFilterOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }));
 const priorityFilterOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }));
+const difficultyFilterOptions = DIFFICULTIES.map((d) => ({
+  label: DIFFICULTY_DISPLAY[d],
+  value: d,
+}));
 
 function renderPriorityLabel(option: { label: string; value: string }) {
   const p = option.value as Priority;
@@ -78,6 +86,9 @@ const filteredTodos = computed(() => {
   }
   if (filterPriority.value) {
     list = list.filter((t) => t.priority === filterPriority.value);
+  }
+  if (filterDifficulty.value) {
+    list = list.filter((t) => t.difficulty === filterDifficulty.value);
   }
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase();
@@ -141,6 +152,21 @@ const columns: DataTableColumns<Todo> = [
         PRIORITY_COLORS[row.priority],
         PRIORITY_DISPLAY[row.priority],
       );
+    },
+  },
+  {
+    title: "Difficulty",
+    key: "difficulty",
+    width: 100,
+    render(row) {
+      const d = row.difficulty;
+      if (!d || d === "none") return h("span", { style: "opacity: 0.3" }, "\u2014");
+      return h("span", { style: "display: flex; align-items: center; gap: 6px; font-size: 12px" }, [
+        h("span", {
+          style: `width: 8px; height: 8px; border-radius: 50%; background: ${DIFFICULTY_COLORS[d]}; flex-shrink: 0`,
+        }),
+        DIFFICULTY_DISPLAY[d],
+      ]);
     },
   },
   {
@@ -212,6 +238,14 @@ const rowProps = (row: Todo) => ({
           clearable
           size="small"
           style="width: 160px"
+        />
+        <NSelect
+          v-model:value="filterDifficulty"
+          :options="difficultyFilterOptions"
+          placeholder="Difficulty"
+          clearable
+          size="small"
+          style="width: 140px"
         />
       </NSpace>
       <NButton type="primary" size="small" @click="showCreate = true">+ New Todo</NButton>

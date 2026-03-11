@@ -7,8 +7,8 @@ import { findProject, readConfig } from "../../lib/project.js";
 import { loadDoc, saveDoc } from "../../lib/storage.js";
 import { updateTodo } from "../../lib/operations.js";
 import { parseTodoRef, findTodoByNumber, findMember } from "../../lib/queries.js";
-import type { Status, Priority, Label, Todo } from "../../lib/schema.js";
-import { STATUSES, PRIORITIES, LABELS } from "../../lib/schema.js";
+import type { Status, Priority, Difficulty, Label, Todo } from "../../lib/schema.js";
+import { STATUSES, PRIORITIES, DIFFICULTIES, LABELS } from "../../lib/schema.js";
 import { error, success } from "../output.js";
 
 export function registerUpdate(program: Command): void {
@@ -20,6 +20,7 @@ export function registerUpdate(program: Command): void {
     .option("-d, --description <text>", "New description")
     .option("-s, --status <status>", "New status")
     .option("-p, --priority <priority>", "New priority")
+    .option("--difficulty <difficulty>", "New difficulty (easy, medium, hard)")
     .option("-a, --assignee <name>", "New assignee")
     .option("-l, --labels <labels>", "Labels (comma-separated: bug,new_feature,feature_plus)")
     .option("--json", "Output as JSON")
@@ -31,6 +32,7 @@ export function registerUpdate(program: Command): void {
           description?: string;
           status?: string;
           priority?: string;
+          difficulty?: string;
           assignee?: string;
           labels?: string;
           json?: boolean;
@@ -55,7 +57,10 @@ export function registerUpdate(program: Command): void {
 
         // Build updates
         const updates: Partial<
-          Pick<Todo, "title" | "description" | "status" | "priority" | "labels" | "assignee">
+          Pick<
+            Todo,
+            "title" | "description" | "status" | "priority" | "difficulty" | "labels" | "assignee"
+          >
         > = {};
 
         if (opts.title !== undefined) updates.title = opts.title;
@@ -73,6 +78,13 @@ export function registerUpdate(program: Command): void {
             error(`Invalid priority "${opts.priority}". Valid: ${PRIORITIES.join(", ")}`);
           }
           updates.priority = opts.priority as Priority;
+        }
+
+        if (opts.difficulty !== undefined) {
+          if (!DIFFICULTIES.includes(opts.difficulty as Difficulty)) {
+            error(`Invalid difficulty "${opts.difficulty}". Valid: ${DIFFICULTIES.join(", ")}`);
+          }
+          updates.difficulty = opts.difficulty as Difficulty;
         }
 
         if (opts.assignee !== undefined) {
@@ -94,7 +106,7 @@ export function registerUpdate(program: Command): void {
         }
 
         if (Object.keys(updates).length === 0) {
-          error("No updates specified. Use --title, --status, --priority, etc.");
+          error("No updates specified. Use --title, --status, --priority, --difficulty, etc.");
         }
 
         doc = updateTodo(doc, num, updates);

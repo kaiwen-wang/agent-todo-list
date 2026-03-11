@@ -15,6 +15,7 @@ import type {
   Comment,
   Status,
   Priority,
+  Difficulty,
   Label,
   Platform,
   MemberRole,
@@ -113,6 +114,7 @@ export function addTodo(
     description?: string;
     status?: Status;
     priority?: Priority;
+    difficulty?: Difficulty;
     labels?: Label[];
     assignee?: MemberId | null;
     createdBy?: MemberId;
@@ -133,6 +135,7 @@ export function addTodo(
       description: opts.description ?? "",
       status: opts.status ?? "todo",
       priority: opts.priority ?? "none",
+      difficulty: opts.difficulty ?? "none",
       labels: opts.labels ?? [],
       assignee: opts.assignee ?? null,
       branch: null,
@@ -158,7 +161,7 @@ export function updateTodo(
   doc: Doc,
   todoNumber: number,
   updates: Partial<
-    Pick<Todo, "title" | "description" | "status" | "priority" | "labels" | "assignee">
+    Pick<Todo, "title" | "description" | "status" | "priority" | "difficulty" | "labels" | "assignee">
   >,
   actorId?: MemberId,
 ): Doc {
@@ -184,6 +187,10 @@ export function updateTodo(
     if (updates.priority !== undefined) {
       changed.priority = { from: todo.priority, to: updates.priority };
       todo.priority = updates.priority;
+    }
+    if (updates.difficulty !== undefined) {
+      changed.difficulty = { from: todo.difficulty, to: updates.difficulty };
+      todo.difficulty = updates.difficulty;
     }
     if (updates.labels !== undefined) {
       changed.labels = updates.labels;

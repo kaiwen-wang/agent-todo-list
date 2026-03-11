@@ -24,14 +24,17 @@ import {
   AntennaBars5,
 } from "@vicons/tabler";
 import { useProjectStore } from "@/stores/project";
-import type { Status, Priority, Label } from "@/types";
+import type { Status, Priority, Difficulty, Label } from "@/types";
 import {
   STATUSES,
   PRIORITIES,
+  DIFFICULTIES,
   LABELS,
   STATUS_DISPLAY,
   PRIORITY_DISPLAY,
   PRIORITY_COLORS,
+  DIFFICULTY_DISPLAY,
+  DIFFICULTY_COLORS,
   LABEL_DISPLAY,
   LABEL_COLORS,
 } from "@/types";
@@ -56,6 +59,7 @@ const editing = ref(false);
 const editTitle = ref("");
 const editDescription = ref("");
 const editPriority = ref<Priority | null>(null);
+const editDifficulty = ref<Difficulty | null>(null);
 const editStatus = ref<Status | null>(null);
 const editLabels = ref<Label[]>([]);
 const editAssignee = ref<string | null>(null);
@@ -65,6 +69,7 @@ const memberOptions = computed(() => store.members.map((m) => ({ label: m.name, 
 
 const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }));
 const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }));
+const difficultyOptions = DIFFICULTIES.map((d) => ({ label: DIFFICULTY_DISPLAY[d], value: d }));
 
 const labelOptions = LABELS.map((l) => ({ label: LABEL_DISPLAY[l], value: l }));
 
@@ -72,6 +77,16 @@ function renderPriorityLabel(option: { label: string; value: string }) {
   const p = option.value as Priority;
   return h("span", { style: "display: flex; align-items: center; gap: 8px" }, [
     h(NIcon, { size: 16, color: PRIORITY_COLORS[p] }, { default: () => h(PRIORITY_ICON[p]) }),
+    option.label,
+  ]);
+}
+
+function renderDifficultyLabel(option: { label: string; value: string }) {
+  const d = option.value as Difficulty;
+  return h("span", { style: "display: flex; align-items: center; gap: 8px" }, [
+    h("span", {
+      style: `width: 8px; height: 8px; border-radius: 50%; background: ${DIFFICULTY_COLORS[d]}; flex-shrink: 0`,
+    }),
     option.label,
   ]);
 }
@@ -93,6 +108,7 @@ function startEdit() {
   editTitle.value = todo.value.title;
   editDescription.value = todo.value.description;
   editPriority.value = todo.value.priority;
+  editDifficulty.value = todo.value.difficulty;
   editStatus.value = todo.value.status;
   editLabels.value = [...(todo.value.labels ?? [])];
   editAssignee.value = todo.value.assignee;
@@ -107,6 +123,7 @@ async function saveEdit() {
       title: editTitle.value.trim(),
       description: editDescription.value.trim(),
       priority: editPriority.value || undefined,
+      difficulty: editDifficulty.value || undefined,
       status: editStatus.value || undefined,
       labels: editLabels.value,
       assignee: editAssignee.value,
@@ -210,6 +227,21 @@ function formatDate(iso: string | number): string {
               {{ PRIORITY_DISPLAY[todo.priority] }}
             </NSpace>
           </NDescriptionsItem>
+          <NDescriptionsItem label="Difficulty">
+            <NSpace :size="6" align="center">
+              <span
+                :style="{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: DIFFICULTY_COLORS[todo.difficulty || 'none'],
+                  flexShrink: 0,
+                  display: 'inline-block',
+                }"
+              />
+              {{ DIFFICULTY_DISPLAY[todo.difficulty || "none"] }}
+            </NSpace>
+          </NDescriptionsItem>
           <NDescriptionsItem label="Labels">
             <NSpace v-if="todo.labels?.length" :size="4">
               <span
@@ -267,6 +299,13 @@ function formatDate(iso: string | number): string {
               v-model:value="editPriority"
               :options="priorityOptions"
               :render-label="renderPriorityLabel"
+            />
+          </NFormItem>
+          <NFormItem label="Difficulty" style="flex: 1">
+            <NSelect
+              v-model:value="editDifficulty"
+              :options="difficultyOptions"
+              :render-label="renderDifficultyLabel"
             />
           </NFormItem>
         </NSpace>

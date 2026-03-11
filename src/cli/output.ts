@@ -4,7 +4,7 @@
  */
 
 import chalk from "chalk";
-import type { Todo, Status, Priority, Timestamp } from "../lib/schema.js";
+import type { Todo, Status, Priority, Difficulty, Timestamp } from "../lib/schema.js";
 import { LABEL_DISPLAY } from "../lib/schema.js";
 
 const STATUS_COLORS: Record<Status, (s: string) => string> = {
@@ -43,6 +43,20 @@ const PRIORITY_LABELS: Record<Priority, string> = {
   urgent: "URGENT",
 };
 
+const DIFFICULTY_COLORS: Record<Difficulty, (s: string) => string> = {
+  none: chalk.gray,
+  easy: chalk.green,
+  medium: chalk.yellow,
+  hard: chalk.red,
+};
+
+const DIFFICULTY_LABELS: Record<Difficulty, string> = {
+  none: "",
+  easy: "easy",
+  medium: "med",
+  hard: "HARD",
+};
+
 /** Format a single todo as a one-line summary for list view. */
 export function formatTodoLine(todo: Todo, prefix: string): string {
   const ref = chalk.bold(`${prefix}-${todo.number}`);
@@ -53,7 +67,11 @@ export function formatTodoLine(todo: Todo, prefix: string): string {
     todo.priority !== "medium" && todo.priority !== "none"
       ? " " + PRIORITY_COLORS[todo.priority](PRIORITY_LABELS[todo.priority])
       : "";
-  return `[${icon}] ${ref} ${title}${priority}`;
+  const difficulty =
+    todo.difficulty && todo.difficulty !== "none"
+      ? " " + DIFFICULTY_COLORS[todo.difficulty](DIFFICULTY_LABELS[todo.difficulty])
+      : "";
+  return `[${icon}] ${ref} ${title}${priority}${difficulty}`;
 }
 
 /** Format a todo's full detail view. */
@@ -65,6 +83,10 @@ export function formatTodoDetail(todo: Todo, prefix: string, memberName?: string
   lines.push("");
   lines.push(`  Status:   ${STATUS_COLORS[todo.status](todo.status.replace("_", " "))}`);
   lines.push(`  Priority: ${PRIORITY_COLORS[todo.priority](PRIORITY_LABELS[todo.priority])}`);
+
+  if (todo.difficulty && todo.difficulty !== "none") {
+    lines.push(`  Difficulty: ${DIFFICULTY_COLORS[todo.difficulty](DIFFICULTY_LABELS[todo.difficulty])}`);
+  }
 
   if (todo.assignee) {
     lines.push(`  Assignee: ${memberName ?? todo.assignee}`);

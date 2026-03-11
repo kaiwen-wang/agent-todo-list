@@ -4,13 +4,14 @@
  */
 
 import type * as Automerge from "@automerge/automerge";
-import type { Project, Todo, Status, Priority } from "./schema.js";
+import type { Project, Todo, Status, Priority, Difficulty } from "./schema.js";
 
 type Doc = Automerge.Doc<Project>;
 
 export interface TodoFilter {
   status?: Status | Status[];
   priority?: Priority | Priority[];
+  difficulty?: Difficulty | Difficulty[];
   assignee?: string;
   search?: string;
 }
@@ -31,6 +32,11 @@ export function queryTodos(doc: Doc, filter: TodoFilter = {}): Todo[] {
   if (filter.priority) {
     const priorities = Array.isArray(filter.priority) ? filter.priority : [filter.priority];
     todos = todos.filter((t) => priorities.includes(t.priority));
+  }
+
+  if (filter.difficulty) {
+    const difficulties = Array.isArray(filter.difficulty) ? filter.difficulty : [filter.difficulty];
+    todos = todos.filter((t) => difficulties.includes(t.difficulty));
   }
 
   if (filter.assignee) {

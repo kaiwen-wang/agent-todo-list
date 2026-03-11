@@ -9,6 +9,7 @@ export type Status =
   | "wont_do"
   | "needs_elaboration";
 export type Priority = "none" | "low" | "medium" | "high" | "urgent";
+export type Difficulty = "none" | "easy" | "medium" | "hard";
 export type Label = "new_feature" | "bug" | "feature_plus";
 export type Platform = "cli" | "web" | "unknown";
 export type MemberRole = "owner" | "member" | "agent";
@@ -41,6 +42,7 @@ export interface Todo {
   description: string;
   status: Status | null;
   priority: Priority;
+  difficulty: Difficulty;
   labels: Label[];
   assignee: string | null;
   assigneeName: string | null;
@@ -104,6 +106,8 @@ export const BOARD_STATUSES: Status[] = [
 
 export const PRIORITIES: Priority[] = ["none", "urgent", "high", "medium", "low"];
 
+export const DIFFICULTIES: Difficulty[] = ["none", "easy", "medium", "hard"];
+
 export const LABELS: Label[] = ["bug", "new_feature", "feature_plus"];
 
 export const LABEL_DISPLAY: Record<Label, string> = {
@@ -136,12 +140,26 @@ export const PRIORITY_DISPLAY: Record<Priority, string> = {
   urgent: "Urgent",
 };
 
+export const DIFFICULTY_DISPLAY: Record<Difficulty, string> = {
+  none: "None",
+  easy: "Easy",
+  medium: "Medium",
+  hard: "Hard",
+};
+
 export const PRIORITY_COLORS: Record<Priority, string> = {
   none: "#d4d4d8",
   low: "#6b7280",
   medium: "#3b82f6",
   high: "#f59e0b",
   urgent: "#ef4444",
+};
+
+export const DIFFICULTY_COLORS: Record<Difficulty, string> = {
+  none: "#d4d4d8",
+  easy: "#10b981",
+  medium: "#f59e0b",
+  hard: "#ef4444",
 };
 
 export const STATUS_COLORS: Record<Status, string> = {

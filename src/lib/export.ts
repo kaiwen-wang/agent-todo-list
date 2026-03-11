@@ -29,6 +29,7 @@ export function toJSON(doc: Doc): object {
       description: t.description,
       status: t.status,
       priority: t.priority,
+      difficulty: t.difficulty ?? "none",
       labels: t.labels ? [...t.labels] : [],
       assignee: t.assignee,
       assigneeName: t.assignee ? findMemberName(doc, t.assignee) : null, // computed

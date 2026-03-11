@@ -20,7 +20,7 @@ describe("createProject", () => {
     expect(doc.members[0]!.name).toBe("Alice");
     expect(doc.members[0]!.role).toBe("owner");
     expect(doc.todos).toHaveLength(0);
-    expect(doc._version).toBe(3);
+    expect(doc._version).toBe(4);
   });
 
   test("uppercases the prefix", () => {
@@ -40,6 +40,7 @@ describe("addTodo", () => {
     expect(r1.doc.todos[0]!.title).toBe("First task");
     expect(r1.doc.todos[0]!.status).toBe("todo");
     expect(r1.doc.todos[0]!.priority).toBe("none");
+    expect(r1.doc.todos[0]!.difficulty).toBe("none");
   });
 
   test("increments counter for each todo", () => {
@@ -66,6 +67,16 @@ describe("addTodo", () => {
     const todo = result.doc.todos[0]!;
     expect(todo.status).toBe("in_progress");
     expect(todo.priority).toBe("urgent");
+  });
+
+  test("respects custom difficulty", () => {
+    const doc = createProject("TST", "Test", "Alice");
+    const result = addTodo(doc, {
+      title: "Hard task",
+      difficulty: "hard",
+    });
+
+    expect(result.doc.todos[0]!.difficulty).toBe("hard");
   });
 
   test("concurrent counter increments merge correctly", () => {
@@ -109,6 +120,15 @@ describe("updateTodo", () => {
     const d2 = updateTodo(d1, number, { status: "completed" });
 
     expect(d2.todos[0]!.status).toBe("completed");
+  });
+
+  test("updates difficulty", () => {
+    const doc = createProject("TST", "Test", "Alice");
+    const { doc: d1, number } = addTodo(doc, { title: "Task" });
+    expect(d1.todos[0]!.difficulty).toBe("none");
+
+    const d2 = updateTodo(d1, number, { difficulty: "hard" });
+    expect(d2.todos[0]!.difficulty).toBe("hard");
   });
 
   test("throws on nonexistent todo", () => {

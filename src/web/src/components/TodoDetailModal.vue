@@ -9,15 +9,18 @@ import {
   AntennaBars5,
 } from "@vicons/tabler";
 import { useProjectStore } from "@/stores/project";
-import type { Status, Priority, Label } from "@/types";
+import type { Status, Priority, Difficulty, Label } from "@/types";
 import {
   STATUSES,
   PRIORITIES,
+  DIFFICULTIES,
   LABELS,
   STATUS_DISPLAY,
   PRIORITY_DISPLAY,
   PRIORITY_COLORS,
   STATUS_COLORS,
+  DIFFICULTY_DISPLAY,
+  DIFFICULTY_COLORS,
   LABEL_DISPLAY,
   LABEL_COLORS,
 } from "@/types";
@@ -35,6 +38,7 @@ const message = useMessage();
 
 const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }));
 const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }));
+const difficultyOptions = DIFFICULTIES.map((d) => ({ label: DIFFICULTY_DISPLAY[d], value: d }));
 const labelOptions = LABELS.map((l) => ({ label: LABEL_DISPLAY[l], value: l }));
 
 function renderStatusLabel(option: { label: string; value: string }) {
@@ -51,6 +55,16 @@ function renderPriorityLabel(option: { label: string; value: string }) {
   const p = option.value as Priority;
   return h("span", { style: "display: flex; align-items: center; gap: 8px" }, [
     h(NIcon, { size: 16, color: PRIORITY_COLORS[p] }, { default: () => h(PRIORITY_ICON[p]) }),
+    option.label,
+  ]);
+}
+
+function renderDifficultyLabel(option: { label: string; value: string }) {
+  const d = option.value as Difficulty;
+  return h("span", { style: "display: flex; align-items: center; gap: 8px" }, [
+    h("span", {
+      style: `width: 8px; height: 8px; border-radius: 50%; background: ${DIFFICULTY_COLORS[d]}; flex-shrink: 0`,
+    }),
     option.label,
   ]);
 }
@@ -131,6 +145,11 @@ async function changePriority(priority: Priority) {
   saveField("priority", priority);
 }
 
+async function changeDifficulty(difficulty: Difficulty) {
+  if (!todo.value || difficulty === todo.value.difficulty) return;
+  saveField("difficulty", difficulty);
+}
+
 async function changeLabels(labels: Label[]) {
   if (!todo.value) return;
   saveField("labels", labels);
@@ -159,8 +178,10 @@ function formatDate(ts: number | string): string {
 // ── Keyboard shortcuts (Linear-style) ──
 const statusSelectRef = ref<InstanceType<typeof NSelect> | null>(null);
 const prioritySelectRef = ref<InstanceType<typeof NSelect> | null>(null);
+const difficultySelectRef = ref<InstanceType<typeof NSelect> | null>(null);
 const statusPickerOpen = ref(false);
 const priorityPickerOpen = ref(false);
+const difficultyPickerOpen = ref(false);
 
 const PRIORITY_KEYS: Record<string, Priority> = {
   "0": "none",
@@ -168,6 +189,13 @@ const PRIORITY_KEYS: Record<string, Priority> = {
   "2": "high",
   "3": "medium",
   "4": "low",
+};
+
+const DIFFICULTY_KEYS: Record<string, Difficulty> = {
+  "0": "none",
+  "1": "easy",
+  "2": "medium",
+  "3": "hard",
 };
 
 // Map number keys to statuses: 0=None, 1=Todo, 2=Needs Elaboration, ...
@@ -203,6 +231,14 @@ function handleDetailKeydown(e: KeyboardEvent) {
     return;
   }
 
+  // When difficulty picker is open, number keys select a difficulty
+  if (difficultyPickerOpen.value && DIFFICULTY_KEYS[e.key]) {
+    e.preventDefault();
+    changeDifficulty(DIFFICULTY_KEYS[e.key]);
+    difficultyPickerOpen.value = false;
+    return;
+  }
+
   if (isTyping()) return;
 
   if (e.key === "s") {
@@ -211,6 +247,9 @@ function handleDetailKeydown(e: KeyboardEvent) {
   } else if (e.key === "p") {
     e.preventDefault();
     priorityPickerOpen.value = true;
+  } else if (e.key === "d") {
+    e.preventDefault();
+    difficultyPickerOpen.value = true;
   }
 }
 
@@ -345,6 +384,21 @@ async function handleRemoveBranch() {
               style="width: 160px"
               @update:value="changePriority"
               @update:show="(v: boolean) => (priorityPickerOpen = v)"
+            />
+          </div>
+
+          <div class="meta-item">
+            <label class="meta-label">Difficulty</label>
+            <NSelect
+              ref="difficultySelectRef"
+              :value="todo.difficulty"
+              :options="difficultyOptions"
+              :render-label="renderDifficultyLabel"
+              size="small"
+              :show="difficultyPickerOpen"
+              style="width: 160px"
+              @update:value="changeDifficulty"
+              @update:show="(v: boolean) => (difficultyPickerOpen = v)"
             />
           </div>
 

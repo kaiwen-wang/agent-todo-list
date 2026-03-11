@@ -18,6 +18,7 @@ export type Timestamp = number;
 export type Status = "none" | "todo" | "in_progress" | "completed" | "archived" | "wont_do" | "needs_elaboration";
 export type Priority = "none" | "low" | "medium" | "high" | "urgent";
 export type Label = "new_feature" | "bug" | "feature_plus";
+export type Difficulty = "none" | "easy" | "medium" | "hard";
 export type Platform = "cli" | "web" | "unknown";
 export type MemberRole = "owner" | "member" | "agent";
 
@@ -32,6 +33,8 @@ export const STATUSES: readonly Status[] = [
 ] as const;
 
 export const PRIORITIES: readonly Priority[] = ["none", "urgent", "high", "medium", "low"] as const;
+
+export const DIFFICULTIES: readonly Difficulty[] = ["none", "easy", "medium", "hard"] as const;
 
 export const LABELS: readonly Label[] = ["bug", "new_feature", "feature_plus"] as const;
 
@@ -57,6 +60,13 @@ export const PRIORITY_DISPLAY: Record<Priority, string> = {
   medium: "Medium",
   high: "High",
   urgent: "Urgent",
+};
+
+export const DIFFICULTY_DISPLAY: Record<Difficulty, string> = {
+  none: "None",
+  easy: "Easy",
+  medium: "Medium",
+  hard: "Hard",
 };
 
 // ── Sub-document types ──────────────────────────────────────────────
@@ -88,6 +98,7 @@ export interface Todo {
   description: string;
   status: Status;
   priority: Priority;
+  difficulty: Difficulty;
   labels: Label[];
   assignee: MemberId | null;
   branch: string | null;
@@ -119,7 +130,7 @@ export interface Project extends Record<string, unknown> {
 }
 
 /** Current schema version — increment when making breaking changes */
-export const CURRENT_SCHEMA_VERSION = 3;
+export const CURRENT_SCHEMA_VERSION = 4;
 
 /** Config stored in .todo/config.toml (committed to git) */
 export interface ProjectConfig {

@@ -7,8 +7,8 @@ import { findProject, readConfig } from "../../lib/project.js";
 import { loadDoc, saveDoc } from "../../lib/storage.js";
 import { addTodo } from "../../lib/operations.js";
 import { findMember } from "../../lib/queries.js";
-import type { Status, Priority, Label } from "../../lib/schema.js";
-import { STATUSES, PRIORITIES, LABELS } from "../../lib/schema.js";
+import type { Status, Priority, Difficulty, Label } from "../../lib/schema.js";
+import { STATUSES, PRIORITIES, DIFFICULTIES, LABELS } from "../../lib/schema.js";
 import { error, success } from "../output.js";
 
 export function registerAdd(program: Command): void {
@@ -19,6 +19,7 @@ export function registerAdd(program: Command): void {
     .option("-d, --description <text>", "Description (markdown)")
     .option("-s, --status <status>", "Initial status", "todo")
     .option("-p, --priority <priority>", "Priority level", "none")
+    .option("--difficulty <difficulty>", "Difficulty (easy, medium, hard)", "none")
     .option("-a, --assignee <name>", "Assignee name")
     .option("-l, --labels <labels>", "Labels (comma-separated: bug,new_feature,feature_plus)")
     .option("--json", "Output as JSON")
@@ -29,6 +30,7 @@ export function registerAdd(program: Command): void {
           description?: string;
           status: string;
           priority: string;
+          difficulty: string;
           assignee?: string;
           labels?: string;
           json?: boolean;
@@ -49,6 +51,11 @@ export function registerAdd(program: Command): void {
         // Validate priority
         if (!PRIORITIES.includes(opts.priority as Priority)) {
           error(`Invalid priority "${opts.priority}". Valid: ${PRIORITIES.join(", ")}`);
+        }
+
+        // Validate difficulty
+        if (!DIFFICULTIES.includes(opts.difficulty as Difficulty)) {
+          error(`Invalid difficulty "${opts.difficulty}". Valid: ${DIFFICULTIES.join(", ")}`);
         }
 
         // Validate labels
@@ -79,6 +86,7 @@ export function registerAdd(program: Command): void {
           description: opts.description,
           status: opts.status as Status,
           priority: opts.priority as Priority,
+          difficulty: opts.difficulty as Difficulty,
           labels: parsedLabels,
           assignee: assigneeId,
           platform: "cli",

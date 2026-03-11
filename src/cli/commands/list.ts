@@ -6,7 +6,7 @@ import type { Command } from "commander";
 import { findProject, readConfig } from "../../lib/project.js";
 import { loadDoc } from "../../lib/storage.js";
 import { queryTodos, type TodoFilter } from "../../lib/queries.js";
-import type { Status, Priority } from "../../lib/schema.js";
+import type { Status, Priority, Difficulty } from "../../lib/schema.js";
 import { error, formatTodoLine } from "../output.js";
 
 export function registerList(program: Command): void {
@@ -16,6 +16,7 @@ export function registerList(program: Command): void {
     .description("List todos")
     .option("-s, --status <status>", "Filter by status")
     .option("-p, --priority <priority>", "Filter by priority")
+    .option("--difficulty <difficulty>", "Filter by difficulty (easy, medium, hard)")
     .option("-a, --assignee <name>", "Filter by assignee")
     .option("-q, --search <query>", "Search title and description")
     .option("--all", "Include archived todos")
@@ -24,6 +25,7 @@ export function registerList(program: Command): void {
       async (opts: {
         status?: string;
         priority?: string;
+        difficulty?: string;
         assignee?: string;
         search?: string;
         all?: boolean;
@@ -54,6 +56,7 @@ export function registerList(program: Command): void {
         }
 
         if (opts.priority) filter.priority = opts.priority as Priority;
+        if (opts.difficulty) filter.difficulty = opts.difficulty as Difficulty;
         if (opts.assignee) filter.assignee = opts.assignee;
         if (opts.search) filter.search = opts.search;
 
@@ -66,6 +69,7 @@ export function registerList(program: Command): void {
             title: t.title,
             status: t.status,
             priority: t.priority,
+            difficulty: t.difficulty,
             assignee: t.assignee,
           }));
           console.log(JSON.stringify(out, null, 2));

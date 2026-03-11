@@ -9,7 +9,14 @@ import {
   AntennaBars5,
 } from "@vicons/tabler";
 import type { Todo, Priority } from "@/types";
-import { PRIORITY_DISPLAY, PRIORITY_COLORS, LABEL_DISPLAY, LABEL_COLORS } from "@/types";
+import {
+  PRIORITY_DISPLAY,
+  PRIORITY_COLORS,
+  DIFFICULTY_DISPLAY,
+  DIFFICULTY_COLORS,
+  LABEL_DISPLAY,
+  LABEL_COLORS,
+} from "@/types";
 import { useProjectStore } from "@/stores/project";
 
 const PRIORITY_ICON: Record<Priority, Component> = {
@@ -67,9 +74,21 @@ function onDragStart(e: DragEvent) {
   >
     <div class="card-header">
       <span class="todo-ref">{{ todo.ref }}</span>
-      <NIcon :size="16" :color="priorityColor" :title="priorityLabel">
-        <component :is="priorityIcon" />
-      </NIcon>
+      <span class="card-header-icons">
+        <span
+          v-if="todo.difficulty && todo.difficulty !== 'none'"
+          class="difficulty-badge"
+          :style="{
+            background: DIFFICULTY_COLORS[todo.difficulty] + '22',
+            color: DIFFICULTY_COLORS[todo.difficulty],
+          }"
+          :title="'Difficulty: ' + DIFFICULTY_DISPLAY[todo.difficulty]"
+          >{{ DIFFICULTY_DISPLAY[todo.difficulty] }}</span
+        >
+        <NIcon :size="16" :color="priorityColor" :title="priorityLabel">
+          <component :is="priorityIcon" />
+        </NIcon>
+      </span>
     </div>
     <div class="card-title">{{ todo.title }}</div>
     <div v-if="todo.description" class="card-description">{{ todo.description }}</div>
@@ -131,6 +150,22 @@ function onDragStart(e: DragEvent) {
   font-weight: 600;
   opacity: 0.45;
   font-family: monospace;
+}
+
+.card-header-icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.difficulty-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 6px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .card-title {

@@ -23,6 +23,16 @@ type MigrationFn = (d: Project) => void;
  * e.g. migrations[1] upgrades from v1 → v2.
  */
 const migrations: Record<number, MigrationFn> = {
+  3: (d) => {
+    // v3 → v4:
+    //   - Add difficulty field to each todo (default "none" for pre-existing items)
+    for (const todo of d.todos) {
+      if (!(todo as any).difficulty) {
+        (todo as any).difficulty = "none";
+      }
+    }
+  },
+
   2: (d) => {
     // v2 → v3:
     //   - Add platform field to each todo (default "unknown" for pre-existing items)

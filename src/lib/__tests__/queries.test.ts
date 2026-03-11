@@ -15,16 +15,19 @@ function makeProject() {
   const r1 = addTodo(doc, {
     title: "Auth bug",
     priority: "high",
+    difficulty: "hard",
   });
   const r2 = addTodo(r1.doc, {
     title: "Write tests",
     status: "in_progress",
     priority: "medium",
+    difficulty: "easy",
   });
   const r3 = addTodo(r2.doc, {
     title: "Deploy",
     status: "completed",
     priority: "low",
+    difficulty: "medium",
   });
   const r4 = addTodo(r3.doc, {
     title: "Old task",
@@ -77,6 +80,19 @@ describe("queryTodos", () => {
     const todos = queryTodos(doc, { assignee: "bob" });
     expect(todos).toHaveLength(1);
     expect(todos[0]!.title).toBe("Auth bug");
+  });
+
+  test("filters by difficulty", () => {
+    const doc = makeProject();
+    const todos = queryTodos(doc, { difficulty: "hard" });
+    expect(todos).toHaveLength(1);
+    expect(todos[0]!.title).toBe("Auth bug");
+  });
+
+  test("filters by multiple difficulties", () => {
+    const doc = makeProject();
+    const todos = queryTodos(doc, { difficulty: ["easy", "medium"] });
+    expect(todos).toHaveLength(2);
   });
 
   test("returns empty for no matches", () => {

@@ -158,6 +158,7 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
                   description: body.description,
                   status: body.status,
                   priority: body.priority,
+                  difficulty: body.difficulty,
                   labels: body.labels,
                   assignee: body.assignee,
                   platform: "web",

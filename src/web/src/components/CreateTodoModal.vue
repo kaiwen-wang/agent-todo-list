@@ -19,15 +19,18 @@ import {
   AntennaBars4,
   AntennaBars5,
 } from "@vicons/tabler";
-import type { Status, Priority, Label } from "@/types";
+import type { Status, Priority, Difficulty, Label } from "@/types";
 import {
   STATUSES,
   PRIORITIES,
+  DIFFICULTIES,
   LABELS,
   STATUS_DISPLAY,
   PRIORITY_DISPLAY,
   PRIORITY_COLORS,
   STATUS_COLORS,
+  DIFFICULTY_DISPLAY,
+  DIFFICULTY_COLORS,
   LABEL_DISPLAY,
   LABEL_COLORS,
 } from "@/types";
@@ -57,6 +60,7 @@ const title = ref("");
 const description = ref("");
 const status = ref<Status>(props.defaultStatus ?? "todo");
 const priority = ref<Priority>("none");
+const difficulty = ref<Difficulty>("none");
 const labels = ref<Label[]>([]);
 const assignee = ref<string | null>(null);
 const submitting = ref(false);
@@ -65,6 +69,7 @@ const memberOptions = computed(() => store.members.map((m) => ({ label: m.name, 
 
 const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }));
 const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }));
+const difficultyOptions = DIFFICULTIES.map((d) => ({ label: DIFFICULTY_DISPLAY[d], value: d }));
 const labelOptions = LABELS.map((l) => ({ label: LABEL_DISPLAY[l], value: l }));
 
 function renderStatusLabel(option: { label: string; value: string }) {
@@ -81,6 +86,16 @@ function renderPriorityLabel(option: { label: string; value: string }) {
   const p = option.value as Priority;
   return h("span", { style: "display: flex; align-items: center; gap: 8px" }, [
     h(NIcon, { size: 16, color: PRIORITY_COLORS[p] }, { default: () => h(PRIORITY_ICON[p]) }),
+    option.label,
+  ]);
+}
+
+function renderDifficultyLabel(option: { label: string; value: string }) {
+  const d = option.value as Difficulty;
+  return h("span", { style: "display: flex; align-items: center; gap: 8px" }, [
+    h("span", {
+      style: `width: 8px; height: 8px; border-radius: 50%; background: ${DIFFICULTY_COLORS[d]}; flex-shrink: 0`,
+    }),
     option.label,
   ]);
 }
@@ -103,6 +118,7 @@ watch(
       description.value = "";
       status.value = props.defaultStatus ?? "todo";
       priority.value = "none";
+      difficulty.value = "none";
       labels.value = [];
       assignee.value = null;
     }
@@ -130,6 +146,7 @@ async function submit() {
       description: description.value.trim() || undefined,
       status: status.value,
       priority: priority.value,
+      difficulty: difficulty.value !== "none" ? difficulty.value : undefined,
       labels: labels.value.length ? labels.value : undefined,
       assignee: assignee.value,
     });
@@ -180,6 +197,13 @@ async function submit() {
               v-model:value="priority"
               :options="priorityOptions"
               :render-label="renderPriorityLabel"
+            />
+          </NFormItem>
+          <NFormItem label="Difficulty" style="flex: 1">
+            <NSelect
+              v-model:value="difficulty"
+              :options="difficultyOptions"
+              :render-label="renderDifficultyLabel"
             />
           </NFormItem>
         </NSpace>
