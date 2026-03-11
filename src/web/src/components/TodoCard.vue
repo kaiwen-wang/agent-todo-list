@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, type Component } from "vue";
+import { ref, computed, type Component } from "vue";
 import { NCard, NIcon } from "naive-ui";
 import {
   AntennaBars1,
@@ -29,12 +29,16 @@ const emit = defineEmits<{
 }>();
 
 const store = useProjectStore();
+const isDragging = ref(false);
 
 const priorityIcon = computed(() => PRIORITY_ICON[props.todo.priority]);
 const priorityColor = computed(() => PRIORITY_COLORS[props.todo.priority]);
 const priorityLabel = computed(() => PRIORITY_DISPLAY[props.todo.priority]);
 
 function openDetail() {
+  if (isDragging.value) {
+    return;
+  }
   store.openTodo(props.todo.number);
 }
 
@@ -43,6 +47,10 @@ function onDragStart(e: DragEvent) {
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", props.todo.id);
     emit("dragStart", props.todo);
+    isDragging.value = true;
+    setTimeout(() => {
+      isDragging.value = false;
+    }, 100);
   }
 }
 </script>
@@ -51,7 +59,6 @@ function onDragStart(e: DragEvent) {
   <NCard
     draggable="true"
     size="small"
-    hoverable
     class="todo-card"
     :class="{ done: todo.status === 'completed' }"
     @click="openDetail"

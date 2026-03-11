@@ -31,8 +31,11 @@ function onDragEnter(e: DragEvent) {
   isDragOver.value = true;
 }
 
-function onDragLeave() {
-  isDragOver.value = false;
+function onDragLeave(e: DragEvent) {
+  const target = e.currentTarget as HTMLElement;
+  if (e.relatedTarget && !target.contains(e.relatedTarget as Node)) {
+    isDragOver.value = false;
+  }
 }
 
 async function onDrop(e: DragEvent) {
