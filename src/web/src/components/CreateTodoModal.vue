@@ -61,9 +61,7 @@ const labels = ref<Label[]>([])
 const assignee = ref<string | null>(null)
 const submitting = ref(false)
 
-const memberOptions = computed(() =>
-  store.members.map((m) => ({ label: m.name, value: m.id }))
-)
+const memberOptions = computed(() => store.members.map((m) => ({ label: m.name, value: m.id })))
 
 const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }))
 const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }))
@@ -72,7 +70,9 @@ const labelOptions = LABELS.map((l) => ({ label: LABEL_DISPLAY[l], value: l }))
 function renderStatusLabel(option: { label: string; value: string }) {
   const s = option.value as Status
   return h('span', { style: 'display: flex; align-items: center; gap: 8px' }, [
-    h('span', { style: `width: 8px; height: 8px; border-radius: 50%; background: ${STATUS_COLORS[s]}; flex-shrink: 0` }),
+    h('span', {
+      style: `width: 8px; height: 8px; border-radius: 50%; background: ${STATUS_COLORS[s]}; flex-shrink: 0`,
+    }),
     option.label,
   ])
 }
@@ -88,7 +88,9 @@ function renderPriorityLabel(option: { label: string; value: string }) {
 function renderLabelTag(option: { label: string; value: string }) {
   const l = option.value as Label
   return h('span', { style: 'display: flex; align-items: center; gap: 6px' }, [
-    h('span', { style: `width: 8px; height: 8px; border-radius: 50%; background: ${LABEL_COLORS[l]}; flex-shrink: 0` }),
+    h('span', {
+      style: `width: 8px; height: 8px; border-radius: 50%; background: ${LABEL_COLORS[l]}; flex-shrink: 0`,
+    }),
     option.label,
   ])
 }
@@ -160,7 +162,11 @@ async function submit() {
 
         <NSpace :size="12">
           <NFormItem label="Status" style="flex: 1">
-            <NSelect v-model:value="status" :options="statusOptions" :render-label="renderStatusLabel" />
+            <NSelect
+              v-model:value="status"
+              :options="statusOptions"
+              :render-label="renderStatusLabel"
+            />
           </NFormItem>
           <NFormItem label="Priority" style="flex: 1">
             <NSelect

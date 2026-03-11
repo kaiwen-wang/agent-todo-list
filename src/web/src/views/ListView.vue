@@ -41,11 +41,14 @@ const PRIORITY_ICON: Record<Priority, Component> = {
 }
 
 function renderPriority(icon: Component, color: string, label: string) {
-  return h(NTooltip, { trigger: 'hover' }, {
-    trigger: () =>
-      h(NIcon, { size: 20, color }, { default: () => h(icon) }),
-    default: () => label,
-  })
+  return h(
+    NTooltip,
+    { trigger: 'hover' },
+    {
+      trigger: () => h(NIcon, { size: 20, color }, { default: () => h(icon) }),
+      default: () => label,
+    },
+  )
 }
 
 const store = useProjectStore()
@@ -122,7 +125,11 @@ const columns: DataTableColumns<Todo> = [
     width: 70,
     align: 'center',
     render(row) {
-      return renderPriority(PRIORITY_ICON[row.priority], PRIORITY_COLORS[row.priority], PRIORITY_DISPLAY[row.priority])
+      return renderPriority(
+        PRIORITY_ICON[row.priority],
+        PRIORITY_COLORS[row.priority],
+        PRIORITY_DISPLAY[row.priority],
+      )
     },
   },
   {
@@ -131,11 +138,17 @@ const columns: DataTableColumns<Todo> = [
     width: 160,
     render(row) {
       if (!row.labels?.length) return null
-      return h('span', { style: 'display: flex; flex-wrap: wrap; gap: 4px' },
+      return h(
+        'span',
+        { style: 'display: flex; flex-wrap: wrap; gap: 4px' },
         row.labels.map((l: Label) =>
-          h('span', {
-            style: `font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 8px; white-space: nowrap; background: ${LABEL_COLORS[l]}22; color: ${LABEL_COLORS[l]}`,
-          }, LABEL_DISPLAY[l]),
+          h(
+            'span',
+            {
+              style: `font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 8px; white-space: nowrap; background: ${LABEL_COLORS[l]}22; color: ${LABEL_COLORS[l]}`,
+            },
+            LABEL_DISPLAY[l],
+          ),
         ),
       )
     },
@@ -145,9 +158,7 @@ const columns: DataTableColumns<Todo> = [
     key: 'assigneeName',
     width: 120,
     render(row) {
-      return row.assigneeName
-        ? h('span', {}, row.assigneeName)
-        : null
+      return row.assigneeName ? h('span', {}, row.assigneeName) : null
     },
   },
 ]

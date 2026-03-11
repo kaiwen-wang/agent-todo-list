@@ -22,7 +22,9 @@ const showCreate = ref(false)
     <div class="column-header">
       <div class="column-indicator" :style="{ background: color }" />
       <span class="column-label">{{ label }}</span>
-      <span class="column-count" :style="{ background: color + '22', color: color }">{{ todos.length }}</span>
+      <span class="column-count" :style="{ background: color + '22', color: color }">{{
+        todos.length
+      }}</span>
       <NButton size="tiny" quaternary @click="showCreate = true" class="add-btn">+</NButton>
     </div>
     <div class="column-body">

@@ -1,15 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, h, type Component } from 'vue'
-import {
-  NModal,
-  NCard,
-  NTag,
-  NIcon,
-  NSelect,
-  NInput,
-  NButton,
-  useMessage,
-} from 'naive-ui'
+import { NModal, NCard, NTag, NIcon, NSelect, NInput, NButton, useMessage } from 'naive-ui'
 import {
   AntennaBars1,
   AntennaBars2,
@@ -49,7 +40,9 @@ const labelOptions = LABELS.map((l) => ({ label: LABEL_DISPLAY[l], value: l }))
 function renderStatusLabel(option: { label: string; value: string }) {
   const s = option.value as Status
   return h('span', { style: 'display: flex; align-items: center; gap: 8px' }, [
-    h('span', { style: `width: 8px; height: 8px; border-radius: 50%; background: ${STATUS_COLORS[s]}; flex-shrink: 0` }),
+    h('span', {
+      style: `width: 8px; height: 8px; border-radius: 50%; background: ${STATUS_COLORS[s]}; flex-shrink: 0`,
+    }),
     option.label,
   ])
 }
@@ -65,14 +58,14 @@ function renderPriorityLabel(option: { label: string; value: string }) {
 function renderLabelTag(option: { label: string; value: string }) {
   const l = option.value as Label
   return h('span', { style: `display: flex; align-items: center; gap: 6px` }, [
-    h('span', { style: `width: 8px; height: 8px; border-radius: 50%; background: ${LABEL_COLORS[l]}; flex-shrink: 0` }),
+    h('span', {
+      style: `width: 8px; height: 8px; border-radius: 50%; background: ${LABEL_COLORS[l]}; flex-shrink: 0`,
+    }),
     option.label,
   ])
 }
 
-const assigneeOptions = computed(() =>
-  store.members.map((m) => ({ label: m.name, value: m.id })),
-)
+const assigneeOptions = computed(() => store.members.map((m) => ({ label: m.name, value: m.id })))
 
 const isOpen = computed(() => store.selectedTodoNumber !== null)
 const todo = computed(() =>
@@ -166,11 +159,7 @@ function formatDate(iso: string): string {
 
 <template>
   <NModal :show="isOpen" @update:show="(v: boolean) => !v && close()">
-    <NCard
-      :bordered="true"
-      style="width: 680px; max-width: 95vw; min-height: 70vh"
-      role="dialog"
-    >
+    <NCard :bordered="true" style="width: 680px; max-width: 95vw; min-height: 70vh" role="dialog">
       <div v-if="!todo" class="not-found">
         <p>Todo not found.</p>
       </div>
@@ -190,7 +179,21 @@ function formatDate(iso: string): string {
             @click="handleArchive"
           >
             <template #icon>
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M3 6h18" />
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              </svg>
             </template>
           </NButton>
         </div>

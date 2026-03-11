@@ -58,7 +58,8 @@ function openDetail() {
           :key="l"
           class="card-label"
           :style="{ background: LABEL_COLORS[l] + '22', color: LABEL_COLORS[l] }"
-        >{{ LABEL_DISPLAY[l] }}</span>
+          >{{ LABEL_DISPLAY[l] }}</span
+        >
       </div>
       <span v-if="todo.assigneeName" class="card-assignee">{{ todo.assigneeName }}</span>
     </div>

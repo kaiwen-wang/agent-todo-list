@@ -1,15 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import {
-  NModal,
-  NCard,
-  NForm,
-  NFormItem,
-  NInput,
-  NButton,
-  NSpace,
-  useMessage,
-} from 'naive-ui'
+import { NModal, NCard, NForm, NFormItem, NInput, NButton, NSpace, useMessage } from 'naive-ui'
 import { useProjectStore } from '@/stores/project'
 
 const props = defineProps<{
@@ -94,7 +85,8 @@ async function submit() {
             @keydown.enter.prevent="submit"
           />
           <template #feedback>
-            Used for todo references like {{ (prefix || 'TODO').toUpperCase() }}-1, {{ (prefix || 'TODO').toUpperCase() }}-2, etc.
+            Used for todo references like {{ (prefix || 'TODO').toUpperCase() }}-1,
+            {{ (prefix || 'TODO').toUpperCase() }}-2, etc.
           </template>
         </NFormItem>
 

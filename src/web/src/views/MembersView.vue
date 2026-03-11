@@ -113,7 +113,9 @@ const columns: DataTableColumns<Member> = [
     key: 'tasks',
     width: 80,
     render(row) {
-      const count = store.todos.filter((t) => t.assignee === row.id && t.status !== 'archived' && t.status !== 'wont_do').length
+      const count = store.todos.filter(
+        (t) => t.assignee === row.id && t.status !== 'archived' && t.status !== 'wont_do',
+      ).length
       return count > 0 ? String(count) : ''
     },
   },
@@ -122,7 +124,10 @@ const columns: DataTableColumns<Member> = [
 /** Todos assigned to the selected member */
 const memberTodos = computed(() => {
   if (!selectedMember.value) return []
-  return store.todos.filter((t) => t.assignee === selectedMember.value!.id && t.status !== 'archived' && t.status !== 'wont_do')
+  return store.todos.filter(
+    (t) =>
+      t.assignee === selectedMember.value!.id && t.status !== 'archived' && t.status !== 'wont_do',
+  )
 })
 
 const memberTodoColumns: DataTableColumns<Todo> = [
@@ -145,7 +150,9 @@ const memberTodoColumns: DataTableColumns<Todo> = [
     width: 110,
     render(row) {
       return h('span', { style: 'display: flex; align-items: center; gap: 6px; font-size: 12px' }, [
-        h('span', { style: `width: 8px; height: 8px; border-radius: 50%; background: ${STATUS_COLORS[row.status]}; flex-shrink: 0` }),
+        h('span', {
+          style: `width: 8px; height: 8px; border-radius: 50%; background: ${STATUS_COLORS[row.status]}; flex-shrink: 0`,
+        }),
         STATUS_DISPLAY[row.status],
       ])
     },
@@ -156,7 +163,11 @@ const memberTodoColumns: DataTableColumns<Todo> = [
     width: 60,
     align: 'center',
     render(row) {
-      return h(NIcon, { size: 16, color: PRIORITY_COLORS[row.priority] }, { default: () => h(PRIORITY_ICON[row.priority]) })
+      return h(
+        NIcon,
+        { size: 16, color: PRIORITY_COLORS[row.priority] },
+        { default: () => h(PRIORITY_ICON[row.priority]) },
+      )
     },
   },
 ]
@@ -261,7 +272,13 @@ async function handleRemove(member: Member) {
     </div>
 
     <div class="members-table-container">
-      <NDataTable :columns="columns" :data="store.members" :row-props="rowProps" :bordered="false" size="small" />
+      <NDataTable
+        :columns="columns"
+        :data="store.members"
+        :row-props="rowProps"
+        :bordered="false"
+        size="small"
+      />
     </div>
 
     <!-- Member Detail Modal -->
@@ -276,7 +293,9 @@ async function handleRemove(member: Member) {
       >
         <template #header>
           <div class="member-detail-header">
-            <span class="member-detail-avatar">{{ selectedMember.name.charAt(0).toUpperCase() }}</span>
+            <span class="member-detail-avatar">{{
+              selectedMember.name.charAt(0).toUpperCase()
+            }}</span>
             <div>
               <div class="member-detail-name">{{ selectedMember.name }}</div>
               <div class="member-detail-meta">
@@ -284,9 +303,15 @@ async function handleRemove(member: Member) {
                   size="small"
                   round
                   :bordered="false"
-                  :color="{ color: ROLE_COLORS[selectedMember.role] + '22', textColor: ROLE_COLORS[selectedMember.role] }"
-                >{{ selectedMember.role }}</NTag>
-                <span v-if="selectedMember.email" class="member-detail-email">{{ selectedMember.email }}</span>
+                  :color="{
+                    color: ROLE_COLORS[selectedMember.role] + '22',
+                    textColor: ROLE_COLORS[selectedMember.role],
+                  }"
+                  >{{ selectedMember.role }}</NTag
+                >
+                <span v-if="selectedMember.email" class="member-detail-email">{{
+                  selectedMember.email
+                }}</span>
               </div>
             </div>
           </div>

@@ -61,9 +61,7 @@ const editLabels = ref<Label[]>([])
 const editAssignee = ref<string | null>(null)
 const saving = ref(false)
 
-const memberOptions = computed(() =>
-  store.members.map((m) => ({ label: m.name, value: m.id }))
-)
+const memberOptions = computed(() => store.members.map((m) => ({ label: m.name, value: m.id })))
 
 const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }))
 const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }))
@@ -81,7 +79,9 @@ function renderPriorityLabel(option: { label: string; value: string }) {
 function renderLabelTag(option: { label: string; value: string }) {
   const l = option.value as Label
   return h('span', { style: 'display: flex; align-items: center; gap: 6px' }, [
-    h('span', { style: `width: 8px; height: 8px; border-radius: 50%; background: ${LABEL_COLORS[l]}; flex-shrink: 0` }),
+    h('span', {
+      style: `width: 8px; height: 8px; border-radius: 50%; background: ${LABEL_COLORS[l]}; flex-shrink: 0`,
+    }),
     option.label,
   ])
 }
@@ -204,10 +204,7 @@ function formatDate(iso: string): string {
         <NDescriptions :column="4" label-placement="top" size="small" class="meta-descriptions">
           <NDescriptionsItem label="Priority">
             <NSpace :size="6" align="center">
-              <NIcon
-                :size="18"
-                :color="PRIORITY_COLORS[todo.priority]"
-              >
+              <NIcon :size="18" :color="PRIORITY_COLORS[todo.priority]">
                 <component :is="PRIORITY_ICON[todo.priority]" />
               </NIcon>
               {{ PRIORITY_DISPLAY[todo.priority] }}
@@ -218,8 +215,16 @@ function formatDate(iso: string): string {
               <span
                 v-for="l in todo.labels"
                 :key="l"
-                :style="{ fontSize: '11px', fontWeight: 600, padding: '1px 8px', borderRadius: '8px', background: LABEL_COLORS[l] + '22', color: LABEL_COLORS[l] }"
-              >{{ LABEL_DISPLAY[l] }}</span>
+                :style="{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  padding: '1px 8px',
+                  borderRadius: '8px',
+                  background: LABEL_COLORS[l] + '22',
+                  color: LABEL_COLORS[l],
+                }"
+                >{{ LABEL_DISPLAY[l] }}</span
+              >
             </NSpace>
             <span v-else style="opacity: 0.35">None</span>
           </NDescriptionsItem>
@@ -233,7 +238,6 @@ function formatDate(iso: string): string {
             {{ formatDate(todo.updatedAt) }}
           </NDescriptionsItem>
         </NDescriptions>
-
       </NCard>
 
       <!-- Description -->
@@ -259,7 +263,11 @@ function formatDate(iso: string): string {
             <NSelect v-model:value="editStatus" :options="statusOptions" />
           </NFormItem>
           <NFormItem label="Priority" style="flex: 1">
-            <NSelect v-model:value="editPriority" :options="priorityOptions" :render-label="renderPriorityLabel" />
+            <NSelect
+              v-model:value="editPriority"
+              :options="priorityOptions"
+              :render-label="renderPriorityLabel"
+            />
           </NFormItem>
         </NSpace>
 

@@ -37,10 +37,24 @@ export interface Project {
   todos: Todo[]
 }
 
-export const STATUSES: Status[] = ['none', 'todo', 'in_progress', 'completed', 'archived', 'wont_do']
+export const STATUSES: Status[] = [
+  'none',
+  'todo',
+  'in_progress',
+  'completed',
+  'archived',
+  'wont_do',
+]
 
 /** Statuses shown as columns on the board */
-export const BOARD_STATUSES: Status[] = ['none', 'todo', 'in_progress', 'completed', 'archived', 'wont_do']
+export const BOARD_STATUSES: Status[] = [
+  'none',
+  'todo',
+  'in_progress',
+  'completed',
+  'archived',
+  'wont_do',
+]
 
 export const PRIORITIES: Priority[] = ['none', 'urgent', 'high', 'medium', 'low']
 

@@ -36,7 +36,9 @@ export const useProjectStore = defineStore('project', () => {
   })
 
   /** Active todos (not archived or won't do) */
-  const activeTodos = computed(() => todos.value.filter((t) => t.status !== 'archived' && t.status !== 'wont_do'))
+  const activeTodos = computed(() =>
+    todos.value.filter((t) => t.status !== 'archived' && t.status !== 'wont_do'),
+  )
 
   /** Counts per status */
   const statusCounts = computed(() => {

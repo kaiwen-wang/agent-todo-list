@@ -10,12 +10,7 @@ import {
   NTag,
   NIcon,
 } from 'naive-ui'
-import {
-  LayoutKanban,
-  Table,
-  Users,
-  Settings,
-} from '@vicons/tabler'
+import { LayoutKanban, Table, Users, Settings } from '@vicons/tabler'
 import { useProjectStore } from '@/stores/project'
 import { STATUSES, STATUS_DISPLAY, STATUS_COLORS } from '@/types'
 import SettingsModal from '@/components/SettingsModal.vue'
@@ -49,7 +44,6 @@ const themeOverrides = {
     siderColor: '#f0f0f0',
   },
 }
-
 </script>
 
 <template>
@@ -57,10 +51,7 @@ const themeOverrides = {
     <NMessageProvider>
       <NLayout has-sider class="app-layout">
         <!-- Sidebar -->
-        <NLayoutSider
-          :width="220"
-          content-class="sidebar-content"
-        >
+        <NLayoutSider :width="220" content-class="sidebar-content">
           <template v-if="store.project">
             <!-- Project title + settings -->
             <div class="sidebar-header">
@@ -69,7 +60,11 @@ const themeOverrides = {
                 <h1 class="app-title">{{ store.projectName }}</h1>
                 <span class="app-subtitle">{{ store.todos.length }} items</span>
               </div>
-              <button class="icon-btn settings-icon-btn" title="Settings" @click="showSettings = true">
+              <button
+                class="icon-btn settings-icon-btn"
+                title="Settings"
+                @click="showSettings = true"
+              >
                 <NIcon :size="20"><Settings /></NIcon>
               </button>
             </div>
@@ -92,11 +87,7 @@ const themeOverrides = {
             <div class="sidebar-section">
               <div class="section-label">Status</div>
               <div class="status-counts">
-                <div
-                  v-for="s in STATUSES"
-                  :key="s"
-                  class="status-row"
-                >
+                <div v-for="s in STATUSES" :key="s" class="status-row">
                   <span class="status-dot" :style="{ background: STATUS_COLORS[s] }" />
                   <span class="status-name">{{ STATUS_DISPLAY[s] }}</span>
                   <span class="status-count">{{ store.statusCounts[s] }}</span>
@@ -218,7 +209,9 @@ body {
   justify-content: center;
   cursor: pointer;
   opacity: 0.35;
-  transition: opacity 0.15s, background 0.15s;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
   flex-shrink: 0;
   color: inherit;
 }
@@ -250,7 +243,9 @@ body {
   cursor: pointer;
   color: inherit;
   opacity: 0.6;
-  transition: background 0.12s, opacity 0.12s;
+  transition:
+    background 0.12s,
+    opacity 0.12s;
   text-align: left;
   font-family: inherit;
 }
@@ -383,7 +378,9 @@ body {
 }
 
 /* Nuke every transition and animation */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   transition: none !important;
   animation: none !important;
 }

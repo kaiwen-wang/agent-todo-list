@@ -1,4 +1,4 @@
-import { createApp, Transition, TransitionGroup, h } from 'vue'
+import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
 import App from './App.vue'
