@@ -31,6 +31,7 @@ import {
 import CreateTodoModal from '@/components/CreateTodoModal.vue'
 
 const PRIORITY_ICON: Record<Priority, Component> = {
+  none: AntennaBars1,
   low: AntennaBars2,
   medium: AntennaBars3,
   high: AntennaBars4,
@@ -49,14 +50,19 @@ const store = useProjectStore()
 
 const showCreate = ref(false)
 const filterStatus = ref<Status | null>(null)
-const filterPriority = ref<Priority | 'none' | null>(null)
+const filterPriority = ref<Priority | null>(null)
 const searchQuery = ref('')
 
 const statusFilterOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }))
-const priorityFilterOptions = [
-  { label: 'None', value: 'none' },
-  ...PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p })),
-]
+const priorityFilterOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }))
+
+function renderPriorityLabel(option: { label: string; value: string }) {
+  const p = option.value as Priority
+  return h('span', { style: 'display: flex; align-items: center; gap: 8px' }, [
+    h(NIcon, { size: 16, color: PRIORITY_COLORS[p] }, { default: () => h(PRIORITY_ICON[p]) }),
+    option.label,
+  ])
+}
 
 const filteredTodos = computed(() => {
   let list = store.activeTodos
@@ -64,9 +70,7 @@ const filteredTodos = computed(() => {
     list = list.filter((t) => t.status === filterStatus.value)
   }
   if (filterPriority.value) {
-    list = list.filter((t) =>
-      filterPriority.value === 'none' ? t.priority === null : t.priority === filterPriority.value,
-    )
+    list = list.filter((t) => t.priority === filterPriority.value)
   }
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase()
@@ -116,9 +120,7 @@ const columns: DataTableColumns<Todo> = [
     width: 70,
     align: 'center',
     render(row) {
-      const priority = row.priority
-      if (!priority) return renderPriority(AntennaBars1, '#d4d4d8', 'None')
-      return renderPriority(PRIORITY_ICON[priority], PRIORITY_COLORS[priority], PRIORITY_DISPLAY[priority])
+      return renderPriority(PRIORITY_ICON[row.priority], PRIORITY_COLORS[row.priority], PRIORITY_DISPLAY[row.priority])
     },
   },
   {
@@ -166,10 +168,11 @@ const rowProps = (row: Todo) => ({
         <NSelect
           v-model:value="filterPriority"
           :options="priorityFilterOptions"
+          :render-label="renderPriorityLabel"
           placeholder="Priority"
           clearable
           size="small"
-          style="width: 140px"
+          style="width: 160px"
         />
       </NSpace>
       <NButton type="primary" size="small" @click="showCreate = true">+ New Todo</NButton>

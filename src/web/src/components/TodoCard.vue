@@ -13,6 +13,7 @@ import { PRIORITY_DISPLAY, PRIORITY_COLORS } from '@/types'
 import { useProjectStore } from '@/stores/project'
 
 const PRIORITY_ICON: Record<Priority, Component> = {
+  none: AntennaBars1,
   low: AntennaBars2,
   medium: AntennaBars3,
   high: AntennaBars4,
@@ -25,9 +26,9 @@ const props = defineProps<{
 
 const store = useProjectStore()
 
-const priorityIcon = computed(() => props.todo.priority ? PRIORITY_ICON[props.todo.priority] : AntennaBars1)
-const priorityColor = computed(() => props.todo.priority ? PRIORITY_COLORS[props.todo.priority] : '#d4d4d8')
-const priorityLabel = computed(() => props.todo.priority ? PRIORITY_DISPLAY[props.todo.priority] : 'None')
+const priorityIcon = computed(() => PRIORITY_ICON[props.todo.priority])
+const priorityColor = computed(() => PRIORITY_COLORS[props.todo.priority])
+const priorityLabel = computed(() => PRIORITY_DISPLAY[props.todo.priority])
 
 function openDetail() {
   store.openTodo(props.todo.number)

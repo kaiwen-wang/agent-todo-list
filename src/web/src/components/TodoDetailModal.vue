@@ -1,15 +1,23 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, h, type Component } from 'vue'
 import {
   NModal,
   NCard,
   NTag,
+  NIcon,
   NSelect,
   NInput,
   NButtonGroup,
   NButton,
   useMessage,
 } from 'naive-ui'
+import {
+  AntennaBars1,
+  AntennaBars2,
+  AntennaBars3,
+  AntennaBars4,
+  AntennaBars5,
+} from '@vicons/tabler'
 import { useProjectStore } from '@/stores/project'
 import type { Status, Priority } from '@/types'
 import {
@@ -17,12 +25,29 @@ import {
   PRIORITIES,
   STATUS_DISPLAY,
   PRIORITY_DISPLAY,
+  PRIORITY_COLORS,
 } from '@/types'
+
+const PRIORITY_ICON: Record<Priority, Component> = {
+  none: AntennaBars1,
+  low: AntennaBars2,
+  medium: AntennaBars3,
+  high: AntennaBars4,
+  urgent: AntennaBars5,
+}
 
 const store = useProjectStore()
 const message = useMessage()
 
 const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }))
+
+function renderPriorityLabel(option: { label: string; value: string }) {
+  const p = option.value as Priority
+  return h('span', { style: 'display: flex; align-items: center; gap: 8px' }, [
+    h(NIcon, { size: 16, color: PRIORITY_COLORS[p] }, { default: () => h(PRIORITY_ICON[p]) }),
+    option.label,
+  ])
+}
 const assigneeOptions = computed(() =>
   store.members.map((m) => ({ label: m.name, value: m.id })),
 )
@@ -172,8 +197,9 @@ function formatDate(iso: string): string {
             <NSelect
               :value="todo.priority"
               :options="priorityOptions"
+              :render-label="renderPriorityLabel"
               size="small"
-              style="width: 130px"
+              style="width: 160px"
               @update:value="changePriority"
             />
           </div>

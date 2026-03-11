@@ -16,6 +16,7 @@ const STATUS_COLORS: Record<Status, (s: string) => string> = {
 };
 
 const PRIORITY_COLORS: Record<Priority, (s: string) => string> = {
+  none: chalk.gray,
   low: chalk.dim,
   medium: chalk.white,
   high: chalk.yellow,
@@ -32,6 +33,7 @@ const STATUS_ICONS: Record<Status, string> = {
 };
 
 const PRIORITY_LABELS: Record<Priority, string> = {
+  none: "",
   low: "low",
   medium: "med",
   high: "high",
@@ -45,7 +47,7 @@ export function formatTodoLine(todo: Todo, prefix: string): string {
   const statusColor = STATUS_COLORS[todo.status];
   const title = statusColor(todo.title);
   const priority =
-    todo.priority !== "medium"
+    todo.priority !== "medium" && todo.priority !== "none"
       ? " " + PRIORITY_COLORS[todo.priority](PRIORITY_LABELS[todo.priority])
       : "";
   return `[${icon}] ${ref} ${title}${priority}`;

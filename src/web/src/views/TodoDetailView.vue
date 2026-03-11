@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, type Component } from 'vue'
+import { ref, computed, h, type Component } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   NButton,
@@ -34,6 +34,7 @@ import {
 } from '@/types'
 
 const PRIORITY_ICON: Record<Priority, Component> = {
+  none: AntennaBars1,
   low: AntennaBars2,
   medium: AntennaBars3,
   high: AntennaBars4,
@@ -62,6 +63,14 @@ const memberOptions = computed(() =>
 
 const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }))
 const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }))
+
+function renderPriorityLabel(option: { label: string; value: string }) {
+  const p = option.value as Priority
+  return h('span', { style: 'display: flex; align-items: center; gap: 8px' }, [
+    h(NIcon, { size: 16, color: PRIORITY_COLORS[p] }, { default: () => h(PRIORITY_ICON[p]) }),
+    option.label,
+  ])
+}
 
 const todo = computed(() => store.todos.find((t) => t.number === props.number))
 
@@ -181,11 +190,11 @@ function formatDate(iso: string): string {
             <NSpace :size="6" align="center">
               <NIcon
                 :size="18"
-                :color="todo.priority ? PRIORITY_COLORS[todo.priority] : '#d4d4d8'"
+                :color="PRIORITY_COLORS[todo.priority]"
               >
-                <component :is="todo.priority ? PRIORITY_ICON[todo.priority] : AntennaBars1" />
+                <component :is="PRIORITY_ICON[todo.priority]" />
               </NIcon>
-              {{ todo.priority ? PRIORITY_DISPLAY[todo.priority] : 'None' }}
+              {{ PRIORITY_DISPLAY[todo.priority] }}
             </NSpace>
           </NDescriptionsItem>
           <NDescriptionsItem label="Assignee">
@@ -224,7 +233,7 @@ function formatDate(iso: string): string {
             <NSelect v-model:value="editStatus" :options="statusOptions" />
           </NFormItem>
           <NFormItem label="Priority" style="flex: 1">
-            <NSelect v-model:value="editPriority" :options="priorityOptions" />
+            <NSelect v-model:value="editPriority" :options="priorityOptions" :render-label="renderPriorityLabel" />
           </NFormItem>
         </NSpace>
 

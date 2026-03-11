@@ -18,7 +18,7 @@ export function registerAdd(program: Command): void {
     .argument("<title>", "Todo title")
     .option("-d, --description <text>", "Description (markdown)")
     .option("-s, --status <status>", "Initial status", "todo")
-    .option("-p, --priority <priority>", "Priority level", "medium")
+    .option("-p, --priority <priority>", "Priority level", "none")
     .option("-a, --assignee <name>", "Assignee name")
     .option("--json", "Output as JSON")
     .action(

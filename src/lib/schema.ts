@@ -6,7 +6,8 @@
 import type { Counter } from "@automerge/automerge";
 
 export type Status = "none" | "todo" | "in_progress" | "completed" | "archived" | "wont_do";
-export type Priority = "low" | "medium" | "high" | "urgent";
+export type Priority = "none" | "low" | "medium" | "high" | "urgent";
+export type Label = "new_feature" | "bug" | "feature_plus";
 export type MemberRole = "owner" | "member" | "agent";
 
 export const STATUSES: readonly Status[] = [
@@ -19,11 +20,24 @@ export const STATUSES: readonly Status[] = [
 ] as const;
 
 export const PRIORITIES: readonly Priority[] = [
-  "low",
-  "medium",
-  "high",
+  "none",
   "urgent",
+  "high",
+  "medium",
+  "low",
 ] as const;
+
+export const LABELS: readonly Label[] = [
+  "new_feature",
+  "bug",
+  "feature_plus",
+] as const;
+
+export const LABEL_DISPLAY: Record<Label, string> = {
+  new_feature: "New Feature",
+  bug: "Bug",
+  feature_plus: "Feature++",
+};
 
 export const STATUS_DISPLAY: Record<Status, string> = {
   none: "None",
@@ -35,6 +49,7 @@ export const STATUS_DISPLAY: Record<Status, string> = {
 };
 
 export const PRIORITY_DISPLAY: Record<Priority, string> = {
+  none: "None",
   low: "Low",
   medium: "Medium",
   high: "High",
@@ -49,6 +64,7 @@ export interface Todo {
   description: string;
   status: Status;
   priority: Priority;
+  labels: Label[];
   assignee: string | null;
   assigneeName: string | null;
   createdAt: string;

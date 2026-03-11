@@ -11,6 +11,7 @@ import type {
   Todo,
   Status,
   Priority,
+  Label,
   MemberRole,
 } from "./schema.js";
 import { CURRENT_SCHEMA_VERSION } from "./schema.js";
@@ -54,6 +55,7 @@ export function addTodo(
     description?: string;
     status?: Status;
     priority?: Priority;
+    labels?: Label[];
     assignee?: string | null;
     createdBy?: string;
   },
@@ -71,7 +73,8 @@ export function addTodo(
       title: opts.title,
       description: opts.description ?? "",
       status: opts.status ?? "todo",
-      priority: opts.priority ?? "medium",
+      priority: opts.priority ?? "none",
+      labels: opts.labels ?? [],
       assignee: opts.assignee ?? null,
       createdAt: now,
       updatedAt: now,
@@ -89,7 +92,7 @@ export function updateTodo(
   updates: Partial<
     Pick<
       Todo,
-      "title" | "description" | "status" | "priority" | "assignee"
+      "title" | "description" | "status" | "priority" | "labels" | "assignee"
     >
   >,
 ): Doc {
@@ -102,6 +105,12 @@ export function updateTodo(
       todo.description = updates.description;
     if (updates.status !== undefined) todo.status = updates.status;
     if (updates.priority !== undefined) todo.priority = updates.priority;
+    if (updates.labels !== undefined) {
+      todo.labels.splice(0, todo.labels.length);
+      for (const label of updates.labels) {
+        todo.labels.push(label);
+      }
+    }
     if (updates.assignee !== undefined) todo.assignee = updates.assignee;
     todo.updatedAt = new Date().toISOString();
   });

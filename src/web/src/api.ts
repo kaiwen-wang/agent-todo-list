@@ -1,6 +1,6 @@
 /** API client — talks to the Bun server's two endpoints */
 
-import type { Project, Status, Priority, MemberRole } from './types'
+import type { Project, Status, Priority, Label, MemberRole } from './types'
 
 const BASE = '' // same origin (Vite proxy in dev, Bun.serve in prod)
 
@@ -15,6 +15,7 @@ export interface AddTodoParams {
   description?: string
   status?: Status
   priority?: Priority
+  labels?: Label[]
   assignee?: string | null
 }
 
@@ -36,6 +37,7 @@ export interface UpdateTodoParams {
   description?: string
   status?: Status
   priority?: Priority
+  labels?: Label[]
   assignee?: string | null
 }
 

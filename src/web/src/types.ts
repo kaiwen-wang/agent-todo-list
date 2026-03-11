@@ -1,7 +1,8 @@
 /** Types mirroring the server's JSON output from toJSON() */
 
 export type Status = 'none' | 'todo' | 'in_progress' | 'completed' | 'archived' | 'wont_do'
-export type Priority = 'low' | 'medium' | 'high' | 'urgent'
+export type Priority = 'none' | 'low' | 'medium' | 'high' | 'urgent'
+export type Label = 'new_feature' | 'bug' | 'feature_plus'
 export type MemberRole = 'owner' | 'member' | 'agent'
 
 export interface Todo {
@@ -11,7 +12,8 @@ export interface Todo {
   title: string
   description: string
   status: Status | null
-  priority: Priority | null
+  priority: Priority
+  labels: Label[]
   assignee: string | null
   assigneeName: string | null
   createdAt: string
@@ -40,7 +42,21 @@ export const STATUSES: Status[] = ['none', 'todo', 'in_progress', 'completed', '
 /** Statuses shown as columns on the board */
 export const BOARD_STATUSES: Status[] = ['none', 'todo', 'in_progress', 'completed', 'archived', 'wont_do']
 
-export const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low']
+export const PRIORITIES: Priority[] = ['none', 'urgent', 'high', 'medium', 'low']
+
+export const LABELS: Label[] = ['new_feature', 'bug', 'feature_plus']
+
+export const LABEL_DISPLAY: Record<Label, string> = {
+  new_feature: 'New Feature',
+  bug: 'Bug',
+  feature_plus: 'Feature++',
+}
+
+export const LABEL_COLORS: Record<Label, string> = {
+  new_feature: '#10b981',
+  bug: '#ef4444',
+  feature_plus: '#8b5cf6',
+}
 
 export const STATUS_DISPLAY: Record<Status, string> = {
   none: 'None',
@@ -52,6 +68,7 @@ export const STATUS_DISPLAY: Record<Status, string> = {
 }
 
 export const PRIORITY_DISPLAY: Record<Priority, string> = {
+  none: 'None',
   low: 'Low',
   medium: 'Medium',
   high: 'High',
@@ -59,6 +76,7 @@ export const PRIORITY_DISPLAY: Record<Priority, string> = {
 }
 
 export const PRIORITY_COLORS: Record<Priority, string> = {
+  none: '#d4d4d8',
   low: '#6b7280',
   medium: '#3b82f6',
   high: '#f59e0b',

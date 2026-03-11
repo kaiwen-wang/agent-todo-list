@@ -1,19 +1,35 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, h, type Component } from 'vue'
 import {
   NModal,
   NCard,
   NForm,
   NFormItem,
+  NIcon,
   NInput,
   NSelect,
   NButton,
   NSpace,
   useMessage,
 } from 'naive-ui'
+import {
+  AntennaBars1,
+  AntennaBars2,
+  AntennaBars3,
+  AntennaBars4,
+  AntennaBars5,
+} from '@vicons/tabler'
 import type { Status, Priority } from '@/types'
-import { STATUSES, PRIORITIES, STATUS_DISPLAY, PRIORITY_DISPLAY } from '@/types'
+import { STATUSES, PRIORITIES, STATUS_DISPLAY, PRIORITY_DISPLAY, PRIORITY_COLORS } from '@/types'
 import { useProjectStore } from '@/stores/project'
+
+const PRIORITY_ICON: Record<Priority, Component> = {
+  none: AntennaBars1,
+  low: AntennaBars2,
+  medium: AntennaBars3,
+  high: AntennaBars4,
+  urgent: AntennaBars5,
+}
 
 const props = defineProps<{
   open: boolean
@@ -30,7 +46,7 @@ const message = useMessage()
 const title = ref('')
 const description = ref('')
 const status = ref<Status>(props.defaultStatus ?? 'todo')
-const priority = ref<Priority>('medium')
+const priority = ref<Priority>('none')
 const assignee = ref<string | null>(null)
 const submitting = ref(false)
 
@@ -41,6 +57,14 @@ const memberOptions = computed(() =>
 const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }))
 const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }))
 
+function renderPriorityLabel(option: { label: string; value: string }) {
+  const p = option.value as Priority
+  return h('span', { style: 'display: flex; align-items: center; gap: 8px' }, [
+    h(NIcon, { size: 16, color: PRIORITY_COLORS[p] }, { default: () => h(PRIORITY_ICON[p]) }),
+    option.label,
+  ])
+}
+
 watch(
   () => props.open,
   (isOpen) => {
@@ -48,7 +72,7 @@ watch(
       title.value = ''
       description.value = ''
       status.value = props.defaultStatus ?? 'todo'
-      priority.value = 'medium'
+      priority.value = 'none'
       assignee.value = null
     }
   },
@@ -109,7 +133,11 @@ async function submit() {
             <NSelect v-model:value="status" :options="statusOptions" />
           </NFormItem>
           <NFormItem label="Priority" style="flex: 1">
-            <NSelect v-model:value="priority" :options="priorityOptions" />
+            <NSelect
+              v-model:value="priority"
+              :options="priorityOptions"
+              :render-label="renderPriorityLabel"
+            />
           </NFormItem>
         </NSpace>
 
