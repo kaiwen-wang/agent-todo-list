@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { RouterView, useRoute, useRouter } from 'vue-router'
+import { ref, onMounted, computed } from "vue";
+import { RouterView, useRoute, useRouter } from "vue-router";
 import {
   NConfigProvider,
   NMessageProvider,
@@ -9,41 +9,41 @@ import {
   NLayoutContent,
   NTag,
   NIcon,
-} from 'naive-ui'
-import { LayoutKanban, Table, Users, Settings } from '@vicons/tabler'
-import { useProjectStore } from '@/stores/project'
-import { STATUSES, STATUS_DISPLAY, STATUS_COLORS } from '@/types'
-import SettingsModal from '@/components/SettingsModal.vue'
-import TodoDetailModal from '@/components/TodoDetailModal.vue'
+} from "naive-ui";
+import { LayoutKanban, Table, Users, Settings } from "@vicons/tabler";
+import { useProjectStore } from "@/stores/project";
+import { STATUSES, STATUS_DISPLAY, STATUS_COLORS } from "@/types";
+import SettingsModal from "@/components/SettingsModal.vue";
+import TodoDetailModal from "@/components/TodoDetailModal.vue";
 
-const store = useProjectStore()
-const route = useRoute()
-const router = useRouter()
+const store = useProjectStore();
+const route = useRoute();
+const router = useRouter();
 
-const showSettings = ref(false)
+const showSettings = ref(false);
 
 onMounted(() => {
-  store.load()
-})
+  store.load();
+});
 
-const activeKey = computed(() => (route.name as string) ?? 'board')
+const activeKey = computed(() => (route.name as string) ?? "board");
 
 const navItems = [
-  { label: 'Board', key: 'board', icon: LayoutKanban },
-  { label: 'Table', key: 'list', icon: Table },
-  { label: 'Members', key: 'members', icon: Users },
-]
+  { label: "Board", key: "board", icon: LayoutKanban },
+  { label: "Table", key: "list", icon: Table },
+  { label: "Members", key: "members", icon: Users },
+];
 
 function navigate(key: string) {
-  router.push({ name: key })
+  router.push({ name: key });
 }
 
 const themeOverrides = {
   Layout: {
-    color: '#f0f0f0',
-    siderColor: '#f0f0f0',
+    color: "#f0f0f0",
+    siderColor: "#f0f0f0",
   },
-}
+};
 </script>
 
 <template>
@@ -134,7 +134,7 @@ const themeOverrides = {
 
 body {
   font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -150,6 +150,7 @@ body {
   background: #f0f0f0;
   gap: 14px;
   overflow-y: auto;
+  padding: 0 0 0 10px;
 }
 
 /* ── Project header ── */
@@ -158,7 +159,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 16px 14px 0;
+  padding: 16px 0 0 4px;
 }
 
 .project-badge {
@@ -227,7 +228,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 0 8px;
+  padding: 0;
 }
 
 .nav-item {
@@ -271,7 +272,7 @@ body {
 /* ── Sections ── */
 
 .sidebar-section {
-  padding: 0 14px;
+  padding: 0 0 0 4px;
 }
 
 .section-label {
@@ -398,6 +399,5 @@ body {
 
 .v-binder-follower-content {
   opacity: 1 !important;
-  transform: none !important;
 }
 </style>
