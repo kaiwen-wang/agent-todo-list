@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, h, type Component } from 'vue'
+import { ref, computed, h, type Component } from "vue";
 import {
   NButton,
   NDataTable,
@@ -9,16 +9,16 @@ import {
   NSpace,
   NTooltip,
   type DataTableColumns,
-} from 'naive-ui'
+} from "naive-ui";
 import {
   AntennaBars1,
   AntennaBars2,
   AntennaBars3,
   AntennaBars4,
   AntennaBars5,
-} from '@vicons/tabler'
-import { useProjectStore } from '@/stores/project'
-import type { Todo, Status, Priority, Label } from '@/types'
+} from "@vicons/tabler";
+import { useProjectStore } from "@/stores/project";
+import type { Todo, Status, Priority, Label } from "@/types";
 import {
   STATUSES,
   PRIORITIES,
@@ -28,9 +28,9 @@ import {
   PRIORITY_COLORS,
   LABEL_DISPLAY,
   LABEL_COLORS,
-} from '@/types'
+} from "@/types";
 
-import CreateTodoModal from '@/components/CreateTodoModal.vue'
+import CreateTodoModal from "@/components/CreateTodoModal.vue";
 
 const PRIORITY_ICON: Record<Priority, Component> = {
   none: AntennaBars1,
@@ -38,139 +38,143 @@ const PRIORITY_ICON: Record<Priority, Component> = {
   medium: AntennaBars3,
   high: AntennaBars4,
   urgent: AntennaBars5,
-}
+};
 
 function renderPriority(icon: Component, color: string, label: string) {
   return h(
     NTooltip,
-    { trigger: 'hover' },
+    { trigger: "hover" },
     {
       trigger: () => h(NIcon, { size: 20, color }, { default: () => h(icon) }),
       default: () => label,
     },
-  )
+  );
 }
 
-const store = useProjectStore()
+const store = useProjectStore();
 
-const showCreate = ref(false)
-const filterStatus = ref<Status | null>(null)
-const filterPriority = ref<Priority | null>(null)
-const searchQuery = ref('')
+const showCreate = ref(false);
+const filterStatus = ref<Status | null>(null);
+const filterPriority = ref<Priority | null>(null);
+const searchQuery = ref("");
 
-const statusFilterOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }))
-const priorityFilterOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }))
+const statusFilterOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }));
+const priorityFilterOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }));
 
 function renderPriorityLabel(option: { label: string; value: string }) {
-  const p = option.value as Priority
-  return h('span', { style: 'display: flex; align-items: center; gap: 8px' }, [
+  const p = option.value as Priority;
+  return h("span", { style: "display: flex; align-items: center; gap: 8px" }, [
     h(NIcon, { size: 16, color: PRIORITY_COLORS[p] }, { default: () => h(PRIORITY_ICON[p]) }),
     option.label,
-  ])
+  ]);
 }
 
 const filteredTodos = computed(() => {
-  let list = store.activeTodos
+  let list = store.activeTodos;
   if (filterStatus.value) {
-    list = list.filter((t) => t.status === filterStatus.value)
+    list = list.filter((t) => t.status === filterStatus.value);
   }
   if (filterPriority.value) {
-    list = list.filter((t) => t.priority === filterPriority.value)
+    list = list.filter((t) => t.priority === filterPriority.value);
   }
   if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase()
+    const q = searchQuery.value.toLowerCase();
     list = list.filter(
       (t) => t.title.toLowerCase().includes(q) || t.description.toLowerCase().includes(q),
-    )
+    );
   }
-  return list
-})
+  return [...list].sort((a, b) => {
+    const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return tb - ta;
+  });
+});
 
 const columns: DataTableColumns<Todo> = [
   {
-    title: 'Ref',
-    key: 'ref',
+    title: "Ref",
+    key: "ref",
     width: 90,
     render(row) {
-      return h('span', { style: 'font-family: monospace; font-size: 12px; opacity: 0.5' }, row.ref)
+      return h("span", { style: "font-family: monospace; font-size: 12px; opacity: 0.5" }, row.ref);
     },
   },
   {
-    title: 'Title',
-    key: 'title',
+    title: "Title",
+    key: "title",
     ellipsis: { tooltip: true },
     render(row) {
-      const style = row.status === 'completed' ? 'text-decoration: line-through; opacity: 0.6' : ''
-      return h('span', { style }, row.title)
+      const style = row.status === "completed" ? "text-decoration: line-through; opacity: 0.6" : "";
+      return h("span", { style }, row.title);
     },
   },
   {
-    title: 'Status',
-    key: 'status',
+    title: "Status",
+    key: "status",
     width: 120,
     render(row) {
-      const status = row.status
-      if (!status) return h('span', { style: 'opacity: 0.3' }, '\u2014')
-      return h('span', { style: 'display: flex; align-items: center; gap: 6px; font-size: 12px' }, [
-        h('span', {
+      const status = row.status;
+      if (!status) return h("span", { style: "opacity: 0.3" }, "\u2014");
+      return h("span", { style: "display: flex; align-items: center; gap: 6px; font-size: 12px" }, [
+        h("span", {
           style: `width: 8px; height: 8px; border-radius: 50%; background: ${STATUS_COLORS[status]}; flex-shrink: 0`,
         }),
         STATUS_DISPLAY[status],
-      ])
+      ]);
     },
   },
   {
-    title: 'Priority',
-    key: 'priority',
+    title: "Priority",
+    key: "priority",
     width: 70,
-    align: 'center',
+    align: "center",
     render(row) {
       return renderPriority(
         PRIORITY_ICON[row.priority],
         PRIORITY_COLORS[row.priority],
         PRIORITY_DISPLAY[row.priority],
-      )
+      );
     },
   },
   {
-    title: 'Labels',
-    key: 'labels',
+    title: "Labels",
+    key: "labels",
     width: 160,
     render(row) {
-      if (!row.labels?.length) return null
+      if (!row.labels?.length) return null;
       return h(
-        'span',
-        { style: 'display: flex; flex-wrap: wrap; gap: 4px' },
+        "span",
+        { style: "display: flex; flex-wrap: wrap; gap: 4px" },
         row.labels.map((l: Label) =>
           h(
-            'span',
+            "span",
             {
               style: `font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 8px; white-space: nowrap; background: ${LABEL_COLORS[l]}22; color: ${LABEL_COLORS[l]}`,
             },
             LABEL_DISPLAY[l],
           ),
         ),
-      )
+      );
     },
   },
   {
-    title: 'Assignee',
-    key: 'assigneeName',
+    title: "Assignee",
+    key: "assigneeName",
     width: 120,
     render(row) {
-      return row.assigneeName ? h('span', {}, row.assigneeName) : null
+      return row.assigneeName ? h("span", {}, row.assigneeName) : null;
     },
   },
-]
+];
 
 function handleRowClick(row: Todo) {
-  store.openTodo(row.number)
+  store.openTodo(row.number);
 }
 
 const rowProps = (row: Todo) => ({
-  style: 'cursor: pointer',
+  style: "cursor: pointer",
   onClick: () => handleRowClick(row),
-})
+});
 </script>
 
 <template>
