@@ -1,6 +1,6 @@
 /** API client — talks to the Bun server's two endpoints */
 
-import type { Project, Status, Priority } from './types'
+import type { Project, Status, Priority, MemberRole } from './types'
 
 const BASE = '' // same origin (Vite proxy in dev, Bun.serve in prod)
 
@@ -15,7 +15,7 @@ export interface AddTodoParams {
   description?: string
   status?: Status
   priority?: Priority
-  tags?: string[]
+  assignee?: string | null
 }
 
 export async function addTodo(params: AddTodoParams): Promise<{ ok: boolean; number: number }> {
@@ -37,7 +37,6 @@ export interface UpdateTodoParams {
   status?: Status
   priority?: Priority
   assignee?: string | null
-  tags?: string[]
 }
 
 export async function updateTodo(
@@ -86,6 +85,62 @@ export async function deleteTodo(number: number): Promise<{ ok: boolean }> {
   if (!res.ok) {
     const data = await res.json()
     throw new Error(data.error || 'Failed to delete todo')
+  }
+  return res.json()
+}
+
+// ── Member API ──
+
+export interface AddMemberParams {
+  name: string
+  role?: MemberRole
+  email?: string
+}
+
+export async function addMember(params: AddMemberParams): Promise<{ ok: boolean; id: string }> {
+  const res = await fetch(`${BASE}/api/change`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'addMember', ...params }),
+  })
+  if (!res.ok) {
+    const data = await res.json()
+    throw new Error(data.error || 'Failed to add member')
+  }
+  return res.json()
+}
+
+export async function removeMember(memberId: string): Promise<{ ok: boolean }> {
+  const res = await fetch(`${BASE}/api/change`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'removeMember', memberId }),
+  })
+  if (!res.ok) {
+    const data = await res.json()
+    throw new Error(data.error || 'Failed to remove member')
+  }
+  return res.json()
+}
+
+export interface UpdateMemberParams {
+  name?: string
+  role?: MemberRole
+  email?: string | null
+}
+
+export async function updateMemberApi(
+  memberId: string,
+  updates: UpdateMemberParams,
+): Promise<{ ok: boolean }> {
+  const res = await fetch(`${BASE}/api/change`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'updateMember', memberId, updates }),
+  })
+  if (!res.ok) {
+    const data = await res.json()
+    throw new Error(data.error || 'Failed to update member')
   }
   return res.json()
 }
