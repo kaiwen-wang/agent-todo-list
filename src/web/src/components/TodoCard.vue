@@ -1,16 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { NCard, NTag, NSpace, NEllipsis } from 'naive-ui'
 import type { Todo } from '@/types'
 import { PRIORITY_DISPLAY, PRIORITY_COLORS } from '@/types'
-import { useProjectStore } from '@/stores/project'
 
 const props = defineProps<{
   todo: Todo
 }>()
 
 const router = useRouter()
-const store = useProjectStore()
 
 const priorityColor = computed(() => PRIORITY_COLORS[props.todo.priority])
 const priorityLabel = computed(() => PRIORITY_DISPLAY[props.todo.priority])
@@ -21,56 +20,57 @@ function openDetail() {
 </script>
 
 <template>
-  <div class="todo-card" @click="openDetail" :class="{ done: todo.status === 'done' }">
+  <NCard
+    size="small"
+    hoverable
+    class="todo-card"
+    :class="{ done: todo.status === 'done' }"
+    @click="openDetail"
+    content-class="card-content"
+  >
     <div class="card-header">
       <span class="todo-ref">{{ todo.ref }}</span>
-      <span
-        class="priority-dot"
-        :style="{ background: priorityColor }"
-        :title="priorityLabel"
-      ></span>
+      <span class="priority-dot" :style="{ background: priorityColor }" :title="priorityLabel" />
     </div>
     <div class="card-title">{{ todo.title }}</div>
-    <div class="card-footer">
-      <div class="card-tags" v-if="todo.tags.length">
-        <span class="tag" v-for="tag in todo.tags" :key="tag">{{ tag }}</span>
-      </div>
-      <span class="card-assignee" v-if="todo.assigneeName">{{ todo.assigneeName }}</span>
-    </div>
-  </div>
+    <NSpace v-if="todo.tags.length || todo.assigneeName" :size="4" class="card-footer">
+      <NTag v-for="tag in todo.tags" :key="tag" size="tiny" round :bordered="false">
+        {{ tag }}
+      </NTag>
+      <span v-if="todo.assigneeName" class="card-assignee">{{ todo.assigneeName }}</span>
+    </NSpace>
+  </NCard>
 </template>
 
 <style scoped>
 .todo-card {
-  padding: 12px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: transform 0.1s;
 }
 
 .todo-card:hover {
-  border-color: var(--text-muted);
   transform: translateY(-1px);
-  box-shadow: var(--shadow);
 }
 
 .todo-card.done {
-  opacity: 0.6;
+  opacity: 0.55;
+}
+
+.card-content {
+  padding: 10px 12px !important;
 }
 
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .todo-ref {
   font-size: 11px;
   font-weight: 600;
-  color: var(--text-muted);
+  opacity: 0.45;
   font-family: monospace;
 }
 
@@ -84,41 +84,21 @@ function openDetail() {
 .card-title {
   font-size: 13px;
   font-weight: 500;
-  color: var(--text);
   line-height: 1.4;
   word-break: break-word;
 }
 
 .todo-card.done .card-title {
   text-decoration: line-through;
-  color: var(--text-dim);
+  opacity: 0.7;
 }
 
 .card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   margin-top: 8px;
-  gap: 8px;
-}
-
-.card-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.tag {
-  font-size: 10px;
-  padding: 1px 6px;
-  background: var(--bg-hover);
-  border-radius: 3px;
-  color: var(--text-dim);
 }
 
 .card-assignee {
   font-size: 11px;
-  color: var(--text-dim);
-  white-space: nowrap;
+  opacity: 0.5;
 }
 </style>

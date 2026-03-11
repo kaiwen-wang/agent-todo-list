@@ -1,6 +1,21 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import {
+  NButton,
+  NSpace,
+  NTag,
+  NCard,
+  NForm,
+  NFormItem,
+  NInput,
+  NSelect,
+  NDescriptions,
+  NDescriptionsItem,
+  NPopconfirm,
+  NButtonGroup,
+  useMessage,
+} from 'naive-ui'
 import { useProjectStore } from '@/stores/project'
 import type { Status, Priority } from '@/types'
 import {
@@ -18,6 +33,7 @@ const props = defineProps<{
 
 const store = useProjectStore()
 const router = useRouter()
+const message = useMessage()
 
 const editing = ref(false)
 const editTitle = ref('')
@@ -26,6 +42,9 @@ const editPriority = ref<Priority>('medium')
 const editStatus = ref<Status>('todo')
 const editTags = ref('')
 const saving = ref(false)
+
+const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }))
+const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }))
 
 const todo = computed(() => store.todos.find((t) => t.number === props.number))
 
@@ -55,8 +74,9 @@ async function saveEdit() {
       tags,
     })
     editing.value = false
+    message.success('Todo updated')
   } catch {
-    // error via store
+    message.error('Failed to update todo')
   } finally {
     saving.value = false
   }
@@ -68,13 +88,22 @@ function cancelEdit() {
 
 async function changeStatus(status: Status) {
   if (!todo.value) return
-  await store.moveTodo(todo.value.number, status)
+  try {
+    await store.moveTodo(todo.value.number, status)
+  } catch {
+    message.error('Failed to update status')
+  }
 }
 
 async function handleDelete() {
   if (!todo.value) return
-  await store.deleteTodo(todo.value.number)
-  router.back()
+  try {
+    await store.deleteTodo(todo.value.number)
+    message.success('Todo deleted')
+    router.back()
+  } catch {
+    message.error('Failed to delete todo')
+  }
 }
 
 function goBack() {
@@ -89,136 +118,119 @@ function formatDate(iso: string): string {
 <template>
   <div class="detail-view">
     <div class="detail-nav">
-      <button class="btn btn-sm" @click="goBack">&larr; Back</button>
+      <NButton size="small" @click="goBack">&larr; Back</NButton>
     </div>
 
     <div v-if="!todo" class="not-found">
       <p>Todo #{{ number }} not found.</p>
-      <button class="btn" @click="goBack">Go back</button>
+      <NButton @click="goBack">Go back</NButton>
     </div>
 
-    <div v-else class="detail-content">
+    <div v-else-if="!editing">
       <!-- View mode -->
-      <template v-if="!editing">
-        <div class="detail-header">
-          <div class="detail-header-left">
-            <span class="detail-ref">{{ todo.ref }}</span>
-            <h1 class="detail-title">{{ todo.title }}</h1>
-          </div>
-          <div class="detail-actions">
-            <button class="btn btn-sm" @click="startEdit">Edit</button>
-            <button class="btn btn-sm btn-danger" @click="handleDelete">Delete</button>
-          </div>
+      <div class="detail-header">
+        <div class="detail-header-left">
+          <NTag size="small" :bordered="false" style="font-family: monospace">
+            {{ todo.ref }}
+          </NTag>
+          <h1 class="detail-title">{{ todo.title }}</h1>
+        </div>
+        <NSpace :size="8">
+          <NButton size="small" @click="startEdit">Edit</NButton>
+          <NPopconfirm @positive-click="handleDelete">
+            <template #trigger>
+              <NButton size="small" type="error" ghost>Delete</NButton>
+            </template>
+            Delete this todo permanently?
+          </NPopconfirm>
+        </NSpace>
+      </div>
+
+      <!-- Status buttons -->
+      <NCard size="small" class="detail-meta">
+        <div class="meta-section">
+          <label class="meta-label">Status</label>
+          <NButtonGroup size="tiny">
+            <NButton
+              v-for="s in STATUSES"
+              :key="s"
+              :type="todo.status === s ? 'primary' : 'default'"
+              :ghost="todo.status !== s"
+              @click="changeStatus(s)"
+            >
+              {{ STATUS_DISPLAY[s] }}
+            </NButton>
+          </NButtonGroup>
         </div>
 
-        <div class="detail-meta">
-          <div class="meta-group">
-            <label>Status</label>
-            <div class="status-selector">
-              <button
-                v-for="s in STATUSES"
-                :key="s"
-                class="status-option"
-                :class="{ active: todo.status === s }"
-                :style="
-                  todo.status === s
-                    ? { background: STATUS_COLORS[s] + '22', color: STATUS_COLORS[s], borderColor: STATUS_COLORS[s] + '44' }
-                    : {}
-                "
-                @click="changeStatus(s)"
-              >
-                {{ STATUS_DISPLAY[s] }}
-              </button>
-            </div>
-          </div>
+        <NDescriptions :column="4" label-placement="top" size="small" class="meta-descriptions">
+          <NDescriptionsItem label="Priority">
+            <NSpace :size="6" align="center">
+              <span
+                class="priority-dot"
+                :style="{ background: PRIORITY_COLORS[todo.priority] }"
+              />
+              {{ PRIORITY_DISPLAY[todo.priority] }}
+            </NSpace>
+          </NDescriptionsItem>
+          <NDescriptionsItem label="Assignee">
+            {{ todo.assigneeName || 'Unassigned' }}
+          </NDescriptionsItem>
+          <NDescriptionsItem label="Created">
+            {{ formatDate(todo.createdAt) }}
+          </NDescriptionsItem>
+          <NDescriptionsItem label="Updated">
+            {{ formatDate(todo.updatedAt) }}
+          </NDescriptionsItem>
+        </NDescriptions>
 
-          <div class="meta-row">
-            <div class="meta-group">
-              <label>Priority</label>
-              <span class="priority-indicator">
-                <span
-                  class="priority-dot"
-                  :style="{ background: PRIORITY_COLORS[todo.priority] }"
-                ></span>
-                {{ PRIORITY_DISPLAY[todo.priority] }}
-              </span>
-            </div>
-            <div class="meta-group">
-              <label>Assignee</label>
-              <span>{{ todo.assigneeName || 'Unassigned' }}</span>
-            </div>
-            <div class="meta-group">
-              <label>Created</label>
-              <span class="date-text">{{ formatDate(todo.createdAt) }}</span>
-            </div>
-            <div class="meta-group">
-              <label>Updated</label>
-              <span class="date-text">{{ formatDate(todo.updatedAt) }}</span>
-            </div>
-          </div>
-
-          <div class="meta-group" v-if="todo.tags.length > 0">
-            <label>Tags</label>
-            <div class="tags-list">
-              <span class="tag" v-for="tag in todo.tags" :key="tag">{{ tag }}</span>
-            </div>
-          </div>
+        <div v-if="todo.tags.length > 0" class="meta-section">
+          <label class="meta-label">Tags</label>
+          <NSpace :size="6">
+            <NTag v-for="tag in todo.tags" :key="tag" size="small" round :bordered="false">
+              {{ tag }}
+            </NTag>
+          </NSpace>
         </div>
+      </NCard>
 
-        <div class="detail-description" v-if="todo.description">
-          <label>Description</label>
-          <div class="description-body">{{ todo.description }}</div>
-        </div>
-        <div class="detail-description" v-else>
-          <label>Description</label>
-          <div class="description-empty">No description provided.</div>
-        </div>
-      </template>
-
-      <!-- Edit mode -->
-      <template v-else>
-        <form @submit.prevent="saveEdit" class="edit-form">
-          <div class="form-group">
-            <label for="edit-title">Title</label>
-            <input id="edit-title" v-model="editTitle" type="text" />
-          </div>
-
-          <div class="form-group">
-            <label for="edit-description">Description</label>
-            <textarea id="edit-description" v-model="editDescription" rows="5"></textarea>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="edit-status">Status</label>
-              <select id="edit-status" v-model="editStatus">
-                <option v-for="s in STATUSES" :key="s" :value="s">{{ STATUS_DISPLAY[s] }}</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="edit-priority">Priority</label>
-              <select id="edit-priority" v-model="editPriority">
-                <option v-for="p in PRIORITIES" :key="p" :value="p">
-                  {{ PRIORITY_DISPLAY[p] }}
-                </option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="edit-tags">Tags</label>
-            <input id="edit-tags" v-model="editTags" type="text" placeholder="comma-separated" />
-          </div>
-
-          <div class="edit-actions">
-            <button type="button" class="btn" @click="cancelEdit">Cancel</button>
-            <button type="submit" class="btn btn-primary" :disabled="saving">
-              {{ saving ? 'Saving...' : 'Save Changes' }}
-            </button>
-          </div>
-        </form>
-      </template>
+      <!-- Description -->
+      <NCard size="small" title="Description" class="detail-description">
+        <div v-if="todo.description" class="description-body">{{ todo.description }}</div>
+        <div v-else class="description-empty">No description provided.</div>
+      </NCard>
     </div>
+
+    <!-- Edit mode -->
+    <NCard v-else title="Edit Todo" size="small">
+      <NForm label-placement="top" @submit.prevent="saveEdit">
+        <NFormItem label="Title">
+          <NInput v-model:value="editTitle" />
+        </NFormItem>
+
+        <NFormItem label="Description">
+          <NInput v-model:value="editDescription" type="textarea" :rows="5" />
+        </NFormItem>
+
+        <NSpace :size="12">
+          <NFormItem label="Status" style="flex: 1">
+            <NSelect v-model:value="editStatus" :options="statusOptions" />
+          </NFormItem>
+          <NFormItem label="Priority" style="flex: 1">
+            <NSelect v-model:value="editPriority" :options="priorityOptions" />
+          </NFormItem>
+        </NSpace>
+
+        <NFormItem label="Tags">
+          <NInput v-model:value="editTags" placeholder="comma-separated" />
+        </NFormItem>
+
+        <NSpace justify="end" :size="8">
+          <NButton @click="cancelEdit">Cancel</NButton>
+          <NButton type="primary" @click="saveEdit" :loading="saving">Save Changes</NButton>
+        </NSpace>
+      </NForm>
+    </NCard>
   </div>
 </template>
 
@@ -230,13 +242,13 @@ function formatDate(iso: string): string {
 }
 
 .detail-nav {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .not-found {
   text-align: center;
   padding: 40px;
-  color: var(--text-dim);
+  opacity: 0.5;
 }
 
 .not-found p {
@@ -247,162 +259,69 @@ function formatDate(iso: string): string {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   gap: 16px;
 }
 
 .detail-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   flex: 1;
 }
 
-.detail-ref {
-  font-family: monospace;
-  font-size: 13px;
-  color: var(--text-muted);
-  font-weight: 600;
-  margin-bottom: 4px;
-  display: block;
-}
-
 .detail-title {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   line-height: 1.3;
 }
 
-.detail-actions {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
 .detail-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-bottom: 24px;
-  padding: 16px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  margin-bottom: 16px;
 }
 
-.meta-group label {
+.meta-section {
+  margin-bottom: 12px;
+}
+
+.meta-section:last-child {
+  margin-bottom: 0;
+}
+
+.meta-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.5;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   margin-bottom: 6px;
 }
 
-.meta-row {
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
-}
-
-.status-selector {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.status-option {
-  padding: 4px 10px;
-  font-size: 12px;
-  font-weight: 500;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-dim);
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.status-option:hover {
-  background: var(--bg-hover);
-}
-
-.status-option.active {
-  font-weight: 600;
-}
-
-.priority-indicator {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
+.meta-descriptions {
+  margin-top: 12px;
 }
 
 .priority-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-}
-
-.date-text {
-  font-size: 13px;
-  color: var(--text-dim);
-}
-
-.tags-list {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.tag {
-  font-size: 12px;
-  padding: 2px 8px;
-  background: var(--bg-hover);
-  border-radius: var(--radius-sm);
-  color: var(--text-dim);
+  display: inline-block;
 }
 
 .detail-description {
-  margin-bottom: 24px;
-}
-
-.detail-description label {
-  margin-bottom: 8px;
+  margin-top: 16px;
 }
 
 .description-body {
   font-size: 14px;
   line-height: 1.6;
-  color: var(--text);
   white-space: pre-wrap;
-  padding: 16px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
 }
 
 .description-empty {
   font-size: 13px;
-  color: var(--text-muted);
+  opacity: 0.35;
   font-style: italic;
-}
-
-/* Edit form */
-.edit-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-}
-
-.form-row {
-  display: flex;
-  gap: 12px;
-}
-
-.edit-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding-top: 8px;
 }
 </style>

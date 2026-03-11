@@ -1,8 +1,17 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, h } from 'vue'
 import { useRouter } from 'vue-router'
+import {
+  NButton,
+  NDataTable,
+  NInput,
+  NSelect,
+  NSpace,
+  NTag,
+  type DataTableColumns,
+} from 'naive-ui'
 import { useProjectStore } from '@/stores/project'
-import type { Status, Priority } from '@/types'
+import type { Todo, Status, Priority } from '@/types'
 import {
   STATUSES,
   PRIORITIES,
@@ -17,9 +26,12 @@ const store = useProjectStore()
 const router = useRouter()
 
 const showCreate = ref(false)
-const filterStatus = ref<Status | ''>('')
-const filterPriority = ref<Priority | ''>('')
+const filterStatus = ref<Status | null>(null)
+const filterPriority = ref<Priority | null>(null)
 const searchQuery = ref('')
+
+const statusFilterOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }))
+const priorityFilterOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }))
 
 const filteredTodos = computed(() => {
   let list = store.activeTodos
@@ -38,93 +50,131 @@ const filteredTodos = computed(() => {
   return list
 })
 
-function openTodo(number: number) {
-  router.push({ name: 'todo-detail', params: { number } })
+const columns: DataTableColumns<Todo> = [
+  {
+    title: 'Ref',
+    key: 'ref',
+    width: 90,
+    render(row) {
+      return h('span', { style: 'font-family: monospace; font-size: 12px; opacity: 0.5' }, row.ref)
+    },
+  },
+  {
+    title: 'Title',
+    key: 'title',
+    ellipsis: { tooltip: true },
+    render(row) {
+      const style = row.status === 'done' ? 'text-decoration: line-through; opacity: 0.6' : ''
+      return h('span', { style }, row.title)
+    },
+  },
+  {
+    title: 'Status',
+    key: 'status',
+    width: 120,
+    render(row) {
+      return h(
+        NTag,
+        {
+          size: 'small',
+          round: true,
+          bordered: false,
+          color: { color: STATUS_COLORS[row.status] + '22', textColor: STATUS_COLORS[row.status] },
+        },
+        () => STATUS_DISPLAY[row.status],
+      )
+    },
+  },
+  {
+    title: 'Priority',
+    key: 'priority',
+    width: 100,
+    render(row) {
+      return h('span', { style: 'display: flex; align-items: center; gap: 6px; font-size: 12px' }, [
+        h('span', {
+          style: `width: 8px; height: 8px; border-radius: 50%; background: ${PRIORITY_COLORS[row.priority]}; flex-shrink: 0`,
+        }),
+        PRIORITY_DISPLAY[row.priority],
+      ])
+    },
+  },
+  {
+    title: 'Assignee',
+    key: 'assigneeName',
+    width: 120,
+    render(row) {
+      return row.assigneeName
+        ? h('span', {}, row.assigneeName)
+        : h('span', { style: 'opacity: 0.3' }, '\u2014')
+    },
+  },
+  {
+    title: 'Tags',
+    key: 'tags',
+    width: 160,
+    render(row) {
+      if (!row.tags.length) return null
+      return h(
+        NSpace,
+        { size: 4 },
+        () => row.tags.map((tag) => h(NTag, { size: 'tiny', round: true, bordered: false }, () => tag)),
+      )
+    },
+  },
+]
+
+function handleRowClick(row: Todo) {
+  router.push({ name: 'todo-detail', params: { number: row.number } })
 }
 
-async function quickStatusChange(todoNumber: number, status: Status) {
-  await store.moveTodo(todoNumber, status)
-}
+const rowProps = (row: Todo) => ({
+  style: 'cursor: pointer',
+  onClick: () => handleRowClick(row),
+})
 </script>
 
 <template>
   <div class="list-view">
     <div class="list-toolbar">
       <h2>List</h2>
-      <div class="list-filters">
-        <input
-          v-model="searchQuery"
-          type="text"
+      <NSpace :size="8" align="center" class="list-filters">
+        <NInput
+          v-model:value="searchQuery"
           placeholder="Search..."
-          class="search-input"
+          clearable
+          size="small"
+          style="width: 200px"
         />
-        <select v-model="filterStatus">
-          <option value="">All statuses</option>
-          <option v-for="s in STATUSES" :key="s" :value="s">{{ STATUS_DISPLAY[s] }}</option>
-        </select>
-        <select v-model="filterPriority">
-          <option value="">All priorities</option>
-          <option v-for="p in PRIORITIES" :key="p" :value="p">{{ PRIORITY_DISPLAY[p] }}</option>
-        </select>
-      </div>
-      <button class="btn btn-primary" @click="showCreate = true">+ New Todo</button>
+        <NSelect
+          v-model:value="filterStatus"
+          :options="statusFilterOptions"
+          placeholder="Status"
+          clearable
+          size="small"
+          style="width: 140px"
+        />
+        <NSelect
+          v-model:value="filterPriority"
+          :options="priorityFilterOptions"
+          placeholder="Priority"
+          clearable
+          size="small"
+          style="width: 140px"
+        />
+      </NSpace>
+      <NButton type="primary" size="small" @click="showCreate = true">+ New Todo</NButton>
     </div>
 
     <div class="list-table-container">
-      <table class="list-table">
-        <thead>
-          <tr>
-            <th class="col-ref">Ref</th>
-            <th class="col-title">Title</th>
-            <th class="col-status">Status</th>
-            <th class="col-priority">Priority</th>
-            <th class="col-assignee">Assignee</th>
-            <th class="col-tags">Tags</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="todo in filteredTodos"
-            :key="todo.id"
-            class="todo-row"
-            @click="openTodo(todo.number)"
-          >
-            <td class="col-ref">
-              <span class="ref-text">{{ todo.ref }}</span>
-            </td>
-            <td class="col-title">
-              <span :class="{ done: todo.status === 'done' }">{{ todo.title }}</span>
-            </td>
-            <td class="col-status">
-              <span
-                class="status-badge"
-                :style="{ background: STATUS_COLORS[todo.status] + '22', color: STATUS_COLORS[todo.status] }"
-              >
-                {{ STATUS_DISPLAY[todo.status] }}
-              </span>
-            </td>
-            <td class="col-priority">
-              <span class="priority-indicator">
-                <span
-                  class="priority-dot"
-                  :style="{ background: PRIORITY_COLORS[todo.priority] }"
-                ></span>
-                {{ PRIORITY_DISPLAY[todo.priority] }}
-              </span>
-            </td>
-            <td class="col-assignee">
-              <span v-if="todo.assigneeName" class="assignee-text">{{ todo.assigneeName }}</span>
-              <span v-else class="no-assignee">&mdash;</span>
-            </td>
-            <td class="col-tags">
-              <span class="tag" v-for="tag in todo.tags" :key="tag">{{ tag }}</span>
-            </td>
-          </tr>
-          <tr v-if="filteredTodos.length === 0">
-            <td colspan="6" class="empty-row">No todos found</td>
-          </tr>
-        </tbody>
-      </table>
+      <NDataTable
+        :columns="columns"
+        :data="filteredTodos"
+        :row-props="rowProps"
+        :bordered="false"
+        size="small"
+        flex-height
+        class="list-table"
+      />
     </div>
 
     <CreateTodoModal :open="showCreate" @close="showCreate = false" />
@@ -133,7 +183,7 @@ async function quickStatusChange(todoNumber: number, status: Status) {
 
 <style scoped>
 .list-view {
-  height: calc(100vh - 56px);
+  height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -155,144 +205,17 @@ async function quickStatusChange(todoNumber: number, status: Status) {
 }
 
 .list-filters {
-  display: flex;
-  gap: 8px;
   flex: 1;
   justify-content: center;
 }
 
-.search-input {
-  max-width: 220px;
-}
-
-.list-filters select {
-  width: auto;
-  min-width: 140px;
-}
-
 .list-table-container {
   flex: 1;
-  overflow: auto;
   padding: 0 24px 24px;
+  overflow: hidden;
 }
 
 .list-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.list-table th {
-  text-align: left;
-  padding: 10px 12px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  background: var(--bg);
-  z-index: 1;
-}
-
-.list-table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-}
-
-.todo-row {
-  cursor: pointer;
-  transition: background 0.1s;
-}
-
-.todo-row:hover {
-  background: var(--bg-surface);
-}
-
-.col-ref {
-  width: 80px;
-}
-
-.ref-text {
-  font-family: monospace;
-  font-size: 12px;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-
-.col-title {
-  min-width: 200px;
-}
-
-.col-title .done {
-  text-decoration: line-through;
-  color: var(--text-dim);
-}
-
-.col-status {
-  width: 120px;
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 11px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.col-priority {
-  width: 100px;
-}
-
-.priority-indicator {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text-dim);
-}
-
-.priority-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.col-assignee {
-  width: 120px;
-}
-
-.assignee-text {
-  color: var(--text-dim);
-}
-
-.no-assignee {
-  color: var(--text-muted);
-}
-
-.col-tags {
-  width: 150px;
-}
-
-.tag {
-  display: inline-block;
-  font-size: 10px;
-  padding: 1px 6px;
-  background: var(--bg-hover);
-  border-radius: 3px;
-  color: var(--text-dim);
-  margin-right: 4px;
-}
-
-.empty-row {
-  text-align: center;
-  padding: 40px 12px !important;
-  color: var(--text-muted);
+  height: 100%;
 }
 </style>

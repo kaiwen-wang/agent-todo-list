@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { NButton, NSpace } from 'naive-ui'
 import { useProjectStore } from '@/stores/project'
 import { BOARD_STATUSES } from '@/types'
 import StatusColumn from '@/components/StatusColumn.vue'
@@ -13,7 +14,7 @@ const showCreate = ref(false)
   <div class="board-view">
     <div class="board-toolbar">
       <h2>Board</h2>
-      <button class="btn btn-primary" @click="showCreate = true">+ New Todo</button>
+      <NButton type="primary" size="small" @click="showCreate = true">+ New Todo</NButton>
     </div>
     <div class="board">
       <StatusColumn
@@ -29,7 +30,7 @@ const showCreate = ref(false)
 
 <style scoped>
 .board-view {
-  height: calc(100vh - 56px);
+  height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;

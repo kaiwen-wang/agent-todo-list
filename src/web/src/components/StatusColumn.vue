@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { NBadge } from 'naive-ui'
 import type { Todo, Status } from '@/types'
 import { STATUS_DISPLAY, STATUS_COLORS } from '@/types'
 import TodoCard from './TodoCard.vue'
@@ -16,9 +17,9 @@ const color = computed(() => STATUS_COLORS[props.status])
 <template>
   <div class="status-column">
     <div class="column-header">
-      <div class="column-indicator" :style="{ background: color }"></div>
+      <div class="column-indicator" :style="{ background: color }" />
       <span class="column-label">{{ label }}</span>
-      <span class="column-count">{{ todos.length }}</span>
+      <NBadge :value="todos.length" :color="color" show-zero type="info" />
     </div>
     <div class="column-body">
       <TodoCard v-for="todo in todos" :key="todo.id" :todo="todo" />
@@ -34,9 +35,9 @@ const color = computed(() => STATUS_COLORS[props.status])
   max-width: 340px;
   display: flex;
   flex-direction: column;
-  background: var(--bg-surface);
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
+  background: var(--n-color);
+  border-radius: 8px;
+  border: 1px solid var(--n-border-color, rgba(255, 255, 255, 0.09));
   overflow: hidden;
 }
 
@@ -45,7 +46,7 @@ const color = computed(() => STATUS_COLORS[props.status])
   align-items: center;
   gap: 8px;
   padding: 12px 14px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--n-border-color, rgba(255, 255, 255, 0.09));
 }
 
 .column-indicator {
@@ -58,16 +59,7 @@ const color = computed(() => STATUS_COLORS[props.status])
 .column-label {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text);
-}
-
-.column-count {
-  font-size: 11px;
-  color: var(--text-muted);
-  background: var(--bg);
-  padding: 1px 6px;
-  border-radius: 8px;
-  font-weight: 500;
+  flex: 1;
 }
 
 .column-body {
@@ -83,6 +75,6 @@ const color = computed(() => STATUS_COLORS[props.status])
   padding: 24px 8px;
   text-align: center;
   font-size: 12px;
-  color: var(--text-muted);
+  opacity: 0.35;
 }
 </style>
