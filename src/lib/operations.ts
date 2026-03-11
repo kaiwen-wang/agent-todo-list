@@ -105,8 +105,8 @@ export function updateTodo(
     if (updates.priority !== undefined) todo.priority = updates.priority;
     if (updates.assignee !== undefined) todo.assignee = updates.assignee;
     if (updates.tags !== undefined) {
-      // Replace tags array entirely
-      todo.tags.length = 0;
+      // Replace tags array — use splice since Automerge proxies don't support .length = 0
+      todo.tags.splice(0, todo.tags.length);
       for (const tag of updates.tags) {
         todo.tags.push(tag);
       }
