@@ -77,7 +77,7 @@ const themeOverrides = {
 
 <template>
   <NConfigProvider :theme-overrides="themeOverrides">
-    <NMessageProvider>
+    <NMessageProvider placement="bottom-right">
       <NLayout has-sider class="app-layout">
         <!-- Sidebar -->
         <NLayoutSider :width="220" content-class="sidebar-content">

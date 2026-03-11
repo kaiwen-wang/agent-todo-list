@@ -125,7 +125,7 @@ async function submit() {
   if (!title.value.trim()) return;
   submitting.value = true;
   try {
-    await store.addTodo({
+    const result = await store.addTodo({
       title: title.value.trim(),
       description: description.value.trim() || undefined,
       status: status.value,
@@ -133,7 +133,7 @@ async function submit() {
       labels: labels.value.length ? labels.value : undefined,
       assignee: assignee.value,
     });
-    message.success("Todo created");
+    message.success(`${store.prefix}-${result.number} created`);
     emit("close");
   } catch {
     message.error("Failed to create todo");
@@ -153,14 +153,9 @@ async function submit() {
       style="width: 520px; max-width: 95vw"
       role="dialog"
     >
-      <NForm @submit.prevent="submit" label-placement="top">
+      <NForm @submit.prevent label-placement="top">
         <NFormItem label="Title">
-          <NInput
-            v-model:value="title"
-            placeholder="What needs to be done?"
-            autofocus
-            @keydown.enter.prevent="submit"
-          />
+          <NInput v-model:value="title" placeholder="What needs to be done?" autofocus />
         </NFormItem>
 
         <NFormItem label="Description">

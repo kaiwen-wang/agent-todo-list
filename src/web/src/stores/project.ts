@@ -92,8 +92,9 @@ export const useProjectStore = defineStore("project", () => {
   async function addTodo(params: api.AddTodoParams) {
     error.value = null;
     try {
-      await api.addTodo(params);
+      const result = await api.addTodo(params);
       await load(); // Reload to get the full updated state
+      return result;
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : String(e);
       throw e;
