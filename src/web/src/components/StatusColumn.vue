@@ -127,8 +127,9 @@ async function onDrop(e: DragEvent) {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
 }
 
 .add-btn {

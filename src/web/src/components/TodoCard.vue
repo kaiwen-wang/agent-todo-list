@@ -83,14 +83,24 @@ function onDragStart(e: DragEvent) {
 <style scoped>
 .todo-card {
   cursor: pointer;
-  transition: background 0.15s;
+  border-radius: 0 !important;
   border: none !important;
-  border-radius: 4px !important;
-  background: white;
+  box-shadow: none !important;
+  border-bottom: 1px solid #e8e8e8 !important;
 }
 
-.todo-card:hover {
-  background: #f5f5f5;
+.todo-card :deep(.n-card) {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.todo-card :deep(.n-card__content) {
+  border-radius: 0 !important;
+}
+
+.todo-card:hover .card-title {
+  color: #3b82f6;
 }
 
 .todo-card.done {

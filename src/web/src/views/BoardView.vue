@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { NButton } from 'naive-ui'
-import { useProjectStore } from '@/stores/project'
-import { BOARD_STATUSES } from '@/types'
-import StatusColumn from '@/components/StatusColumn.vue'
-import CreateTodoModal from '@/components/CreateTodoModal.vue'
+import { ref } from "vue";
+import { NButton } from "naive-ui";
+import { useProjectStore } from "@/stores/project";
+import { BOARD_STATUSES } from "@/types";
+import StatusColumn from "@/components/StatusColumn.vue";
+import CreateTodoModal from "@/components/CreateTodoModal.vue";
 
-const store = useProjectStore()
-const showCreate = ref(false)
+const store = useProjectStore();
+const showCreate = ref(false);
 </script>
 
 <template>
@@ -34,6 +34,7 @@ const showCreate = ref(false)
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  overscroll-behavior: contain;
 }
 
 .board-toolbar {
@@ -55,5 +56,6 @@ const showCreate = ref(false)
   gap: 12px;
   padding: 0 24px 24px;
   overflow-x: auto;
+  overscroll-behavior: contain;
 }
 </style>

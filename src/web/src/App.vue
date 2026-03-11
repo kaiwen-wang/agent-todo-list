@@ -138,6 +138,13 @@ body {
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
 }
 
 .app-layout {
@@ -372,6 +379,7 @@ body {
   margin: 10px;
   border-radius: 6px;
   border: 1px solid #d9d9d9;
+  overscroll-behavior: contain;
 }
 
 .loading {
