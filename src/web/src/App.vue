@@ -7,14 +7,17 @@ import {
   NLayout,
   NLayoutSider,
   NLayoutContent,
-  NMenu,
   NTag,
-  NDivider,
-  NButton,
-  type MenuOption,
+  NIcon,
 } from 'naive-ui'
+import {
+  LayoutKanban,
+  Table,
+  Users,
+  Settings,
+} from '@vicons/tabler'
 import { useProjectStore } from '@/stores/project'
-import { STATUS_COLORS } from '@/types'
+import { STATUSES, STATUS_DISPLAY, STATUS_COLORS } from '@/types'
 import SettingsModal from '@/components/SettingsModal.vue'
 import TodoDetailModal from '@/components/TodoDetailModal.vue'
 
@@ -30,13 +33,13 @@ onMounted(() => {
 
 const activeKey = computed(() => (route.name as string) ?? 'board')
 
-const menuOptions: MenuOption[] = [
-  { label: 'Board', key: 'board' },
-  { label: 'Table', key: 'list' },
-  { label: 'Members', key: 'members' },
+const navItems = [
+  { label: 'Board', key: 'board', icon: LayoutKanban },
+  { label: 'Table', key: 'list', icon: Table },
+  { label: 'Members', key: 'members', icon: Users },
 ]
 
-function handleMenuUpdate(key: string) {
+function navigate(key: string) {
   router.push({ name: key })
 }
 
@@ -59,55 +62,49 @@ const themeOverrides = {
           content-class="sidebar-content"
         >
           <template v-if="store.project">
+            <!-- Project title + settings -->
             <div class="sidebar-header">
-              <h1 class="app-title">{{ store.projectName }}</h1>
+              <div class="project-badge">{{ store.prefix }}</div>
+              <div class="header-text">
+                <h1 class="app-title">{{ store.projectName }}</h1>
+                <span class="app-subtitle">{{ store.todos.length }} items</span>
+              </div>
+              <button class="icon-btn settings-icon-btn" title="Settings" @click="showSettings = true">
+                <NIcon :size="20"><Settings /></NIcon>
+              </button>
             </div>
 
-            <NMenu
-              :value="activeKey"
-              :options="menuOptions"
-              @update:value="handleMenuUpdate"
-            />
-            <NDivider style="margin: 12px 0" />
+            <!-- Navigation -->
+            <nav class="sidebar-nav">
+              <button
+                v-for="item in navItems"
+                :key="item.key"
+                class="nav-item"
+                :class="{ active: activeKey === item.key }"
+                @click="navigate(item.key)"
+              >
+                <NIcon :size="18"><component :is="item.icon" /></NIcon>
+                {{ item.label }}
+              </button>
+            </nav>
 
+            <!-- Status overview -->
             <div class="sidebar-section">
               <div class="section-label">Status</div>
               <div class="status-counts">
-                <div class="status-row">
-                  <span class="status-dot" :style="{ background: STATUS_COLORS.none }" />
-                  <span class="status-name">None</span>
-                  <span class="status-count">{{ store.statusCounts.none }}</span>
-                </div>
-                <div class="status-row">
-                  <span class="status-dot" :style="{ background: STATUS_COLORS.todo }" />
-                  <span class="status-name">To Do</span>
-                  <span class="status-count">{{ store.statusCounts.todo }}</span>
-                </div>
-                <div class="status-row">
-                  <span class="status-dot" :style="{ background: STATUS_COLORS.in_progress }" />
-                  <span class="status-name">In Progress</span>
-                  <span class="status-count">{{ store.statusCounts.in_progress }}</span>
-                </div>
-                <div class="status-row">
-                  <span class="status-dot" :style="{ background: STATUS_COLORS.completed }" />
-                  <span class="status-name">Completed</span>
-                  <span class="status-count">{{ store.statusCounts.completed }}</span>
-                </div>
-                <div class="status-row">
-                  <span class="status-dot" :style="{ background: STATUS_COLORS.archived }" />
-                  <span class="status-name">Archived</span>
-                  <span class="status-count">{{ store.statusCounts.archived }}</span>
-                </div>
-                <div class="status-row">
-                  <span class="status-dot" :style="{ background: STATUS_COLORS.wont_do }" />
-                  <span class="status-name">Won't Do</span>
-                  <span class="status-count">{{ store.statusCounts.wont_do }}</span>
+                <div
+                  v-for="s in STATUSES"
+                  :key="s"
+                  class="status-row"
+                >
+                  <span class="status-dot" :style="{ background: STATUS_COLORS[s] }" />
+                  <span class="status-name">{{ STATUS_DISPLAY[s] }}</span>
+                  <span class="status-count">{{ store.statusCounts[s] }}</span>
                 </div>
               </div>
             </div>
 
-            <NDivider style="margin: 12px 0" />
-
+            <!-- Members -->
             <div class="sidebar-section">
               <div class="section-label">Members</div>
               <div class="member-list">
@@ -117,22 +114,6 @@ const themeOverrides = {
                   <NTag size="tiny" :bordered="false" round>{{ m.role }}</NTag>
                 </div>
               </div>
-            </div>
-
-            <div class="sidebar-spacer" />
-            <div class="sidebar-bottom">
-              <NButton
-                quaternary
-                block
-                size="medium"
-                class="settings-btn"
-                @click="showSettings = true"
-              >
-                <template #icon>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-                </template>
-                Settings
-              </NButton>
             </div>
           </template>
         </NLayoutSider>
@@ -176,22 +157,126 @@ body {
   flex-direction: column;
   height: 100%;
   background: #f0f0f0;
+  gap: 14px;
+  overflow-y: auto;
 }
+
+/* ── Project header ── */
 
 .sidebar-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 16px 16px 12px;
+  gap: 10px;
+  padding: 16px 14px 0;
+}
+
+.project-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #333;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+
+.header-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
 
 .app-title {
-  font-size: 17px;
+  font-size: 14px;
   font-weight: 700;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+.app-subtitle {
+  font-size: 11px;
+  opacity: 0.45;
+}
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.35;
+  transition: opacity 0.15s, background 0.15s;
+  flex-shrink: 0;
+  color: inherit;
+}
+
+.icon-btn:hover {
+  opacity: 0.7;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* ── Navigation ── */
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 8px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.6;
+  transition: background 0.12s, opacity 0.12s;
+  text-align: left;
+  font-family: inherit;
+}
+
+.nav-item:hover {
+  background: rgba(0, 0, 0, 0.05);
+  opacity: 0.85;
+}
+
+.nav-item.active {
+  background: rgba(0, 0, 0, 0.08);
+  opacity: 1;
+  font-weight: 600;
+}
+
+.nav-icon {
+  width: 20px;
+  text-align: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* ── Sections ── */
+
 .sidebar-section {
-  padding: 0 16px;
+  padding: 0 14px;
 }
 
 .section-label {
@@ -199,14 +284,17 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  opacity: 0.45;
-  margin-bottom: 8px;
+  opacity: 0.35;
+  margin-bottom: 4px;
 }
+
+/* ── Status counts ── */
 
 .status-counts {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 1px;
+  padding-left: 4px;
 }
 
 .status-row {
@@ -214,6 +302,7 @@ body {
   align-items: center;
   gap: 8px;
   font-size: 13px;
+  padding: 2px 0;
 }
 
 .status-dot {
@@ -225,19 +314,24 @@ body {
 
 .status-name {
   flex: 1;
+  opacity: 0.7;
 }
 
 .status-count {
   font-weight: 600;
   font-size: 12px;
-  opacity: 0.6;
+  opacity: 0.4;
   font-variant-numeric: tabular-nums;
+  min-width: 16px;
+  text-align: right;
 }
+
+/* ── Members ── */
 
 .member-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .member-row {
@@ -251,7 +345,7 @@ body {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #e8e8e8;
+  background: #ddd;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -268,14 +362,7 @@ body {
   white-space: nowrap;
 }
 
-.sidebar-spacer {
-  flex: 1;
-}
-
-.sidebar-bottom {
-  padding: 12px 16px;
-  border-top: 1px solid rgba(0, 0, 0, 0.09);
-}
+/* ── Main content ── */
 
 .main-content {
   height: calc(100vh - 20px);
@@ -295,21 +382,25 @@ body {
   font-size: 14px;
 }
 
-/* Kill Naive UI modal/overlay animations */
-.n-modal-mask,
-.v-binder-follower-content {
-  transition-duration: 0s !important;
+/* Nuke every transition and animation */
+*, *::before, *::after {
+  transition: none !important;
+  animation: none !important;
 }
 
+/* Force modal content visible immediately — overrides JS inline styles */
 .n-modal-body-wrapper {
-  transition-duration: 0s !important;
-  animation-duration: 0s !important;
+  opacity: 1 !important;
+  transform: none !important;
+  transform-origin: center center !important;
 }
 
-.fade-in-scale-up-transition-enter-active,
-.fade-in-scale-up-transition-leave-active,
-.fade-in-transition-enter-active,
-.fade-in-transition-leave-active {
-  transition-duration: 0s !important;
+.n-modal-mask {
+  opacity: 1 !important;
+}
+
+.v-binder-follower-content {
+  opacity: 1 !important;
+  transform: none !important;
 }
 </style>
