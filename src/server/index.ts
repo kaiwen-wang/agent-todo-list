@@ -77,8 +77,8 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
                   description: body.description,
                   status: body.status,
                   priority: body.priority,
+                  labels: body.labels,
                   assignee: body.assignee,
-
                 });
                 doc = result.doc;
                 await save();

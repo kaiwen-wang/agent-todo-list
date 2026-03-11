@@ -165,7 +165,7 @@ const rowProps = (row: Todo) => ({
 <template>
   <div class="list-view">
     <div class="list-toolbar">
-      <h2>List</h2>
+      <h2>Table</h2>
       <NSpace :size="8" align="center" class="list-filters">
         <NInput
           v-model:value="searchQuery"
