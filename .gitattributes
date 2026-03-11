@@ -1,0 +1,2 @@
+# CRDT merge driver for Automerge binary data
+.todo/data.automerge merge=automerge-crdt
