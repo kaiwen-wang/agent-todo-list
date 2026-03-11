@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import {
   NModal,
   NCard,
@@ -31,7 +31,12 @@ const title = ref('')
 const description = ref('')
 const status = ref<Status>(props.defaultStatus ?? 'todo')
 const priority = ref<Priority>('medium')
+const assignee = ref<string | null>(null)
 const submitting = ref(false)
+
+const memberOptions = computed(() =>
+  store.members.map((m) => ({ label: m.name, value: m.id }))
+)
 
 const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }))
 const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }))
@@ -44,6 +49,7 @@ watch(
       description.value = ''
       status.value = props.defaultStatus ?? 'todo'
       priority.value = 'medium'
+      assignee.value = null
     }
   },
 )
@@ -57,6 +63,7 @@ async function submit() {
       description: description.value.trim() || undefined,
       status: status.value,
       priority: priority.value,
+      assignee: assignee.value,
     })
     message.success('Todo created')
     emit('close')
@@ -105,6 +112,15 @@ async function submit() {
             <NSelect v-model:value="priority" :options="priorityOptions" />
           </NFormItem>
         </NSpace>
+
+        <NFormItem label="Assignee">
+          <NSelect
+            v-model:value="assignee"
+            :options="memberOptions"
+            placeholder="Assign to a member..."
+            clearable
+          />
+        </NFormItem>
 
         <NSpace justify="end" :size="8">
           <NButton @click="emit('close')">Cancel</NButton>
