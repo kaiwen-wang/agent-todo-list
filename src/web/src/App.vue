@@ -9,7 +9,6 @@ import {
   NSpace,
   NTag,
   NMenu,
-  darkTheme,
   type MenuOption,
 } from 'naive-ui'
 import { useProjectStore } from '@/stores/project'
@@ -35,7 +34,7 @@ function handleMenuUpdate(key: string) {
 </script>
 
 <template>
-  <NConfigProvider :theme="darkTheme">
+  <NConfigProvider>
     <NMessageProvider>
       <NLayout class="app-layout">
         <NLayoutHeader class="app-header" bordered>
@@ -135,5 +134,23 @@ body {
   height: 200px;
   opacity: 0.5;
   font-size: 14px;
+}
+
+/* Kill Naive UI modal/overlay animations */
+.n-modal-mask,
+.v-binder-follower-content {
+  transition-duration: 0s !important;
+}
+
+.n-modal-body-wrapper {
+  transition-duration: 0s !important;
+  animation-duration: 0s !important;
+}
+
+.fade-in-scale-up-transition-enter-active,
+.fade-in-scale-up-transition-leave-active,
+.fade-in-transition-enter-active,
+.fade-in-transition-leave-active {
+  transition-duration: 0s !important;
 }
 </style>

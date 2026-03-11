@@ -35,9 +35,9 @@ const color = computed(() => STATUS_COLORS[props.status])
   max-width: 340px;
   display: flex;
   flex-direction: column;
-  background: var(--n-color);
+  background: #fafafa;
   border-radius: 8px;
-  border: 1px solid var(--n-border-color, rgba(255, 255, 255, 0.09));
+  border: 1px solid #e8e8e8;
   overflow: hidden;
 }
 
@@ -46,7 +46,7 @@ const color = computed(() => STATUS_COLORS[props.status])
   align-items: center;
   gap: 8px;
   padding: 12px 14px;
-  border-bottom: 1px solid var(--n-border-color, rgba(255, 255, 255, 0.09));
+  border-bottom: 1px solid #e8e8e8;
 }
 
 .column-indicator {

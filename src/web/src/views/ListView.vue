@@ -172,8 +172,6 @@ const rowProps = (row: Todo) => ({
         :row-props="rowProps"
         :bordered="false"
         size="small"
-        flex-height
-        class="list-table"
       />
     </div>
 
@@ -212,10 +210,6 @@ const rowProps = (row: Todo) => ({
 .list-table-container {
   flex: 1;
   padding: 0 24px 24px;
-  overflow: hidden;
-}
-
-.list-table {
-  height: 100%;
+  overflow: auto;
 }
 </style>
