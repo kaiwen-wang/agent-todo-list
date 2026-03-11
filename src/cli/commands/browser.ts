@@ -6,6 +6,7 @@
 import type { Command } from "commander";
 import { findProject } from "../../lib/project.js";
 import { error } from "../output.js";
+import { startServer } from "../../server/index.js";
 
 export function registerBrowser(program: Command): void {
   program
@@ -13,12 +14,24 @@ export function registerBrowser(program: Command): void {
     .description("Open the web dashboard in a browser")
     .option("--port <port>", "Port to listen on", "3000")
     .option("--no-open", "Don't automatically open the browser")
-    .action(async (_opts: { port: string; open: boolean }) => {
+    .action(async (opts: { port: string; open: boolean }) => {
       const paths = findProject();
       if (!paths) error("Not in an agt project. Run 'agt init' first.");
 
-      error(
-        "Web dashboard not yet implemented. Coming in a future version.",
-      );
+      const port = parseInt(opts.port, 10);
+      const server = await startServer(paths!.root, port);
+      const url = `http://localhost:${server.port}`;
+
+      console.log(`Dashboard running at ${url}`);
+      console.log("Press Ctrl+C to stop.\n");
+
+      if (opts.open) {
+        // Open browser (macOS: open, Linux: xdg-open)
+        const cmd = process.platform === "darwin" ? "open" : "xdg-open";
+        Bun.spawn([cmd, url]);
+      }
+
+      // Keep the process running
+      await new Promise(() => {});
     });
 }
