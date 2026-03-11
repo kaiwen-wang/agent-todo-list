@@ -44,7 +44,7 @@ export const BOARD_STATUSES: Status[] = ['none', 'todo', 'in_progress', 'complet
 
 export const PRIORITIES: Priority[] = ['none', 'urgent', 'high', 'medium', 'low']
 
-export const LABELS: Label[] = ['new_feature', 'bug', 'feature_plus']
+export const LABELS: Label[] = ['bug', 'new_feature', 'feature_plus']
 
 export const LABEL_DISPLAY: Record<Label, string> = {
   new_feature: 'New Feature',

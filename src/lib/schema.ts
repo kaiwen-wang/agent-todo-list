@@ -28,8 +28,8 @@ export const PRIORITIES: readonly Priority[] = [
 ] as const;
 
 export const LABELS: readonly Label[] = [
-  "new_feature",
   "bug",
+  "new_feature",
   "feature_plus",
 ] as const;
 
