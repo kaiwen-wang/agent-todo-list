@@ -120,58 +120,59 @@ agent-todo-list/
   oxlint.config.json
   ARCHITECTURE.md           # This file
 
-  lib/                      # Shared library (not a separate package)
-    schema.ts               # TypeScript types (Project, Todo, Member)
-    operations.ts           # Automerge mutation functions
-    queries.ts              # Read/filter functions
-    storage.ts              # Load/save .automerge files
-    project.ts              # .todo/ directory management, config I/O
-    sync.ts                 # Automerge sync protocol helpers
-    migrate.ts              # Schema migration logic
-    export.ts               # Markdown export renderer
+  src/
+    lib/                    # Shared library (not a separate package)
+      schema.ts             # TypeScript types (Project, Todo, Member)
+      operations.ts         # Automerge mutation functions
+      queries.ts            # Read/filter functions
+      storage.ts            # Load/save .automerge files
+      project.ts            # .todo/ directory management, config I/O
+      sync.ts               # Automerge sync protocol helpers
+      migrate.ts            # Schema migration logic
+      export.ts             # Markdown export renderer
 
-  cli/                      # CLI application
-    index.ts                # Entry point, command router
-    commands/
-      init.ts               # `todo init` — create .todo/ in current repo
-      add.ts                # `todo add "title"`
-      list.ts               # `todo list`
-      update.ts             # `todo update ABC-1 --status done`
-      show.ts               # `todo show ABC-1`
-      assign.ts             # `todo assign ABC-1 kaiwen`
-      serve.ts              # `todo serve` — start server + web dashboard
-      export.ts             # `todo export --format md`
-    output.ts               # Terminal formatting (tables, colors)
+    cli/                    # CLI application
+      index.ts              # Entry point, command router
+      commands/
+        init.ts             # `todo init` — create .todo/ in current repo
+        add.ts              # `todo add "title"`
+        list.ts             # `todo list`
+        update.ts           # `todo update ABC-1 --status done`
+        show.ts             # `todo show ABC-1`
+        assign.ts           # `todo assign ABC-1 kaiwen`
+        serve.ts            # `todo serve` — start server + web dashboard
+        export.ts           # `todo export --format md`
+      output.ts             # Terminal formatting (tables, colors)
 
-  server/                   # Bun.serve() — sync hub + static file server
-    index.ts                # Server entry point
-    package.json            # Server-specific deps (if any)
+    server/                 # Bun.serve() — sync hub + static file server
+      index.ts              # Server entry point
 
-  web/                      # Vue 3 + Vite frontend
-    src/
-      App.vue
-      main.ts
-      router/index.ts
-      stores/
-        project.ts          # Pinia store wrapping Automerge doc
-      views/
-        Board.vue           # Kanban board (default view)
-        ListView.vue        # Table/list view
-        TodoDetail.vue      # Single todo detail
-      components/
-        TodoCard.vue
-        StatusColumn.vue
-        CreateTodoModal.vue
-      composables/
-        useAutomerge.ts     # Vue composable for Automerge doc reactivity
-    vite.config.ts
-    package.json
+    web/                    # Vue 3 + Vite frontend (scaffolded by create-vue)
+      src/
+        App.vue
+        main.ts
+        router/index.ts
+        stores/
+          project.ts        # Pinia store wrapping Automerge doc
+        views/
+          Board.vue         # Kanban board (default view)
+          ListView.vue      # Table/list view
+          TodoDetail.vue    # Single todo detail
+        components/
+          TodoCard.vue
+          StatusColumn.vue
+          CreateTodoModal.vue
+        composables/
+          useAutomerge.ts   # Vue composable for Automerge doc reactivity
+      vite.config.ts
+      package.json
 ```
 
-`lib/` is NOT a workspace package — it's a shared directory imported via TypeScript
-path aliases. This avoids a third `package.json` and build step.
+All source code lives under `src/`. `lib/` is NOT a workspace package — it's a shared
+directory imported via TypeScript path aliases. This avoids a third `package.json` and
+build step.
 
-Bun workspaces are used for `server/` and `web/` (they have different dependency
+Bun workspaces are used for `src/server` and `src/web` (they have different dependency
 profiles — web needs Vue/Vite, server doesn't).
 
 ## CLI Interface
