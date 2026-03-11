@@ -20,32 +20,40 @@ export const useProjectStore = defineStore('project', () => {
   /** Todos grouped by status for the board view */
   const todosByStatus = computed(() => {
     const grouped: Record<Status, Todo[]> = {
-      backlog: [],
+      none: [],
       todo: [],
       in_progress: [],
-      done: [],
+      completed: [],
       archived: [],
+      wont_do: [],
     }
     for (const todo of todos.value) {
-      grouped[todo.status].push(todo)
+      const key = todo.status
+      if (key && grouped[key]) {
+        grouped[key].push(todo)
+      }
     }
     return grouped
   })
 
-  /** Active todos (not archived) */
-  const activeTodos = computed(() => todos.value.filter((t) => t.status !== 'archived'))
+  /** Active todos (not archived or won't do) */
+  const activeTodos = computed(() => todos.value.filter((t) => t.status !== 'archived' && t.status !== 'wont_do'))
 
   /** Counts per status */
   const statusCounts = computed(() => {
     const counts: Record<Status, number> = {
-      backlog: 0,
+      none: 0,
       todo: 0,
       in_progress: 0,
-      done: 0,
+      completed: 0,
       archived: 0,
+      wont_do: 0,
     }
     for (const todo of todos.value) {
-      counts[todo.status]++
+      const key = todo.status
+      if (key && counts[key] !== undefined) {
+        counts[key]++
+      }
     }
     return counts
   })
@@ -111,6 +119,41 @@ export const useProjectStore = defineStore('project', () => {
     }
   }
 
+  // ── Member actions ──
+
+  async function addMember(params: api.AddMemberParams) {
+    error.value = null
+    try {
+      await api.addMember(params)
+      await load()
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e)
+      throw e
+    }
+  }
+
+  async function removeMember(memberId: string) {
+    error.value = null
+    try {
+      await api.removeMember(memberId)
+      await load()
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e)
+      throw e
+    }
+  }
+
+  async function updateMember(memberId: string, updates: api.UpdateMemberParams) {
+    error.value = null
+    try {
+      await api.updateMemberApi(memberId, updates)
+      await load()
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e)
+      throw e
+    }
+  }
+
   /** Currently selected todo number for the detail modal (null = closed) */
   const selectedTodoNumber = ref<number | null>(null)
 
@@ -140,6 +183,9 @@ export const useProjectStore = defineStore('project', () => {
     deleteTodo,
     moveTodo,
     updateProjectSettings,
+    addMember,
+    removeMember,
+    updateMember,
     openTodo,
     closeTodo,
   }

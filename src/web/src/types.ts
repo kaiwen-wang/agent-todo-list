@@ -1,6 +1,6 @@
 /** Types mirroring the server's JSON output from toJSON() */
 
-export type Status = 'backlog' | 'todo' | 'in_progress' | 'done' | 'archived'
+export type Status = 'none' | 'todo' | 'in_progress' | 'completed' | 'archived' | 'wont_do'
 export type Priority = 'low' | 'medium' | 'high' | 'urgent'
 export type MemberRole = 'owner' | 'member' | 'agent'
 
@@ -10,11 +10,10 @@ export interface Todo {
   number: number
   title: string
   description: string
-  status: Status
-  priority: Priority
+  status: Status | null
+  priority: Priority | null
   assignee: string | null
   assigneeName: string | null
-  tags: string[]
   createdAt: string
   updatedAt: string
   createdBy: string
@@ -36,19 +35,20 @@ export interface Project {
   todos: Todo[]
 }
 
-export const STATUSES: Status[] = ['backlog', 'todo', 'in_progress', 'done', 'archived']
+export const STATUSES: Status[] = ['none', 'todo', 'in_progress', 'completed', 'archived', 'wont_do']
 
-/** Statuses shown as columns on the board (exclude archived) */
-export const BOARD_STATUSES: Status[] = ['backlog', 'todo', 'in_progress', 'done']
+/** Statuses shown as columns on the board (exclude archived and wont_do) */
+export const BOARD_STATUSES: Status[] = ['none', 'todo', 'in_progress', 'completed']
 
 export const PRIORITIES: Priority[] = ['low', 'medium', 'high', 'urgent']
 
 export const STATUS_DISPLAY: Record<Status, string> = {
-  backlog: 'Backlog',
-  todo: 'Todo',
+  none: 'None',
+  todo: 'To Do',
   in_progress: 'In Progress',
-  done: 'Done',
+  completed: 'Completed',
   archived: 'Archived',
+  wont_do: "Won't Do",
 }
 
 export const PRIORITY_DISPLAY: Record<Priority, string> = {
@@ -66,9 +66,10 @@ export const PRIORITY_COLORS: Record<Priority, string> = {
 }
 
 export const STATUS_COLORS: Record<Status, string> = {
-  backlog: '#9ca3af',
+  none: '#9ca3af',
   todo: '#3b82f6',
   in_progress: '#f59e0b',
-  done: '#10b981',
+  completed: '#10b981',
   archived: '#6b7280',
+  wont_do: '#ef4444',
 }
