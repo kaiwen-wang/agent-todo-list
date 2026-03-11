@@ -35,7 +35,8 @@ const activeKey = computed(() => (route.name as string) ?? 'board')
 
 const menuOptions: MenuOption[] = [
   { label: 'Board', key: 'board' },
-  { label: 'List', key: 'list' },
+  { label: 'Table', key: 'list' },
+  { label: 'Members', key: 'members' },
 ]
 
 function handleMenuUpdate(key: string) {
@@ -76,13 +77,13 @@ const themeOverrides = {
               <div class="section-label">Status</div>
               <div class="status-counts">
                 <div class="status-row">
-                  <span class="status-dot" :style="{ background: STATUS_COLORS.backlog }" />
-                  <span class="status-name">Backlog</span>
-                  <span class="status-count">{{ store.statusCounts.backlog }}</span>
+                  <span class="status-dot" :style="{ background: STATUS_COLORS.none }" />
+                  <span class="status-name">None</span>
+                  <span class="status-count">{{ store.statusCounts.none }}</span>
                 </div>
                 <div class="status-row">
                   <span class="status-dot" :style="{ background: STATUS_COLORS.todo }" />
-                  <span class="status-name">Todo</span>
+                  <span class="status-name">To Do</span>
                   <span class="status-count">{{ store.statusCounts.todo }}</span>
                 </div>
                 <div class="status-row">
@@ -91,14 +92,19 @@ const themeOverrides = {
                   <span class="status-count">{{ store.statusCounts.in_progress }}</span>
                 </div>
                 <div class="status-row">
-                  <span class="status-dot" :style="{ background: STATUS_COLORS.done }" />
-                  <span class="status-name">Done</span>
-                  <span class="status-count">{{ store.statusCounts.done }}</span>
+                  <span class="status-dot" :style="{ background: STATUS_COLORS.completed }" />
+                  <span class="status-name">Completed</span>
+                  <span class="status-count">{{ store.statusCounts.completed }}</span>
                 </div>
                 <div class="status-row">
                   <span class="status-dot" :style="{ background: STATUS_COLORS.archived }" />
                   <span class="status-name">Archived</span>
                   <span class="status-count">{{ store.statusCounts.archived }}</span>
+                </div>
+                <div class="status-row">
+                  <span class="status-dot" :style="{ background: STATUS_COLORS.wont_do }" />
+                  <span class="status-name">Won't Do</span>
+                  <span class="status-count">{{ store.statusCounts.wont_do }}</span>
                 </div>
               </div>
             </div>
