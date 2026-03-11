@@ -19,6 +19,10 @@ export interface TodoPaths {
   configPath: string;
   /** Path to .todo/data.automerge */
   dataPath: string;
+  /** Path to .todo/TODO.md (inbox) */
+  inboxPath: string;
+  /** Path to .todo/TODO-PROCESSED.md (processed inbox archive) */
+  processedPath: string;
 }
 
 /**
@@ -37,6 +41,8 @@ export function findProject(startDir: string = process.cwd()): TodoPaths | null 
         todoDir: candidate,
         configPath: join(candidate, CONFIG_FILE),
         dataPath: join(candidate, DATA_FILE),
+        inboxPath: join(candidate, "TODO.md"),
+        processedPath: join(candidate, "TODO-PROCESSED.md"),
       };
     }
 
@@ -73,6 +79,8 @@ export async function initProject(
     todoDir,
     configPath: join(todoDir, CONFIG_FILE),
     dataPath: join(todoDir, DATA_FILE),
+    inboxPath: join(todoDir, "TODO.md"),
+    processedPath: join(todoDir, "TODO-PROCESSED.md"),
   };
 
   // Write config.toml
@@ -103,6 +111,10 @@ export async function initProject(
       "# CRDT merge driver for Automerge binary data\n" + mergeDriverLine + "\n",
     );
   }
+
+  // Create inbox files
+  await Bun.write(paths.inboxPath, "");
+  await Bun.write(paths.processedPath, "");
 
   // Configure the git merge driver (local repo config only)
   if (isGitRepo(dir)) {

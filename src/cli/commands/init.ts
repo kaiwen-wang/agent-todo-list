@@ -43,9 +43,12 @@ export function registerInit(program: Command): void {
       const doc = createProject(opts.prefix, opts.name, opts.owner);
       await saveDoc(paths.dataPath, doc);
 
-      success(`Initialized project "${opts.name}" (${opts.prefix.toUpperCase()}) at ${paths.todoDir}`);
+      success(
+        `Initialized project "${opts.name}" (${opts.prefix.toUpperCase()}) at ${paths.todoDir}`,
+      );
       console.log(`  Config: ${paths.configPath}`);
       console.log(`  Data:   ${paths.dataPath}`);
+      console.log(`  Inbox:  ${paths.inboxPath}`);
       if (isGitRepo(cwd)) {
         console.log(`  Git merge driver configured for conflict-free sync.`);
       }
