@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch } from 'vue'
 import {
   NModal,
   NCard,
   NTag,
-  NSpace,
   NSelect,
   NInput,
   NButtonGroup,
@@ -19,13 +18,11 @@ import {
   PRIORITIES,
   STATUS_DISPLAY,
   PRIORITY_DISPLAY,
-  PRIORITY_COLORS,
 } from '@/types'
 
 const store = useProjectStore()
 const message = useMessage()
 
-const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }))
 const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }))
 
 const isOpen = computed(() => store.selectedTodoNumber !== null)
