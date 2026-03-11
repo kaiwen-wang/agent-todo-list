@@ -14,11 +14,13 @@ import { setBranch, clearBranch } from "../../lib/operations.js";
 import { parseTodoRef, findTodoByNumber } from "../../lib/queries.js";
 import { error, success, warn } from "../output.js";
 
+const ARTICLES = new Set(["a", "an", "the"]);
+
 function slugify(text: string, maxWords = 5): string {
   return text
     .toLowerCase()
     .split(/[^a-z0-9]+/)
-    .filter(Boolean)
+    .filter((w) => w && !ARTICLES.has(w))
     .slice(0, maxWords)
     .join("-");
 }

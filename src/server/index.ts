@@ -54,11 +54,13 @@ export interface ServerOptions {
   vitePort?: number;
 }
 
+const ARTICLES = new Set(["a", "an", "the"]);
+
 function slugify(text: string, maxWords = 5): string {
   return text
     .toLowerCase()
     .split(/[^a-z0-9]+/)
-    .filter(Boolean)
+    .filter((w) => w && !ARTICLES.has(w))
     .slice(0, maxWords)
     .join("-");
 }
