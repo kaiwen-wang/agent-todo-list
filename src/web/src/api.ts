@@ -159,6 +159,19 @@ export async function createBranchApi(
   return res.json();
 }
 
+export async function removeBranchApi(number: number): Promise<{ ok: boolean; branch: string }> {
+  const res = await fetch(`${BASE}/api/change`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "removeBranch", number }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || "Failed to remove branch");
+  }
+  return res.json();
+}
+
 export async function updateMemberApi(
   memberId: string,
   updates: UpdateMemberParams,

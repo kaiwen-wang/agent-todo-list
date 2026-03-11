@@ -133,6 +133,18 @@ export const useProjectStore = defineStore("project", () => {
     }
   }
 
+  async function removeBranch(number: number) {
+    error.value = null;
+    try {
+      const result = await api.removeBranchApi(number);
+      await load();
+      return result;
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
   async function updateProjectSettings(updates: api.UpdateProjectParams) {
     error.value = null;
     try {
@@ -210,6 +222,7 @@ export const useProjectStore = defineStore("project", () => {
     moveTodo,
     addComment,
     createBranch,
+    removeBranch,
     updateProjectSettings,
     addMember,
     removeMember,

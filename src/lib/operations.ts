@@ -245,6 +245,25 @@ export function setBranch(
   });
 }
 
+/** Clear the branch name on a todo (after worktree removal) */
+export function clearBranch(
+  doc: Doc,
+  todoNumber: number,
+  actorId?: MemberId,
+): Doc {
+  return Automerge.change(doc, (d) => {
+    const todo = d.todos.find((t) => t.number === todoNumber);
+    if (!todo) throw new Error(`Todo #${todoNumber} not found`);
+
+    const actor = resolveActor(d, actorId);
+    const oldBranch = todo.branch;
+    todo.branch = null;
+    todo.updatedAt = Date.now();
+
+    audit(d, "todo.unbranched", actor, `${d.prefix}-${todoNumber}`, { branch: oldBranch });
+  });
+}
+
 // ── Member operations ───────────────────────────────────────────────
 
 /** Add a member to the project */

@@ -4,13 +4,12 @@
  * Usage: bun src/server/dev.ts
  *   or:  bun run dev
  *
- * - API server on port 3000 (handles /api/* requests only)
+ * - API server on port 3000 (with --watch for auto-reload on backend changes)
  * - Vite dev server on port 5173 (HMR for Vue, proxies /api to 3000)
  * - Open http://localhost:5173 in your browser
  */
 
 import { findProject } from "../lib/project.js";
-import { startServer } from "./index.js";
 
 const VITE_PORT = 5173;
 
@@ -20,10 +19,17 @@ if (!paths) {
   process.exit(1);
 }
 
-// Start the API server (non-API requests redirect to Vite)
-const server = await startServer(paths.root, 3000, {
-  dev: true,
-  vitePort: VITE_PORT,
+// Spawn API server with --watch so it auto-restarts on backend changes
+const api = Bun.spawn(["bun", "--watch", "src/server/index.ts"], {
+  cwd: paths.root,
+  stdin: "inherit",
+  stdout: "inherit",
+  stderr: "inherit",
+  env: {
+    ...process.env,
+    AGT_DEV: "1",
+    AGT_VITE_PORT: String(VITE_PORT),
+  },
 });
 
 // Spawn Vite dev server
@@ -34,17 +40,16 @@ const vite = Bun.spawn(["bun", "run", "--cwd", "src/web", "dev"], {
   stderr: "inherit",
 });
 
+console.log("Dev mode: API server (--watch) on :3000, Vite on :5173");
+
 // Clean shutdown on Ctrl+C
-process.on("SIGINT", () => {
+function cleanup() {
+  api.kill();
   vite.kill();
-  server.stop();
   process.exit(0);
-});
+}
 
-process.on("SIGTERM", () => {
-  vite.kill();
-  server.stop();
-  process.exit(0);
-});
+process.on("SIGINT", cleanup);
+process.on("SIGTERM", cleanup);
 
-await vite.exited;
+await Promise.race([api.exited, vite.exited]);

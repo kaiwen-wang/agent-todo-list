@@ -23,6 +23,7 @@ import {
   updateMember,
   addComment,
   setBranch,
+  clearBranch,
 } from "../lib/operations.js";
 import { findMember } from "../lib/queries.js";
 import { toJSON } from "../lib/export.js";
@@ -189,6 +190,36 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
                 });
               }
 
+              case "removeBranch": {
+                const todoNum = body.number;
+                const todo = doc.todos.find((t) => t.number === todoNum);
+                if (!todo) return jsonResponse({ error: `Todo #${todoNum} not found` }, 400);
+
+                if (!todo.branch) {
+                  return jsonResponse({ error: `Todo #${todoNum} has no branch` }, 400);
+                }
+
+                const branchName = todo.branch;
+                const worktreePath = join(projectPath, ".worktrees", branchName);
+
+                if (existsSync(worktreePath)) {
+                  const result = Bun.spawnSync(
+                    ["git", "worktree", "remove", worktreePath],
+                    { cwd: projectPath, stderr: "pipe", stdout: "pipe" },
+                  );
+
+                  if (result.exitCode !== 0) {
+                    const stderr = result.stderr.toString().trim();
+                    return jsonResponse({ error: `Failed to remove worktree: ${stderr}` }, 500);
+                  }
+                }
+
+                doc = clearBranch(doc, todoNum);
+                await save();
+
+                return jsonResponse({ ok: true, branch: branchName });
+              }
+
               case "updateProject": {
                 doc = updateProject(doc, body.updates ?? {});
                 await save();
@@ -276,6 +307,8 @@ if (import.meta.main) {
     console.error("Not in an agt project. Run 'agt init' first.");
     process.exit(1);
   }
-  const server = await startServer(paths.root);
-  console.log(`Dashboard: http://localhost:${server.port}`);
+  const dev = process.env.AGT_DEV === "1";
+  const vitePort = parseInt(process.env.AGT_VITE_PORT || "5173", 10);
+  const server = await startServer(paths.root, 3000, dev ? { dev: true, vitePort } : {});
+  console.log(`API server: http://localhost:${server.port}`);
 }

@@ -192,6 +192,19 @@ async function handleCreateBranch() {
     branchLoading.value = false;
   }
 }
+
+async function handleRemoveBranch() {
+  if (!todo.value?.branch) return;
+  branchLoading.value = true;
+  try {
+    await store.removeBranch(todo.value.number);
+    message.success("Removed worktree + branch");
+  } catch (e: unknown) {
+    message.error(e instanceof Error ? e.message : "Failed to remove branch");
+  } finally {
+    branchLoading.value = false;
+  }
+}
 </script>
 
 <template>
@@ -315,6 +328,15 @@ async function handleCreateBranch() {
               <NTag size="small" :bordered="false" style="font-family: monospace">
                 {{ todo.branch }}
               </NTag>
+              <NButton
+                size="tiny"
+                quaternary
+                type="error"
+                :loading="branchLoading"
+                @click="handleRemoveBranch"
+              >
+                Remove
+              </NButton>
             </div>
             <NButton
               v-else
@@ -482,6 +504,8 @@ async function handleCreateBranch() {
 }
 
 .branch-name {
-  line-height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 </style>
