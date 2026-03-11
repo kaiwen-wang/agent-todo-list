@@ -1,0 +1,1 @@
+Remove notifications from center of top pgae. Gets in way of things.
