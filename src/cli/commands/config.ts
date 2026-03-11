@@ -49,7 +49,6 @@ export function registerConfig(program: Command): void {
 
           // Keep config.toml in sync
           await syncConfig(paths.configPath, {
-            id: doc.id,
             prefix: doc.prefix,
             name: doc.name,
           });

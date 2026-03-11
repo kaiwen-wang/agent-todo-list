@@ -20,7 +20,6 @@ export function registerAdd(program: Command): void {
     .option("-s, --status <status>", "Initial status", "todo")
     .option("-p, --priority <priority>", "Priority level", "medium")
     .option("-a, --assignee <name>", "Assignee name")
-    .option("-t, --tags <tags>", "Comma-separated tags")
     .option("--json", "Output as JSON")
     .action(
       async (
@@ -30,7 +29,6 @@ export function registerAdd(program: Command): void {
           status: string;
           priority: string;
           assignee?: string;
-          tags?: string;
           json?: boolean;
         },
       ) => {
@@ -65,17 +63,12 @@ export function registerAdd(program: Command): void {
           assigneeId = member.id;
         }
 
-        const tags = opts.tags
-          ? opts.tags.split(",").map((t) => t.trim()).filter(Boolean)
-          : [];
-
         const result = addTodo(doc, {
           title,
           description: opts.description,
           status: opts.status as Status,
           priority: opts.priority as Priority,
           assignee: assigneeId,
-          tags,
         });
 
         await saveDoc(paths.dataPath, result.doc);

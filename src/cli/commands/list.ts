@@ -17,7 +17,6 @@ export function registerList(program: Command): void {
     .option("-s, --status <status>", "Filter by status")
     .option("-p, --priority <priority>", "Filter by priority")
     .option("-a, --assignee <name>", "Filter by assignee")
-    .option("-t, --tag <tag>", "Filter by tag")
     .option("-q, --search <query>", "Search title and description")
     .option("--all", "Include archived todos")
     .option("--json", "Output as JSON")
@@ -26,7 +25,6 @@ export function registerList(program: Command): void {
         status?: string;
         priority?: string;
         assignee?: string;
-        tag?: string;
         search?: string;
         all?: boolean;
         json?: boolean;
@@ -45,17 +43,17 @@ export function registerList(program: Command): void {
         } else if (opts.all) {
           // No status filter — include everything
           filter.status = [
-            "backlog",
+            "none",
             "todo",
             "in_progress",
-            "done",
+            "completed",
             "archived",
+            "wont_do",
           ];
         }
 
         if (opts.priority) filter.priority = opts.priority as Priority;
         if (opts.assignee) filter.assignee = opts.assignee;
-        if (opts.tag) filter.tag = opts.tag;
         if (opts.search) filter.search = opts.search;
 
         const todos = queryTodos(doc, filter);
@@ -68,7 +66,6 @@ export function registerList(program: Command): void {
             status: t.status,
             priority: t.priority,
             assignee: t.assignee,
-            tags: [...t.tags],
           }));
           console.log(JSON.stringify(out, null, 2));
           return;

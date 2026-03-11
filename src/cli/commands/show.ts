@@ -42,7 +42,6 @@ export function registerShow(program: Command): void {
               ref: `${config.prefix}-${todo.number}`,
               ...todo,
               assigneeName: member?.name ?? null,
-              tags: [...todo.tags],
             },
             null,
             2,

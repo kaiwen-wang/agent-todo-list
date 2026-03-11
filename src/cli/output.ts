@@ -7,11 +7,12 @@ import chalk from "chalk";
 import type { Todo, Status, Priority } from "../lib/schema.js";
 
 const STATUS_COLORS: Record<Status, (s: string) => string> = {
-  backlog: chalk.gray,
+  none: chalk.gray,
   todo: chalk.white,
   in_progress: chalk.cyan,
-  done: chalk.green,
+  completed: chalk.green,
   archived: chalk.dim,
+  wont_do: chalk.strikethrough,
 };
 
 const PRIORITY_COLORS: Record<Priority, (s: string) => string> = {
@@ -22,11 +23,12 @@ const PRIORITY_COLORS: Record<Priority, (s: string) => string> = {
 };
 
 const STATUS_ICONS: Record<Status, string> = {
-  backlog: " ",
+  none: " ",
   todo: " ",
   in_progress: "*",
-  done: "x",
+  completed: "x",
   archived: "-",
+  wont_do: "~",
 };
 
 const PRIORITY_LABELS: Record<Priority, string> = {
@@ -46,12 +48,7 @@ export function formatTodoLine(todo: Todo, prefix: string): string {
     todo.priority !== "medium"
       ? " " + PRIORITY_COLORS[todo.priority](PRIORITY_LABELS[todo.priority])
       : "";
-  const tags =
-    todo.tags.length > 0
-      ? " " + todo.tags.map((t) => chalk.dim(`#${t}`)).join(" ")
-      : "";
-
-  return `[${icon}] ${ref} ${title}${priority}${tags}`;
+  return `[${icon}] ${ref} ${title}${priority}`;
 }
 
 /** Format a todo's full detail view. */
@@ -74,10 +71,6 @@ export function formatTodoDetail(
 
   if (todo.assignee) {
     lines.push(`  Assignee: ${memberName ?? todo.assignee}`);
-  }
-
-  if (todo.tags.length > 0) {
-    lines.push(`  Tags:     ${todo.tags.join(", ")}`);
   }
 
   lines.push(`  Created:  ${formatDate(todo.createdAt)}`);

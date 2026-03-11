@@ -21,7 +21,6 @@ export function registerUpdate(program: Command): void {
     .option("-s, --status <status>", "New status")
     .option("-p, --priority <priority>", "New priority")
     .option("-a, --assignee <name>", "New assignee")
-    .option("-t, --tags <tags>", "Replace tags (comma-separated)")
     .option("--json", "Output as JSON")
     .action(
       async (
@@ -32,7 +31,6 @@ export function registerUpdate(program: Command): void {
           status?: string;
           priority?: string;
           assignee?: string;
-          tags?: string;
           json?: boolean;
         },
       ) => {
@@ -57,7 +55,7 @@ export function registerUpdate(program: Command): void {
         const updates: Partial<
           Pick<
             Todo,
-            "title" | "description" | "status" | "priority" | "assignee" | "tags"
+            "title" | "description" | "status" | "priority" | "assignee"
           >
         > = {};
 
@@ -88,13 +86,6 @@ export function registerUpdate(program: Command): void {
             error(`Member "${opts.assignee}" not found.`);
           }
           updates.assignee = member.id;
-        }
-
-        if (opts.tags !== undefined) {
-          updates.tags = opts.tags
-            .split(",")
-            .map((t) => t.trim())
-            .filter(Boolean);
         }
 
         if (Object.keys(updates).length === 0) {

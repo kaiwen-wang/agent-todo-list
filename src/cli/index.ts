@@ -11,7 +11,7 @@ import { registerList } from "./commands/list.js";
 import { registerShow } from "./commands/show.js";
 import { registerUpdate } from "./commands/update.js";
 import { registerAssign } from "./commands/assign.js";
-import { registerExport } from "./commands/export.js";
+import { registerMember } from "./commands/member.js";
 import { registerConfig } from "./commands/config.js";
 import { registerServe } from "./commands/browser.js";
 
@@ -29,7 +29,7 @@ registerList(program);
 registerShow(program);
 registerUpdate(program);
 registerAssign(program);
-registerExport(program);
+registerMember(program);
 registerConfig(program);
 registerServe(program);
 
