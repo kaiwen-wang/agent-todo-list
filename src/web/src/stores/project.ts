@@ -2,9 +2,8 @@
 
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import type { Project, Todo, Status, Priority } from '@/types'
+import type { Project, Todo, Status } from '@/types'
 import * as api from '@/api'
-import { BOARD_STATUSES } from '@/types'
 
 export const useProjectStore = defineStore('project', () => {
   const project = ref<Project | null>(null)

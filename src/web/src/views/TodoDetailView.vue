@@ -22,7 +22,6 @@ import {
   PRIORITIES,
   STATUS_DISPLAY,
   PRIORITY_DISPLAY,
-  STATUS_COLORS,
   PRIORITY_COLORS,
 } from '@/types'
 

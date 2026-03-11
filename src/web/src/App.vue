@@ -1,18 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, h, type Component } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import {
   NConfigProvider,
   NMessageProvider,
   NLayout,
-  NLayoutHeader,
   NLayoutSider,
   NLayoutContent,
   NMenu,
   NTag,
-  NSpace,
   NDivider,
-  NStatistic,
   NButton,
   type MenuOption,
 } from 'naive-ui'

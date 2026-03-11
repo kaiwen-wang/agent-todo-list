@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { NButton, NSpace } from 'naive-ui'
+import { NButton } from 'naive-ui'
 import { useProjectStore } from '@/stores/project'
 import { BOARD_STATUSES } from '@/types'
 import StatusColumn from '@/components/StatusColumn.vue'
