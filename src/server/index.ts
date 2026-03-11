@@ -12,7 +12,7 @@ import * as Automerge from "@automerge/automerge";
 import { join } from "node:path";
 import type { Project } from "../lib/schema.js";
 import { loadDoc, saveDoc } from "../lib/storage.js";
-import { addTodo, updateTodo, deleteTodo } from "../lib/operations.js";
+import { addTodo, updateTodo, deleteTodo, updateProject } from "../lib/operations.js";
 import { toJSON } from "../lib/export.js";
 
 type Doc = Automerge.Doc<Project>;
@@ -89,6 +89,12 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
 
               case "delete": {
                 doc = deleteTodo(doc, body.number);
+                await save();
+                return jsonResponse({ ok: true });
+              }
+
+              case "updateProject": {
+                doc = updateProject(doc, body.updates ?? {});
                 await save();
                 return jsonResponse({ ok: true });
               }

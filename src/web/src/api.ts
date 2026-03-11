@@ -56,6 +56,27 @@ export async function updateTodo(
   return res.json()
 }
 
+export interface UpdateProjectParams {
+  name?: string
+  prefix?: string
+  description?: string
+}
+
+export async function updateProjectSettings(
+  updates: UpdateProjectParams,
+): Promise<{ ok: boolean }> {
+  const res = await fetch(`${BASE}/api/change`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'updateProject', updates }),
+  })
+  if (!res.ok) {
+    const data = await res.json()
+    throw new Error(data.error || 'Failed to update project')
+  }
+  return res.json()
+}
+
 export async function deleteTodo(number: number): Promise<{ ok: boolean }> {
   const res = await fetch(`${BASE}/api/change`, {
     method: 'POST',

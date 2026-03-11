@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed, h, type Component } from 'vue'
+import { ref, onMounted, computed, h, type Component } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import {
   NConfigProvider,
@@ -13,14 +13,18 @@ import {
   NSpace,
   NDivider,
   NStatistic,
+  NButton,
   type MenuOption,
 } from 'naive-ui'
 import { useProjectStore } from '@/stores/project'
 import { STATUS_COLORS } from '@/types'
+import SettingsModal from '@/components/SettingsModal.vue'
 
 const store = useProjectStore()
 const route = useRoute()
 const router = useRouter()
+
+const showSettings = ref(false)
 
 onMounted(() => {
   store.load()
@@ -53,6 +57,17 @@ function handleMenuUpdate(key: string) {
             <NTag v-if="store.prefix" type="info" size="small" round>
               {{ store.prefix }}
             </NTag>
+            <NButton
+              quaternary
+              circle
+              size="tiny"
+              class="settings-btn"
+              @click="showSettings = true"
+            >
+              <template #icon>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              </template>
+            </NButton>
           </div>
 
           <NMenu

@@ -100,6 +100,17 @@ export const useProjectStore = defineStore('project', () => {
     return updateTodo(number, { status })
   }
 
+  async function updateProjectSettings(updates: api.UpdateProjectParams) {
+    error.value = null
+    try {
+      await api.updateProjectSettings(updates)
+      await load()
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e)
+      throw e
+    }
+  }
+
   return {
     project,
     loading,
@@ -116,5 +127,6 @@ export const useProjectStore = defineStore('project', () => {
     updateTodo,
     deleteTodo,
     moveTodo,
+    updateProjectSettings,
   }
 })
