@@ -21,6 +21,7 @@ import { useProjectStore } from "@/stores/project";
 import type { Todo, Status, Priority, Label } from "@/types";
 import {
   STATUSES,
+  BOARD_STATUSES,
   PRIORITIES,
   STATUS_DISPLAY,
   PRIORITY_DISPLAY,
@@ -70,7 +71,7 @@ function renderPriorityLabel(option: { label: string; value: string }) {
 }
 
 const filteredTodos = computed(() => {
-  let list = store.activeTodos;
+  let list = store.todos;
   if (filterStatus.value) {
     list = list.filter((t) => t.status === filterStatus.value);
   }
