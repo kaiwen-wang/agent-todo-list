@@ -12,7 +12,6 @@ export interface TodoFilter {
   status?: Status | Status[];
   priority?: Priority | Priority[];
   assignee?: string;
-  tag?: string;
   search?: string;
 }
 
@@ -49,13 +48,6 @@ export function queryTodos(doc: Doc, filter: TodoFilter = {}): Todo[] {
         (member && member.name.toLowerCase().includes(assigneeLower))
       );
     });
-  }
-
-  if (filter.tag) {
-    const tagLower = filter.tag.toLowerCase();
-    todos = todos.filter((t) =>
-      t.tags.some((tag) => tag.toLowerCase() === tagLower),
-    );
   }
 
   if (filter.search) {
@@ -109,11 +101,12 @@ export function findMember(
 /** Get a count of todos grouped by status. */
 export function countByStatus(doc: Doc): Record<Status, number> {
   const counts: Record<Status, number> = {
-    backlog: 0,
+    none: 0,
     todo: 0,
     in_progress: 0,
-    done: 0,
+    completed: 0,
     archived: 0,
+    wont_do: 0,
   };
   for (const todo of doc.todos) {
     counts[todo.status]++;

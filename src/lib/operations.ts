@@ -6,6 +6,7 @@
 import * as Automerge from "@automerge/automerge";
 import { Counter } from "@automerge/automerge";
 import type {
+  Member,
   Project,
   Todo,
   Status,
@@ -54,7 +55,6 @@ export function addTodo(
     status?: Status;
     priority?: Priority;
     assignee?: string | null;
-    tags?: string[];
     createdBy?: string;
   },
 ): { doc: Doc; number: number } {
@@ -73,7 +73,6 @@ export function addTodo(
       status: opts.status ?? "todo",
       priority: opts.priority ?? "medium",
       assignee: opts.assignee ?? null,
-      tags: opts.tags ?? [],
       createdAt: now,
       updatedAt: now,
       createdBy: opts.createdBy ?? d.members[0]?.id ?? "unknown",
@@ -90,7 +89,7 @@ export function updateTodo(
   updates: Partial<
     Pick<
       Todo,
-      "title" | "description" | "status" | "priority" | "assignee" | "tags"
+      "title" | "description" | "status" | "priority" | "assignee"
     >
   >,
 ): Doc {
@@ -104,13 +103,6 @@ export function updateTodo(
     if (updates.status !== undefined) todo.status = updates.status;
     if (updates.priority !== undefined) todo.priority = updates.priority;
     if (updates.assignee !== undefined) todo.assignee = updates.assignee;
-    if (updates.tags !== undefined) {
-      // Replace tags array — use splice since Automerge proxies don't support .length = 0
-      todo.tags.splice(0, todo.tags.length);
-      for (const tag of updates.tags) {
-        todo.tags.push(tag);
-      }
-    }
     todo.updatedAt = new Date().toISOString();
   });
 }
@@ -138,6 +130,39 @@ export function addMember(
       email,
       role,
     });
+  });
+}
+
+/** Remove a member by ID or name. Clears assignee on any todos assigned to them. */
+export function removeMember(doc: Doc, memberId: string): Doc {
+  return Automerge.change(doc, (d) => {
+    const idx = d.members.findIndex((m) => m.id === memberId);
+    if (idx === -1) throw new Error(`Member "${memberId}" not found`);
+
+    // Unassign any todos assigned to this member
+    for (const todo of d.todos) {
+      if (todo.assignee === memberId) {
+        todo.assignee = null;
+      }
+    }
+
+    d.members.splice(idx, 1);
+  });
+}
+
+/** Update a member's name, email, or role */
+export function updateMember(
+  doc: Doc,
+  memberId: string,
+  updates: Partial<Pick<Member, "name" | "email" | "role">>,
+): Doc {
+  return Automerge.change(doc, (d) => {
+    const member = d.members.find((m) => m.id === memberId);
+    if (!member) throw new Error(`Member "${memberId}" not found`);
+
+    if (updates.name !== undefined) member.name = updates.name;
+    if (updates.email !== undefined) member.email = updates.email;
+    if (updates.role !== undefined) member.role = updates.role;
   });
 }
 

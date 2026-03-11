@@ -5,16 +5,17 @@
 
 import type { Counter } from "@automerge/automerge";
 
-export type Status = "backlog" | "todo" | "in_progress" | "done" | "archived";
+export type Status = "none" | "todo" | "in_progress" | "completed" | "archived" | "wont_do";
 export type Priority = "low" | "medium" | "high" | "urgent";
 export type MemberRole = "owner" | "member" | "agent";
 
 export const STATUSES: readonly Status[] = [
-  "backlog",
+  "none",
   "todo",
   "in_progress",
-  "done",
+  "completed",
   "archived",
+  "wont_do",
 ] as const;
 
 export const PRIORITIES: readonly Priority[] = [
@@ -25,11 +26,12 @@ export const PRIORITIES: readonly Priority[] = [
 ] as const;
 
 export const STATUS_DISPLAY: Record<Status, string> = {
-  backlog: "Backlog",
-  todo: "Todo",
+  none: "None",
+  todo: "To Do",
   in_progress: "In Progress",
-  done: "Done",
+  completed: "Completed",
   archived: "Archived",
+  wont_do: "Won't Do",
 };
 
 export const PRIORITY_DISPLAY: Record<Priority, string> = {
@@ -41,13 +43,14 @@ export const PRIORITY_DISPLAY: Record<Priority, string> = {
 
 export interface Todo {
   id: string;
+  ref: string;
   number: number;
   title: string;
   description: string;
   status: Status;
   priority: Priority;
   assignee: string | null;
-  tags: string[];
+  assigneeName: string | null;
   createdAt: string;
   updatedAt: string;
   createdBy: string;
