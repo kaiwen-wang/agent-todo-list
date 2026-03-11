@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, h, type Component } from 'vue'
+import { ref, computed, h, type Component } from "vue";
 import {
   NButton,
   NCard,
@@ -16,16 +16,16 @@ import {
   NTag,
   useMessage,
   type DataTableColumns,
-} from 'naive-ui'
+} from "naive-ui";
 import {
   AntennaBars1,
   AntennaBars2,
   AntennaBars3,
   AntennaBars4,
   AntennaBars5,
-} from '@vicons/tabler'
-import { useProjectStore } from '@/stores/project'
-import type { Member, MemberRole, Todo, Priority } from '@/types'
+} from "@vicons/tabler";
+import { useProjectStore } from "@/stores/project";
+import type { Member, MemberRole, Todo, Priority } from "@/types";
 import {
   STATUS_DISPLAY,
   STATUS_COLORS,
@@ -33,7 +33,7 @@ import {
   PRIORITY_COLORS,
   LABEL_DISPLAY,
   LABEL_COLORS,
-} from '@/types'
+} from "@/types";
 
 const PRIORITY_ICON: Record<Priority, Component> = {
   none: AntennaBars1,
@@ -41,225 +41,225 @@ const PRIORITY_ICON: Record<Priority, Component> = {
   medium: AntennaBars3,
   high: AntennaBars4,
   urgent: AntennaBars5,
-}
+};
 
-const store = useProjectStore()
-const message = useMessage()
+const store = useProjectStore();
+const message = useMessage();
 
-const showAddModal = ref(false)
-const showEditModal = ref(false)
-const selectedMember = ref<Member | null>(null)
-const editingMember = ref<Member | null>(null)
+const showAddModal = ref(false);
+const showEditModal = ref(false);
+const selectedMember = ref<Member | null>(null);
+const editingMember = ref<Member | null>(null);
 
 // Add form state
-const addName = ref('')
-const addEmail = ref('')
-const addRole = ref<MemberRole>('member')
-const addSubmitting = ref(false)
+const addName = ref("");
+const addEmail = ref("");
+const addRole = ref<MemberRole>("member");
+const addSubmitting = ref(false);
 
 // Edit form state
-const editName = ref('')
-const editEmail = ref('')
-const editRole = ref<MemberRole>('member')
-const editSubmitting = ref(false)
+const editName = ref("");
+const editEmail = ref("");
+const editRole = ref<MemberRole>("member");
+const editSubmitting = ref(false);
 
 const roleOptions = [
-  { label: 'Owner', value: 'owner' },
-  { label: 'Member', value: 'member' },
-  { label: 'Agent', value: 'agent' },
-]
+  { label: "Owner", value: "owner" },
+  { label: "Member", value: "member" },
+  { label: "Agent", value: "agent" },
+];
 
 const ROLE_COLORS: Record<MemberRole, string> = {
-  owner: '#f59e0b',
-  member: '#3b82f6',
-  agent: '#8b5cf6',
-}
+  owner: "#f59e0b",
+  member: "#3b82f6",
+  agent: "#8b5cf6",
+};
 
 const columns: DataTableColumns<Member> = [
   {
-    title: 'Name',
-    key: 'name',
+    title: "Name",
+    key: "name",
     render(row) {
-      return row.name
+      return row.name;
     },
   },
   {
-    title: 'Role',
-    key: 'role',
+    title: "Role",
+    key: "role",
     width: 120,
     render(row) {
-      const color = ROLE_COLORS[row.role]
+      const color = ROLE_COLORS[row.role];
       return h(
         NTag,
         {
-          size: 'small',
+          size: "small",
           round: true,
           bordered: false,
-          color: { color: color + '22', textColor: color },
+          color: { color: color + "22", textColor: color },
         },
         () => row.role,
-      )
+      );
     },
   },
   {
-    title: 'Email',
-    key: 'email',
+    title: "Email",
+    key: "email",
     render(row) {
-      return row.email || ''
+      return row.email || "";
     },
   },
   {
-    title: 'Tasks',
-    key: 'tasks',
+    title: "Tasks",
+    key: "tasks",
     width: 80,
     render(row) {
       const count = store.todos.filter(
-        (t) => t.assignee === row.id && t.status !== 'archived' && t.status !== 'wont_do',
-      ).length
-      return count > 0 ? String(count) : ''
+        (t) => t.assignee === row.id && t.status !== "archived" && t.status !== "wont_do",
+      ).length;
+      return count > 0 ? String(count) : "";
     },
   },
-]
+];
 
 /** Todos assigned to the selected member */
 const memberTodos = computed(() => {
-  if (!selectedMember.value) return []
+  if (!selectedMember.value) return [];
   return store.todos.filter(
     (t) =>
-      t.assignee === selectedMember.value!.id && t.status !== 'archived' && t.status !== 'wont_do',
-  )
-})
+      t.assignee === selectedMember.value!.id && t.status !== "archived" && t.status !== "wont_do",
+  );
+});
 
 const memberTodoColumns: DataTableColumns<Todo> = [
   {
-    title: 'Ref',
-    key: 'ref',
+    title: "Ref",
+    key: "ref",
     width: 70,
     render(row) {
-      return h('span', { style: 'font-family: monospace; font-size: 11px; opacity: 0.5' }, row.ref)
+      return h("span", { style: "font-family: monospace; font-size: 11px; opacity: 0.5" }, row.ref);
     },
   },
   {
-    title: 'Title',
-    key: 'title',
+    title: "Title",
+    key: "title",
     ellipsis: { tooltip: true },
   },
   {
-    title: 'Status',
-    key: 'status',
+    title: "Status",
+    key: "status",
     width: 110,
     render(row) {
-      return h('span', { style: 'display: flex; align-items: center; gap: 6px; font-size: 12px' }, [
-        h('span', {
-          style: `width: 8px; height: 8px; border-radius: 50%; background: ${STATUS_COLORS[row.status]}; flex-shrink: 0`,
+      return h("span", { style: "display: flex; align-items: center; gap: 6px; font-size: 12px" }, [
+        h("span", {
+          style: `width: 8px; height: 8px; border-radius: 50%; background: ${STATUS_COLORS[row.status ?? "none"]}; flex-shrink: 0`,
         }),
-        STATUS_DISPLAY[row.status],
-      ])
+        STATUS_DISPLAY[row.status ?? "none"],
+      ]);
     },
   },
   {
-    title: 'Priority',
-    key: 'priority',
+    title: "Priority",
+    key: "priority",
     width: 60,
-    align: 'center',
+    align: "center",
     render(row) {
       return h(
         NIcon,
         { size: 16, color: PRIORITY_COLORS[row.priority] },
         { default: () => h(PRIORITY_ICON[row.priority]) },
-      )
+      );
     },
   },
-]
+];
 
 function selectMember(member: Member) {
-  selectedMember.value = member
+  selectedMember.value = member;
 }
 
 const rowProps = (row: Member) => ({
-  style: 'cursor: pointer',
+  style: "cursor: pointer",
   onClick: () => selectMember(row),
-})
+});
 
 function openAdd() {
-  addName.value = ''
-  addEmail.value = ''
-  addRole.value = 'member'
-  showAddModal.value = true
+  addName.value = "";
+  addEmail.value = "";
+  addRole.value = "member";
+  showAddModal.value = true;
 }
 
 function openEdit(member: Member) {
-  editingMember.value = member
-  editName.value = member.name
-  editEmail.value = member.email ?? ''
-  editRole.value = member.role
-  showEditModal.value = true
+  editingMember.value = member;
+  editName.value = member.name;
+  editEmail.value = member.email ?? "";
+  editRole.value = member.role;
+  showEditModal.value = true;
 }
 
 function openTodo(row: Todo) {
-  selectedMember.value = null
-  store.openTodo(row.number)
+  selectedMember.value = null;
+  store.openTodo(row.number);
 }
 
 const todoRowProps = (row: Todo) => ({
-  style: 'cursor: pointer',
+  style: "cursor: pointer",
   onClick: () => openTodo(row),
-})
+});
 
 async function handleAdd() {
-  if (!addName.value.trim()) return
-  addSubmitting.value = true
+  if (!addName.value.trim()) return;
+  addSubmitting.value = true;
   try {
     await store.addMember({
       name: addName.value.trim(),
       role: addRole.value,
       email: addEmail.value.trim() || undefined,
-    })
-    message.success('Member added')
-    showAddModal.value = false
+    });
+    message.success("Member added");
+    showAddModal.value = false;
   } catch {
-    message.error('Failed to add member')
+    message.error("Failed to add member");
   } finally {
-    addSubmitting.value = false
+    addSubmitting.value = false;
   }
 }
 
 async function handleEdit() {
-  if (!editingMember.value || !editName.value.trim()) return
-  editSubmitting.value = true
+  if (!editingMember.value || !editName.value.trim()) return;
+  editSubmitting.value = true;
   try {
-    const updates: Record<string, string | null> = {}
+    const updates: Record<string, string | null> = {};
     if (editName.value.trim() !== editingMember.value.name) {
-      updates.name = editName.value.trim()
+      updates.name = editName.value.trim();
     }
     if (editRole.value !== editingMember.value.role) {
-      updates.role = editRole.value
+      updates.role = editRole.value;
     }
-    const newEmail = editEmail.value.trim() || null
+    const newEmail = editEmail.value.trim() || null;
     if (newEmail !== editingMember.value.email) {
-      updates.email = newEmail
+      updates.email = newEmail;
     }
     if (Object.keys(updates).length > 0) {
-      await store.updateMember(editingMember.value.id, updates)
-      message.success('Member updated')
+      await store.updateMember(editingMember.value.id, updates);
+      message.success("Member updated");
     }
-    showEditModal.value = false
+    showEditModal.value = false;
   } catch {
-    message.error('Failed to update member')
+    message.error("Failed to update member");
   } finally {
-    editSubmitting.value = false
+    editSubmitting.value = false;
   }
 }
 
 async function handleRemove(member: Member) {
   try {
-    await store.removeMember(member.id)
-    message.success(`Removed ${member.name}`)
+    await store.removeMember(member.id);
+    message.success(`Removed ${member.name}`);
     if (selectedMember.value?.id === member.id) {
-      selectedMember.value = null
+      selectedMember.value = null;
     }
   } catch {
-    message.error('Failed to remove member')
+    message.error("Failed to remove member");
   }
 }
 </script>

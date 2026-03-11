@@ -1,44 +1,44 @@
 /** API client — talks to the Bun server's two endpoints */
 
-import type { Project, Status, Priority, Label, MemberRole } from './types'
+import type { Project, Status, Priority, Label, MemberRole } from "./types";
 
-const BASE = '' // same origin (Vite proxy in dev, Bun.serve in prod)
+const BASE = ""; // same origin (Vite proxy in dev, Bun.serve in prod)
 
 export async function fetchProject(): Promise<Project> {
-  const res = await fetch(`${BASE}/api/project`)
-  if (!res.ok) throw new Error(`Failed to fetch project: ${res.statusText}`)
-  return res.json()
+  const res = await fetch(`${BASE}/api/project`);
+  if (!res.ok) throw new Error(`Failed to fetch project: ${res.statusText}`);
+  return res.json();
 }
 
 export interface AddTodoParams {
-  title: string
-  description?: string
-  status?: Status
-  priority?: Priority
-  labels?: Label[]
-  assignee?: string | null
+  title: string;
+  description?: string;
+  status?: Status;
+  priority?: Priority;
+  labels?: Label[];
+  assignee?: string | null;
 }
 
 export async function addTodo(params: AddTodoParams): Promise<{ ok: boolean; number: number }> {
   const res = await fetch(`${BASE}/api/change`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'add', ...params }),
-  })
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "add", ...params }),
+  });
   if (!res.ok) {
-    const data = await res.json()
-    throw new Error(data.error || 'Failed to add todo')
+    const data = await res.json();
+    throw new Error(data.error || "Failed to add todo");
   }
-  return res.json()
+  return res.json();
 }
 
 export interface UpdateTodoParams {
-  title?: string
-  description?: string
-  status?: Status
-  priority?: Priority
-  labels?: Label[]
-  assignee?: string | null
+  title?: string;
+  description?: string;
+  status?: Status;
+  priority?: Priority;
+  labels?: Label[];
+  assignee?: string | null;
 }
 
 export async function updateTodo(
@@ -46,89 +46,117 @@ export async function updateTodo(
   updates: UpdateTodoParams,
 ): Promise<{ ok: boolean }> {
   const res = await fetch(`${BASE}/api/change`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'update', number, updates }),
-  })
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "update", number, updates }),
+  });
   if (!res.ok) {
-    const data = await res.json()
-    throw new Error(data.error || 'Failed to update todo')
+    const data = await res.json();
+    throw new Error(data.error || "Failed to update todo");
   }
-  return res.json()
+  return res.json();
 }
 
 export interface UpdateProjectParams {
-  name?: string
-  prefix?: string
-  description?: string
+  name?: string;
+  prefix?: string;
+  description?: string;
 }
 
 export async function updateProjectSettings(
   updates: UpdateProjectParams,
 ): Promise<{ ok: boolean }> {
   const res = await fetch(`${BASE}/api/change`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'updateProject', updates }),
-  })
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "updateProject", updates }),
+  });
   if (!res.ok) {
-    const data = await res.json()
-    throw new Error(data.error || 'Failed to update project')
+    const data = await res.json();
+    throw new Error(data.error || "Failed to update project");
   }
-  return res.json()
+  return res.json();
 }
 
 export async function deleteTodo(number: number): Promise<{ ok: boolean }> {
   const res = await fetch(`${BASE}/api/change`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'delete', number }),
-  })
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "delete", number }),
+  });
   if (!res.ok) {
-    const data = await res.json()
-    throw new Error(data.error || 'Failed to delete todo')
+    const data = await res.json();
+    throw new Error(data.error || "Failed to delete todo");
   }
-  return res.json()
+  return res.json();
 }
 
 // ── Member API ──
 
 export interface AddMemberParams {
-  name: string
-  role?: MemberRole
-  email?: string
+  name: string;
+  role?: MemberRole;
+  email?: string;
 }
 
 export async function addMember(params: AddMemberParams): Promise<{ ok: boolean; id: string }> {
   const res = await fetch(`${BASE}/api/change`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'addMember', ...params }),
-  })
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "addMember", ...params }),
+  });
   if (!res.ok) {
-    const data = await res.json()
-    throw new Error(data.error || 'Failed to add member')
+    const data = await res.json();
+    throw new Error(data.error || "Failed to add member");
   }
-  return res.json()
+  return res.json();
 }
 
 export async function removeMember(memberId: string): Promise<{ ok: boolean }> {
   const res = await fetch(`${BASE}/api/change`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'removeMember', memberId }),
-  })
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "removeMember", memberId }),
+  });
   if (!res.ok) {
-    const data = await res.json()
-    throw new Error(data.error || 'Failed to remove member')
+    const data = await res.json();
+    throw new Error(data.error || "Failed to remove member");
   }
-  return res.json()
+  return res.json();
 }
 
 export interface UpdateMemberParams {
-  name?: string
-  role?: MemberRole
-  email?: string | null
+  name?: string;
+  role?: MemberRole;
+  email?: string | null;
+}
+
+export async function addCommentApi(number: number, text: string): Promise<{ ok: boolean }> {
+  const res = await fetch(`${BASE}/api/change`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "addComment", number, text }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || "Failed to add comment");
+  }
+  return res.json();
+}
+
+export async function createBranchApi(
+  number: number,
+): Promise<{ ok: boolean; branch: string; worktree?: string; alreadyExists?: boolean }> {
+  const res = await fetch(`${BASE}/api/change`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "createBranch", number }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || "Failed to create branch");
+  }
+  return res.json();
 }
 
 export async function updateMemberApi(
@@ -136,13 +164,13 @@ export async function updateMemberApi(
   updates: UpdateMemberParams,
 ): Promise<{ ok: boolean }> {
   const res = await fetch(`${BASE}/api/change`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'updateMember', memberId, updates }),
-  })
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "updateMember", memberId, updates }),
+  });
   if (!res.ok) {
-    const data = await res.json()
-    throw new Error(data.error || 'Failed to update member')
+    const data = await res.json();
+    throw new Error(data.error || "Failed to update member");
   }
-  return res.json()
+  return res.json();
 }

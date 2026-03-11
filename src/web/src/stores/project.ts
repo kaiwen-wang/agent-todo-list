@@ -1,20 +1,21 @@
 /** Pinia store — single source of truth for the project state in the frontend */
 
-import { ref, computed } from 'vue'
-import { defineStore } from 'pinia'
-import type { Project, Todo, Status } from '@/types'
-import * as api from '@/api'
+import { ref, computed } from "vue";
+import { defineStore } from "pinia";
+import type { Project, Todo, Status } from "@/types";
+import * as api from "@/api";
 
-export const useProjectStore = defineStore('project', () => {
-  const project = ref<Project | null>(null)
-  const loading = ref(false)
-  const error = ref<string | null>(null)
+export const useProjectStore = defineStore("project", () => {
+  const project = ref<Project | null>(null);
+  const loading = ref(false);
+  const error = ref<string | null>(null);
 
   // Getters
-  const todos = computed(() => project.value?.todos ?? [])
-  const members = computed(() => project.value?.members ?? [])
-  const projectName = computed(() => project.value?.name ?? '')
-  const prefix = computed(() => project.value?.prefix ?? '')
+  const todos = computed(() => project.value?.todos ?? []);
+  const members = computed(() => project.value?.members ?? []);
+  const projectName = computed(() => project.value?.name ?? "");
+  const prefix = computed(() => project.value?.prefix ?? "");
+  const auditLog = computed(() => project.value?.auditLog ?? []);
 
   /** Todos grouped by status for the board view */
   const todosByStatus = computed(() => {
@@ -25,20 +26,20 @@ export const useProjectStore = defineStore('project', () => {
       completed: [],
       archived: [],
       wont_do: [],
-    }
+    };
     for (const todo of todos.value) {
-      const key = todo.status
+      const key = todo.status;
       if (key && grouped[key]) {
-        grouped[key].push(todo)
+        grouped[key].push(todo);
       }
     }
-    return grouped
-  })
+    return grouped;
+  });
 
   /** Active todos (not archived or won't do) */
   const activeTodos = computed(() =>
-    todos.value.filter((t) => t.status !== 'archived' && t.status !== 'wont_do'),
-  )
+    todos.value.filter((t) => t.status !== "archived" && t.status !== "wont_do"),
+  );
 
   /** Counts per status */
   const statusCounts = computed(() => {
@@ -49,121 +50,144 @@ export const useProjectStore = defineStore('project', () => {
       completed: 0,
       archived: 0,
       wont_do: 0,
-    }
+    };
     for (const todo of todos.value) {
-      const key = todo.status
+      const key = todo.status;
       if (key && counts[key] !== undefined) {
-        counts[key]++
+        counts[key]++;
       }
     }
-    return counts
-  })
+    return counts;
+  });
 
   // Actions
   async function load() {
-    loading.value = true
-    error.value = null
+    loading.value = true;
+    error.value = null;
     try {
-      project.value = await api.fetchProject()
+      project.value = await api.fetchProject();
     } catch (e: unknown) {
-      error.value = e instanceof Error ? e.message : String(e)
+      error.value = e instanceof Error ? e.message : String(e);
     } finally {
-      loading.value = false
+      loading.value = false;
     }
   }
 
   async function addTodo(params: api.AddTodoParams) {
-    error.value = null
+    error.value = null;
     try {
-      await api.addTodo(params)
-      await load() // Reload to get the full updated state
+      await api.addTodo(params);
+      await load(); // Reload to get the full updated state
     } catch (e: unknown) {
-      error.value = e instanceof Error ? e.message : String(e)
-      throw e
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
     }
   }
 
   async function updateTodo(number: number, updates: api.UpdateTodoParams) {
-    error.value = null
+    error.value = null;
     try {
-      await api.updateTodo(number, updates)
-      await load()
+      await api.updateTodo(number, updates);
+      await load();
     } catch (e: unknown) {
-      error.value = e instanceof Error ? e.message : String(e)
-      throw e
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
     }
   }
 
   async function deleteTodo(number: number) {
-    error.value = null
+    error.value = null;
     try {
-      await api.deleteTodo(number)
-      await load()
+      await api.deleteTodo(number);
+      await load();
     } catch (e: unknown) {
-      error.value = e instanceof Error ? e.message : String(e)
-      throw e
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
     }
   }
 
   async function moveTodo(number: number, status: Status) {
-    return updateTodo(number, { status })
+    return updateTodo(number, { status });
+  }
+
+  async function addComment(number: number, text: string) {
+    error.value = null;
+    try {
+      await api.addCommentApi(number, text);
+      await load();
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
+  async function createBranch(number: number) {
+    error.value = null;
+    try {
+      const result = await api.createBranchApi(number);
+      await load();
+      return result;
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
   }
 
   async function updateProjectSettings(updates: api.UpdateProjectParams) {
-    error.value = null
+    error.value = null;
     try {
-      await api.updateProjectSettings(updates)
-      await load()
+      await api.updateProjectSettings(updates);
+      await load();
     } catch (e: unknown) {
-      error.value = e instanceof Error ? e.message : String(e)
-      throw e
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
     }
   }
 
   // ── Member actions ──
 
   async function addMember(params: api.AddMemberParams) {
-    error.value = null
+    error.value = null;
     try {
-      await api.addMember(params)
-      await load()
+      await api.addMember(params);
+      await load();
     } catch (e: unknown) {
-      error.value = e instanceof Error ? e.message : String(e)
-      throw e
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
     }
   }
 
   async function removeMember(memberId: string) {
-    error.value = null
+    error.value = null;
     try {
-      await api.removeMember(memberId)
-      await load()
+      await api.removeMember(memberId);
+      await load();
     } catch (e: unknown) {
-      error.value = e instanceof Error ? e.message : String(e)
-      throw e
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
     }
   }
 
   async function updateMember(memberId: string, updates: api.UpdateMemberParams) {
-    error.value = null
+    error.value = null;
     try {
-      await api.updateMemberApi(memberId, updates)
-      await load()
+      await api.updateMemberApi(memberId, updates);
+      await load();
     } catch (e: unknown) {
-      error.value = e instanceof Error ? e.message : String(e)
-      throw e
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
     }
   }
 
   /** Currently selected todo number for the detail modal (null = closed) */
-  const selectedTodoNumber = ref<number | null>(null)
+  const selectedTodoNumber = ref<number | null>(null);
 
   function openTodo(number: number) {
-    selectedTodoNumber.value = number
+    selectedTodoNumber.value = number;
   }
 
   function closeTodo() {
-    selectedTodoNumber.value = null
+    selectedTodoNumber.value = null;
   }
 
   return {
@@ -174,6 +198,7 @@ export const useProjectStore = defineStore('project', () => {
     members,
     projectName,
     prefix,
+    auditLog,
     todosByStatus,
     activeTodos,
     statusCounts,
@@ -183,11 +208,13 @@ export const useProjectStore = defineStore('project', () => {
     updateTodo,
     deleteTodo,
     moveTodo,
+    addComment,
+    createBranch,
     updateProjectSettings,
     addMember,
     removeMember,
     updateMember,
     openTodo,
     closeTodo,
-  }
-})
+  };
+});

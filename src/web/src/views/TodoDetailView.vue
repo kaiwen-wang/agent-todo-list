@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, h, type Component } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, h, type Component } from "vue";
+import { useRouter } from "vue-router";
 import {
   NButton,
   NIcon,
@@ -15,16 +15,16 @@ import {
   NPopconfirm,
   NButtonGroup,
   useMessage,
-} from 'naive-ui'
+} from "naive-ui";
 import {
   AntennaBars1,
   AntennaBars2,
   AntennaBars3,
   AntennaBars4,
   AntennaBars5,
-} from '@vicons/tabler'
-import { useProjectStore } from '@/stores/project'
-import type { Status, Priority, Label } from '@/types'
+} from "@vicons/tabler";
+import { useProjectStore } from "@/stores/project";
+import type { Status, Priority, Label } from "@/types";
 import {
   STATUSES,
   PRIORITIES,
@@ -34,7 +34,7 @@ import {
   PRIORITY_COLORS,
   LABEL_DISPLAY,
   LABEL_COLORS,
-} from '@/types'
+} from "@/types";
 
 const PRIORITY_ICON: Record<Priority, Component> = {
   none: AntennaBars1,
@@ -42,66 +42,66 @@ const PRIORITY_ICON: Record<Priority, Component> = {
   medium: AntennaBars3,
   high: AntennaBars4,
   urgent: AntennaBars5,
-}
+};
 
 const props = defineProps<{
-  number: number
-}>()
+  number: number;
+}>();
 
-const store = useProjectStore()
-const router = useRouter()
-const message = useMessage()
+const store = useProjectStore();
+const router = useRouter();
+const message = useMessage();
 
-const editing = ref(false)
-const editTitle = ref('')
-const editDescription = ref('')
-const editPriority = ref<Priority | null>(null)
-const editStatus = ref<Status | null>(null)
-const editLabels = ref<Label[]>([])
-const editAssignee = ref<string | null>(null)
-const saving = ref(false)
+const editing = ref(false);
+const editTitle = ref("");
+const editDescription = ref("");
+const editPriority = ref<Priority | null>(null);
+const editStatus = ref<Status | null>(null);
+const editLabels = ref<Label[]>([]);
+const editAssignee = ref<string | null>(null);
+const saving = ref(false);
 
-const memberOptions = computed(() => store.members.map((m) => ({ label: m.name, value: m.id })))
+const memberOptions = computed(() => store.members.map((m) => ({ label: m.name, value: m.id })));
 
-const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }))
-const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }))
+const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }));
+const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }));
 
-const labelOptions = LABELS.map((l) => ({ label: LABEL_DISPLAY[l], value: l }))
+const labelOptions = LABELS.map((l) => ({ label: LABEL_DISPLAY[l], value: l }));
 
 function renderPriorityLabel(option: { label: string; value: string }) {
-  const p = option.value as Priority
-  return h('span', { style: 'display: flex; align-items: center; gap: 8px' }, [
+  const p = option.value as Priority;
+  return h("span", { style: "display: flex; align-items: center; gap: 8px" }, [
     h(NIcon, { size: 16, color: PRIORITY_COLORS[p] }, { default: () => h(PRIORITY_ICON[p]) }),
     option.label,
-  ])
+  ]);
 }
 
 function renderLabelTag(option: { label: string; value: string }) {
-  const l = option.value as Label
-  return h('span', { style: 'display: flex; align-items: center; gap: 6px' }, [
-    h('span', {
+  const l = option.value as Label;
+  return h("span", { style: "display: flex; align-items: center; gap: 6px" }, [
+    h("span", {
       style: `width: 8px; height: 8px; border-radius: 50%; background: ${LABEL_COLORS[l]}; flex-shrink: 0`,
     }),
     option.label,
-  ])
+  ]);
 }
 
-const todo = computed(() => store.todos.find((t) => t.number === props.number))
+const todo = computed(() => store.todos.find((t) => t.number === props.number));
 
 function startEdit() {
-  if (!todo.value) return
-  editTitle.value = todo.value.title
-  editDescription.value = todo.value.description
-  editPriority.value = todo.value.priority
-  editStatus.value = todo.value.status
-  editLabels.value = [...(todo.value.labels ?? [])]
-  editAssignee.value = todo.value.assignee
-  editing.value = true
+  if (!todo.value) return;
+  editTitle.value = todo.value.title;
+  editDescription.value = todo.value.description;
+  editPriority.value = todo.value.priority;
+  editStatus.value = todo.value.status;
+  editLabels.value = [...(todo.value.labels ?? [])];
+  editAssignee.value = todo.value.assignee;
+  editing.value = true;
 }
 
 async function saveEdit() {
-  if (!todo.value) return
-  saving.value = true
+  if (!todo.value) return;
+  saving.value = true;
   try {
     await store.updateTodo(todo.value.number, {
       title: editTitle.value.trim(),
@@ -110,46 +110,46 @@ async function saveEdit() {
       status: editStatus.value || undefined,
       labels: editLabels.value,
       assignee: editAssignee.value,
-    })
-    editing.value = false
-    message.success('Todo updated')
+    });
+    editing.value = false;
+    message.success("Todo updated");
   } catch {
-    message.error('Failed to update todo')
+    message.error("Failed to update todo");
   } finally {
-    saving.value = false
+    saving.value = false;
   }
 }
 
 function cancelEdit() {
-  editing.value = false
+  editing.value = false;
 }
 
 async function changeStatus(status: Status) {
-  if (!todo.value) return
+  if (!todo.value) return;
   try {
-    await store.moveTodo(todo.value.number, status)
+    await store.moveTodo(todo.value.number, status);
   } catch {
-    message.error('Failed to update status')
+    message.error("Failed to update status");
   }
 }
 
 async function handleDelete() {
-  if (!todo.value) return
+  if (!todo.value) return;
   try {
-    await store.deleteTodo(todo.value.number)
-    message.success('Todo deleted')
-    router.back()
+    await store.deleteTodo(todo.value.number);
+    message.success("Todo deleted");
+    router.back();
   } catch {
-    message.error('Failed to delete todo')
+    message.error("Failed to delete todo");
   }
 }
 
 function goBack() {
-  router.back()
+  router.back();
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString()
+function formatDate(iso: string | number): string {
+  return new Date(iso).toLocaleString();
 }
 </script>
 
@@ -229,7 +229,7 @@ function formatDate(iso: string): string {
             <span v-else style="opacity: 0.35">None</span>
           </NDescriptionsItem>
           <NDescriptionsItem label="Assignee">
-            {{ todo.assigneeName || 'Unassigned' }}
+            {{ todo.assigneeName || "Unassigned" }}
           </NDescriptionsItem>
           <NDescriptionsItem label="Created">
             {{ formatDate(todo.createdAt) }}
