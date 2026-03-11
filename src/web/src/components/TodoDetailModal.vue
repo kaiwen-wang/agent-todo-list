@@ -23,6 +23,9 @@ const store = useProjectStore()
 const message = useMessage()
 
 const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }))
+const assigneeOptions = computed(() =>
+  store.members.map((m) => ({ label: m.name, value: m.id })),
+)
 
 const isOpen = computed(() => store.selectedTodoNumber !== null)
 const todo = computed(() =>
@@ -86,6 +89,11 @@ async function changeStatus(status: Status) {
 async function changePriority(priority: Priority) {
   if (!todo.value || priority === todo.value.priority) return
   saveField('priority', priority)
+}
+
+async function changeAssignee(assignee: string | null) {
+  if (!todo.value || assignee === todo.value.assignee) return
+  saveField('assignee', assignee)
 }
 
 async function handleArchive() {
@@ -172,7 +180,15 @@ function formatDate(iso: string): string {
 
           <div class="meta-item">
             <label class="meta-label">Assignee</label>
-            <span class="meta-value">{{ todo.assigneeName || 'Unassigned' }}</span>
+            <NSelect
+              :value="todo.assignee"
+              :options="assigneeOptions"
+              size="small"
+              clearable
+              placeholder="Unassigned"
+              style="width: 160px"
+              @update:value="changeAssignee"
+            />
           </div>
 
           <div class="meta-item">
