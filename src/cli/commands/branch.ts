@@ -10,16 +10,17 @@ import { existsSync } from "node:fs";
 import type { Command } from "commander";
 import { findProject, readConfig } from "../../lib/project.js";
 import { loadDoc, saveDoc } from "../../lib/storage.js";
-import { updateTodo, setBranch } from "../../lib/operations.js";
+import { setBranch } from "../../lib/operations.js";
 import { parseTodoRef, findTodoByNumber } from "../../lib/queries.js";
 import { error, success, warn } from "../output.js";
 
-function slugify(text: string): string {
+function slugify(text: string, maxWords = 5): string {
   return text
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 60);
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .slice(0, maxWords)
+    .join("-");
 }
 
 export function registerBranch(program: Command): void {
@@ -108,11 +109,8 @@ export function registerBranch(program: Command): void {
         }
       }
 
-      // Store branch name on the todo and set status to in_progress
+      // Store branch name on the todo
       doc = setBranch(doc, num, branchName);
-      if (todo.status === "none" || todo.status === "todo") {
-        doc = updateTodo(doc, num, { status: "in_progress" });
-      }
       await saveDoc(paths.dataPath, doc);
 
       const todoRef = `${config.prefix}-${num}`;

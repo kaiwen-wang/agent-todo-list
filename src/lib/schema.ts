@@ -15,7 +15,7 @@ export type Timestamp = number;
 
 // ── Enums ───────────────────────────────────────────────────────────
 
-export type Status = "none" | "todo" | "in_progress" | "completed" | "archived" | "wont_do";
+export type Status = "none" | "todo" | "in_progress" | "completed" | "archived" | "wont_do" | "needs_elaboration";
 export type Priority = "none" | "low" | "medium" | "high" | "urgent";
 export type Label = "new_feature" | "bug" | "feature_plus";
 export type Platform = "cli" | "web" | "unknown";
@@ -28,6 +28,7 @@ export const STATUSES: readonly Status[] = [
   "completed",
   "archived",
   "wont_do",
+  "needs_elaboration",
 ] as const;
 
 export const PRIORITIES: readonly Priority[] = ["none", "urgent", "high", "medium", "low"] as const;
@@ -47,6 +48,7 @@ export const STATUS_DISPLAY: Record<Status, string> = {
   completed: "Completed",
   archived: "Archived",
   wont_do: "Won't Do",
+  needs_elaboration: "Needs Elaboration",
 };
 
 export const PRIORITY_DISPLAY: Record<Priority, string> = {

@@ -42,7 +42,15 @@ export function registerList(program: Command): void {
           filter.status = opts.status as Status;
         } else if (opts.all) {
           // No status filter — include everything
-          filter.status = ["none", "todo", "in_progress", "completed", "archived", "wont_do"];
+          filter.status = [
+            "none",
+            "todo",
+            "needs_elaboration",
+            "in_progress",
+            "completed",
+            "archived",
+            "wont_do",
+          ];
         }
 
         if (opts.priority) filter.priority = opts.priority as Priority;

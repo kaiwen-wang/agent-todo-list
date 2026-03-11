@@ -32,6 +32,7 @@ export const useProjectStore = defineStore("project", () => {
       completed: [],
       archived: [],
       wont_do: [],
+      needs_elaboration: [],
     };
     for (const todo of todos.value) {
       const key = todo.status;
@@ -64,6 +65,7 @@ export const useProjectStore = defineStore("project", () => {
       completed: 0,
       archived: 0,
       wont_do: 0,
+      needs_elaboration: 0,
     };
     for (const todo of todos.value) {
       const key = todo.status;

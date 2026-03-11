@@ -100,6 +100,7 @@ export function countByStatus(doc: Doc): Record<Status, number> {
     completed: 0,
     archived: 0,
     wont_do: 0,
+    needs_elaboration: 0,
   };
   for (const todo of doc.todos) {
     counts[todo.status]++;

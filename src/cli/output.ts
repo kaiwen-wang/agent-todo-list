@@ -14,6 +14,7 @@ const STATUS_COLORS: Record<Status, (s: string) => string> = {
   completed: chalk.green,
   archived: chalk.dim,
   wont_do: chalk.strikethrough,
+  needs_elaboration: chalk.magenta,
 };
 
 const PRIORITY_COLORS: Record<Priority, (s: string) => string> = {
@@ -31,6 +32,7 @@ const STATUS_ICONS: Record<Status, string> = {
   completed: "x",
   archived: "-",
   wont_do: "~",
+  needs_elaboration: "?",
 };
 
 const PRIORITY_LABELS: Record<Priority, string> = {

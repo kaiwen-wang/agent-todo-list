@@ -54,12 +54,13 @@ export interface ServerOptions {
   vitePort?: number;
 }
 
-function slugify(text: string): string {
+function slugify(text: string, maxWords = 5): string {
   return text
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 60);
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .slice(0, maxWords)
+    .join("-");
 }
 
 /** Load and auto-migrate the document from disk. */
@@ -231,9 +232,6 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
                 }
 
                 doc = setBranch(doc, todoNum, branchName);
-                if (todo.status === "none" || todo.status === "todo") {
-                  doc = updateTodo(doc, todoNum, { status: "in_progress" });
-                }
                 await save();
 
                 return jsonResponse({

@@ -1,6 +1,13 @@
 /** Types mirroring the server's JSON output from toJSON() */
 
-export type Status = "none" | "todo" | "in_progress" | "completed" | "archived" | "wont_do";
+export type Status =
+  | "none"
+  | "todo"
+  | "in_progress"
+  | "completed"
+  | "archived"
+  | "wont_do"
+  | "needs_elaboration";
 export type Priority = "none" | "low" | "medium" | "high" | "urgent";
 export type Label = "new_feature" | "bug" | "feature_plus";
 export type Platform = "cli" | "web" | "unknown";
@@ -81,12 +88,14 @@ export const STATUSES: Status[] = [
   "completed",
   "archived",
   "wont_do",
+  "needs_elaboration",
 ];
 
 /** Statuses shown as columns on the board */
 export const BOARD_STATUSES: Status[] = [
   "none",
   "todo",
+  "needs_elaboration",
   "in_progress",
   "completed",
   "archived",
@@ -116,6 +125,7 @@ export const STATUS_DISPLAY: Record<Status, string> = {
   completed: "Completed",
   archived: "Archived",
   wont_do: "Won't Do",
+  needs_elaboration: "Needs Elaboration",
 };
 
 export const PRIORITY_DISPLAY: Record<Priority, string> = {
@@ -141,4 +151,5 @@ export const STATUS_COLORS: Record<Status, string> = {
   completed: "#10b981",
   archived: "#6b7280",
   wont_do: "#ef4444",
+  needs_elaboration: "#a855f7",
 };
