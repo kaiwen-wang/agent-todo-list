@@ -11,8 +11,8 @@ const props = defineProps<{
 
 const store = useProjectStore()
 
-const priorityColor = computed(() => PRIORITY_COLORS[props.todo.priority])
-const priorityLabel = computed(() => PRIORITY_DISPLAY[props.todo.priority])
+const priorityColor = computed(() => props.todo.priority ? PRIORITY_COLORS[props.todo.priority] : '#6b7280')
+const priorityLabel = computed(() => props.todo.priority ? PRIORITY_DISPLAY[props.todo.priority] : 'None')
 
 function openDetail() {
   store.openTodo(props.todo.number)
@@ -24,7 +24,7 @@ function openDetail() {
     size="small"
     hoverable
     class="todo-card"
-    :class="{ done: todo.status === 'done' }"
+    :class="{ done: todo.status === 'completed' }"
     @click="openDetail"
     content-class="card-content"
   >

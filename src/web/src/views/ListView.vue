@@ -62,7 +62,7 @@ const columns: DataTableColumns<Todo> = [
     key: 'title',
     ellipsis: { tooltip: true },
     render(row) {
-      const style = row.status === 'done' ? 'text-decoration: line-through; opacity: 0.6' : ''
+      const style = row.status === 'completed' ? 'text-decoration: line-through; opacity: 0.6' : ''
       return h('span', { style }, row.title)
     },
   },
@@ -71,15 +71,17 @@ const columns: DataTableColumns<Todo> = [
     key: 'status',
     width: 120,
     render(row) {
+      const status = row.status
+      if (!status) return h('span', { style: 'opacity: 0.3' }, '\u2014')
       return h(
         NTag,
         {
           size: 'small',
           round: true,
           bordered: false,
-          color: { color: STATUS_COLORS[row.status] + '22', textColor: STATUS_COLORS[row.status] },
+          color: { color: STATUS_COLORS[status] + '22', textColor: STATUS_COLORS[status] },
         },
-        () => STATUS_DISPLAY[row.status],
+        () => STATUS_DISPLAY[status],
       )
     },
   },
@@ -88,11 +90,13 @@ const columns: DataTableColumns<Todo> = [
     key: 'priority',
     width: 100,
     render(row) {
+      const priority = row.priority
+      if (!priority) return h('span', { style: 'opacity: 0.3' }, '\u2014')
       return h('span', { style: 'display: flex; align-items: center; gap: 6px; font-size: 12px' }, [
         h('span', {
-          style: `width: 8px; height: 8px; border-radius: 50%; background: ${PRIORITY_COLORS[row.priority]}; flex-shrink: 0`,
+          style: `width: 8px; height: 8px; border-radius: 50%; background: ${PRIORITY_COLORS[priority]}; flex-shrink: 0`,
         }),
-        PRIORITY_DISPLAY[row.priority],
+        PRIORITY_DISPLAY[priority],
       ])
     },
   },
