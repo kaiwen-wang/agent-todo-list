@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, h } from 'vue'
-import { useRouter } from 'vue-router'
 import {
   NButton,
   NDataTable,
@@ -23,7 +22,6 @@ import {
 import CreateTodoModal from '@/components/CreateTodoModal.vue'
 
 const store = useProjectStore()
-const router = useRouter()
 
 const showCreate = ref(false)
 const filterStatus = ref<Status | null>(null)
@@ -124,7 +122,7 @@ const columns: DataTableColumns<Todo> = [
 ]
 
 function handleRowClick(row: Todo) {
-  router.push({ name: 'todo-detail', params: { number: row.number } })
+  store.openTodo(row.number)
 }
 
 const rowProps = (row: Todo) => ({

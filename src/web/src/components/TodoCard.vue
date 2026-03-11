@@ -1,21 +1,21 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { NCard, NTag, NSpace, NEllipsis } from 'naive-ui'
+import { NCard, NTag, NSpace } from 'naive-ui'
 import type { Todo } from '@/types'
 import { PRIORITY_DISPLAY, PRIORITY_COLORS } from '@/types'
+import { useProjectStore } from '@/stores/project'
 
 const props = defineProps<{
   todo: Todo
 }>()
 
-const router = useRouter()
+const store = useProjectStore()
 
 const priorityColor = computed(() => PRIORITY_COLORS[props.todo.priority])
 const priorityLabel = computed(() => PRIORITY_DISPLAY[props.todo.priority])
 
 function openDetail() {
-  router.push({ name: 'todo-detail', params: { number: props.todo.number } })
+  store.openTodo(props.todo.number)
 }
 </script>
 

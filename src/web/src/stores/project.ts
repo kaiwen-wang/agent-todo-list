@@ -111,6 +111,17 @@ export const useProjectStore = defineStore('project', () => {
     }
   }
 
+  /** Currently selected todo number for the detail modal (null = closed) */
+  const selectedTodoNumber = ref<number | null>(null)
+
+  function openTodo(number: number) {
+    selectedTodoNumber.value = number
+  }
+
+  function closeTodo() {
+    selectedTodoNumber.value = null
+  }
+
   return {
     project,
     loading,
@@ -122,11 +133,14 @@ export const useProjectStore = defineStore('project', () => {
     todosByStatus,
     activeTodos,
     statusCounts,
+    selectedTodoNumber,
     load,
     addTodo,
     updateTodo,
     deleteTodo,
     moveTodo,
     updateProjectSettings,
+    openTodo,
+    closeTodo,
   }
 })

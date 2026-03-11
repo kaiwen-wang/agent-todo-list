@@ -19,6 +19,7 @@ import {
 import { useProjectStore } from '@/stores/project'
 import { STATUS_COLORS } from '@/types'
 import SettingsModal from '@/components/SettingsModal.vue'
+import TodoDetailModal from '@/components/TodoDetailModal.vue'
 
 const store = useProjectStore()
 const route = useRoute()
@@ -133,6 +134,8 @@ function handleMenuUpdate(key: string) {
           </NLayoutContent>
         </NLayout>
       </NLayout>
+      <TodoDetailModal />
+      <SettingsModal :open="showSettings" @close="showSettings = false" />
     </NMessageProvider>
   </NConfigProvider>
 </template>
