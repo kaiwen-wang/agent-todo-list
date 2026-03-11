@@ -11,6 +11,8 @@
 import * as Automerge from "@automerge/automerge";
 import { join } from "node:path";
 import { existsSync } from "node:fs";
+import { watch, type FSWatcher } from "node:fs";
+import type { ServerWebSocket } from "bun";
 import type { Project } from "../lib/schema.js";
 import { loadDoc, saveDoc } from "../lib/storage.js";
 import {
@@ -77,12 +79,44 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
 
   if (!doc) throw new Error(`Cannot load project data from ${dataPath}`);
 
+  // ── WebSocket client tracking ──
+  const wsClients = new Set<ServerWebSocket<unknown>>();
+
+  function broadcast(message: string) {
+    for (const ws of wsClients) {
+      try { ws.send(message); } catch { wsClients.delete(ws); }
+    }
+  }
+
+  // Track whether we're currently saving (to ignore our own file changes)
+  let saving = false;
+
   async function reload() {
     doc = await loadAndMigrate(dataPath);
   }
 
   async function save() {
-    if (doc) await saveDoc(dataPath, doc);
+    if (doc) {
+      saving = true;
+      await saveDoc(dataPath, doc);
+      // Small delay to let fs.watch settle before re-enabling external detection
+      setTimeout(() => { saving = false; }, 100);
+      broadcast("refresh");
+    }
+  }
+
+  // ── File watcher — detect CLI writes to the automerge file ──
+  let fileWatcher: FSWatcher | undefined;
+  try {
+    fileWatcher = watch(dataPath, { persistent: false }, async (eventType) => {
+      if (saving) return; // ignore our own writes
+      if (eventType === "change") {
+        await reload();
+        broadcast("refresh");
+      }
+    });
+  } catch {
+    // File watching not available — graceful degradation
   }
 
   const server = Bun.serve({
@@ -113,6 +147,7 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
                   priority: body.priority,
                   labels: body.labels,
                   assignee: body.assignee,
+                  platform: "web",
                 });
                 doc = result.doc;
                 await save();
@@ -274,14 +309,32 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
         return new Response(null, { headers: CORS_HEADERS });
       }
 
+      // WebSocket upgrade for /ws
+      const url = new URL(req.url);
+      if (url.pathname === "/ws") {
+        const upgraded = server.upgrade(req);
+        if (upgraded) return undefined as unknown as Response;
+        return new Response("WebSocket upgrade failed", { status: 400 });
+      }
+
       if (opts.dev) {
-        const url = new URL(req.url);
         url.port = String(opts.vitePort ?? 5173);
         return Response.redirect(url.toString(), 307);
       }
 
-      const url = new URL(req.url);
       return serveStatic(url.pathname, distDir);
+    },
+
+    websocket: {
+      open(ws) {
+        wsClients.add(ws);
+      },
+      message() {
+        // Client-to-server messages not used; refresh is server-pushed
+      },
+      close(ws) {
+        wsClients.delete(ws);
+      },
     },
   });
 

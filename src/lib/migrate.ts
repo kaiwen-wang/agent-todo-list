@@ -23,6 +23,16 @@ type MigrationFn = (d: Project) => void;
  * e.g. migrations[1] upgrades from v1 → v2.
  */
 const migrations: Record<number, MigrationFn> = {
+  2: (d) => {
+    // v2 → v3:
+    //   - Add platform field to each todo (default "unknown" for pre-existing items)
+    for (const todo of d.todos) {
+      if (!(todo as any).platform) {
+        (todo as any).platform = "unknown";
+      }
+    }
+  },
+
   1: (d) => {
     // v1 → v2:
     //   - Convert all timestamps from ISO strings to Unix ms numbers

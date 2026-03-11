@@ -18,6 +18,7 @@ export type Timestamp = number;
 export type Status = "none" | "todo" | "in_progress" | "completed" | "archived" | "wont_do";
 export type Priority = "none" | "low" | "medium" | "high" | "urgent";
 export type Label = "new_feature" | "bug" | "feature_plus";
+export type Platform = "cli" | "web" | "unknown";
 export type MemberRole = "owner" | "member" | "agent";
 
 export const STATUSES: readonly Status[] = [
@@ -102,6 +103,7 @@ export interface Todo {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   createdBy: MemberId;
+  platform: Platform;
 }
 
 export interface Member {
@@ -125,7 +127,7 @@ export interface Project extends Record<string, unknown> {
 }
 
 /** Current schema version — increment when making breaking changes */
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 /** Config stored in .todo/config.toml (committed to git) */
 export interface ProjectConfig {

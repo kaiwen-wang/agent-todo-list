@@ -16,6 +16,7 @@ import type {
   Status,
   Priority,
   Label,
+  Platform,
   MemberRole,
 } from "./schema.js";
 import { CURRENT_SCHEMA_VERSION } from "./schema.js";
@@ -110,6 +111,7 @@ export function addTodo(
     labels?: Label[];
     assignee?: MemberId | null;
     createdBy?: MemberId;
+    platform?: Platform;
   },
 ): { doc: Doc; number: number } {
   let todoNumber = 0;
@@ -133,6 +135,7 @@ export function addTodo(
       createdAt: Date.now(),
       updatedAt: Date.now(),
       createdBy: actor,
+      platform: opts.platform ?? "unknown",
     });
 
     audit(d, "todo.created", actor, `${d.prefix}-${todoNumber}`, {

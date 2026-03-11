@@ -81,6 +81,7 @@ export function registerAdd(program: Command): void {
           priority: opts.priority as Priority,
           labels: parsedLabels,
           assignee: assigneeId,
+          platform: "cli",
         });
 
         await saveDoc(paths.dataPath, result.doc);

@@ -3,6 +3,7 @@
 export type Status = "none" | "todo" | "in_progress" | "completed" | "archived" | "wont_do";
 export type Priority = "none" | "low" | "medium" | "high" | "urgent";
 export type Label = "new_feature" | "bug" | "feature_plus";
+export type Platform = "cli" | "web" | "unknown";
 export type MemberRole = "owner" | "member" | "agent";
 
 export type Timestamp = number;
@@ -41,6 +42,7 @@ export interface Todo {
   createdAt: Timestamp;
   updatedAt: Timestamp;
   createdBy: string;
+  platform: Platform;
 }
 
 export interface Member {

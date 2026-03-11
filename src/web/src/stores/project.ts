@@ -191,6 +191,40 @@ export const useProjectStore = defineStore("project", () => {
     }
   }
 
+  // ── WebSocket for live updates ──
+
+  let ws: WebSocket | null = null;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  const WS_RECONNECT_MS = 2000;
+
+  function connectWebSocket() {
+    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+
+    const proto = location.protocol === "https:" ? "wss:" : "ws:";
+    ws = new WebSocket(`${proto}//${location.host}/ws`);
+
+    ws.onmessage = (event) => {
+      if (event.data === "refresh") {
+        load();
+      }
+    };
+
+    ws.onclose = () => {
+      ws = null;
+      // Auto-reconnect after delay
+      if (!reconnectTimer) {
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = null;
+          connectWebSocket();
+        }, WS_RECONNECT_MS);
+      }
+    };
+
+    ws.onerror = () => {
+      // onclose will fire after this, triggering reconnect
+    };
+  }
+
   /** Currently selected todo number for the detail modal (null = closed) */
   const selectedTodoNumber = ref<number | null>(null);
 
@@ -229,5 +263,6 @@ export const useProjectStore = defineStore("project", () => {
     updateMember,
     openTodo,
     closeTodo,
+    connectWebSocket,
   };
 });

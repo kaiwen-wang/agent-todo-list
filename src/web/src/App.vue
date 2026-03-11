@@ -24,6 +24,7 @@ const showSettings = ref(false);
 
 onMounted(() => {
   store.load();
+  store.connectWebSocket();
 });
 
 const activeKey = computed(() => (route.name as string) ?? "board");

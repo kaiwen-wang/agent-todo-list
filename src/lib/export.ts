@@ -43,6 +43,7 @@ export function toJSON(doc: Doc): object {
       createdAt: t.createdAt,
       updatedAt: t.updatedAt,
       createdBy: t.createdBy,
+      platform: t.platform ?? "unknown",
     })),
     auditLog: (doc.auditLog ?? []).map((e) => ({
       id: e.id,
