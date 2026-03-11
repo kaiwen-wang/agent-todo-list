@@ -10,7 +10,7 @@ import { existsSync } from "node:fs";
 import type { Command } from "commander";
 import { findProject, readConfig } from "../../lib/project.js";
 import { loadDoc, saveDoc } from "../../lib/storage.js";
-import { setBranch } from "../../lib/operations.js";
+import { setBranch, clearBranch } from "../../lib/operations.js";
 import { parseTodoRef, findTodoByNumber } from "../../lib/queries.js";
 import { error, success, warn } from "../output.js";
 
@@ -127,6 +127,79 @@ export function registerBranch(program: Command): void {
         if (opts.worktree) {
           console.log(`  Worktree: .worktrees/${branchName}/`);
         }
+      }
+    });
+
+  program
+    .command("unbranch")
+    .description("Remove a git worktree + branch for a todo")
+    .argument("<ref>", "Todo reference (e.g. ABC-1 or 1)")
+    .option("--keep-branch", "Remove worktree but keep the git branch")
+    .option("--json", "Output as JSON")
+    .action(async (ref: string, opts: { keepBranch?: boolean; json?: boolean }) => {
+      const paths = findProject();
+      if (!paths) error("Not in an agt project. Run 'agt init' first.");
+
+      const config = await readConfig(paths.configPath);
+      let doc = await loadDoc(paths.dataPath);
+      if (!doc) error("Project data not found.");
+
+      const num = parseTodoRef(ref, config.prefix);
+      if (num === null) error(`Invalid todo reference: "${ref}".`);
+
+      const todo = findTodoByNumber(doc, num);
+      if (!todo) error(`Todo ${config.prefix}-${num} not found.`);
+
+      if (!todo.branch) {
+        if (opts.json) {
+          console.log(JSON.stringify({ ref: `${config.prefix}-${num}`, error: "no branch" }));
+        } else {
+          warn(`Todo ${config.prefix}-${num} has no branch.`);
+        }
+        return;
+      }
+
+      const branchName = todo.branch;
+      const worktreePath = join(paths.root, ".worktrees", branchName);
+
+      // Remove worktree if it exists
+      if (existsSync(worktreePath)) {
+        const result = Bun.spawnSync(["git", "worktree", "remove", worktreePath], {
+          cwd: paths.root,
+          stderr: "pipe",
+          stdout: "pipe",
+        });
+
+        if (result.exitCode !== 0) {
+          const stderr = result.stderr.toString().trim();
+          error(`Failed to remove worktree: ${stderr}`);
+        }
+      }
+
+      // Delete the git branch unless --keep-branch
+      if (!opts.keepBranch) {
+        const result = Bun.spawnSync(["git", "branch", "-d", branchName], {
+          cwd: paths.root,
+          stderr: "pipe",
+          stdout: "pipe",
+        });
+
+        if (result.exitCode !== 0) {
+          const stderr = result.stderr.toString().trim();
+          // Not fatal — branch may have been deleted already or not yet merged
+          warn(`Could not delete branch: ${stderr}`);
+        }
+      }
+
+      // Clear branch reference on the todo
+      doc = clearBranch(doc, num);
+      await saveDoc(paths.dataPath, doc);
+
+      const todoRef = `${config.prefix}-${num}`;
+      if (opts.json) {
+        console.log(JSON.stringify({ ref: todoRef, branch: branchName, removed: true }));
+      } else {
+        success(`Removed branch: ${branchName}`);
       }
     });
 }
