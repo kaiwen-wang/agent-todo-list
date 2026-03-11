@@ -3,6 +3,9 @@
   "type": "module",
   "private": true,
   "workspaces": ["src/web"],
+  "bin": {
+    "agt": "src/cli/index.ts"
+  },
   "scripts": {
     "dev": "bun run --cwd src/web dev",
     "build": "bun run --cwd src/web build",
