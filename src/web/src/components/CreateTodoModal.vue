@@ -31,7 +31,6 @@ const title = ref('')
 const description = ref('')
 const status = ref<Status>(props.defaultStatus ?? 'todo')
 const priority = ref<Priority>('medium')
-const tagsInput = ref('')
 const submitting = ref(false)
 
 const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }))
@@ -45,7 +44,6 @@ watch(
       description.value = ''
       status.value = props.defaultStatus ?? 'todo'
       priority.value = 'medium'
-      tagsInput.value = ''
     }
   },
 )
@@ -54,16 +52,11 @@ async function submit() {
   if (!title.value.trim()) return
   submitting.value = true
   try {
-    const tags = tagsInput.value
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean)
     await store.addTodo({
       title: title.value.trim(),
       description: description.value.trim() || undefined,
       status: status.value,
       priority: priority.value,
-      tags: tags.length > 0 ? tags : undefined,
     })
     message.success('Todo created')
     emit('close')
@@ -112,10 +105,6 @@ async function submit() {
             <NSelect v-model:value="priority" :options="priorityOptions" />
           </NFormItem>
         </NSpace>
-
-        <NFormItem label="Tags">
-          <NInput v-model:value="tagsInput" placeholder="bug, frontend, urgent (comma-separated)" />
-        </NFormItem>
 
         <NSpace justify="end" :size="8">
           <NButton @click="emit('close')">Cancel</NButton>
