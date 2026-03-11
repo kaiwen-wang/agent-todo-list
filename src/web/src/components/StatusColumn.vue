@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { NBadge } from 'naive-ui'
+import { ref, computed } from 'vue'
+import { NBadge, NButton } from 'naive-ui'
 import type { Todo, Status } from '@/types'
 import { STATUS_DISPLAY, STATUS_COLORS } from '@/types'
 import TodoCard from './TodoCard.vue'
+import CreateTodoModal from './CreateTodoModal.vue'
 
 const props = defineProps<{
   status: Status
@@ -12,6 +13,8 @@ const props = defineProps<{
 
 const label = computed(() => STATUS_DISPLAY[props.status])
 const color = computed(() => STATUS_COLORS[props.status])
+
+const showCreate = ref(false)
 </script>
 
 <template>
@@ -20,11 +23,13 @@ const color = computed(() => STATUS_COLORS[props.status])
       <div class="column-indicator" :style="{ background: color }" />
       <span class="column-label">{{ label }}</span>
       <NBadge :value="todos.length" :color="color" show-zero type="info" />
+      <NButton size="tiny" quaternary @click="showCreate = true" class="add-btn">+</NButton>
     </div>
     <div class="column-body">
       <TodoCard v-for="todo in todos" :key="todo.id" :todo="todo" />
       <div v-if="todos.length === 0" class="column-empty">No items</div>
     </div>
+    <CreateTodoModal :open="showCreate" :default-status="status" @close="showCreate = false" />
   </div>
 </template>
 
@@ -69,6 +74,17 @@ const color = computed(() => STATUS_COLORS[props.status])
   flex-direction: column;
   gap: 6px;
   overflow-y: auto;
+}
+
+.add-btn {
+  font-size: 16px;
+  font-weight: 600;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+}
+
+.add-btn:hover {
+  opacity: 1;
 }
 
 .column-empty {
