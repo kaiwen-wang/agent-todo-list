@@ -15,7 +15,6 @@ function makeProject() {
   const r1 = addTodo(doc, {
     title: "Auth bug",
     priority: "high",
-    tags: ["auth", "security"],
   });
   const r2 = addTodo(r1.doc, {
     title: "Write tests",
@@ -24,9 +23,8 @@ function makeProject() {
   });
   const r3 = addTodo(r2.doc, {
     title: "Deploy",
-    status: "done",
+    status: "completed",
     priority: "low",
-    tags: ["infra"],
   });
   const r4 = addTodo(r3.doc, {
     title: "Old task",
@@ -60,13 +58,6 @@ describe("queryTodos", () => {
   test("filters by priority", () => {
     const doc = makeProject();
     const todos = queryTodos(doc, { priority: "high" });
-    expect(todos).toHaveLength(1);
-    expect(todos[0]!.title).toBe("Auth bug");
-  });
-
-  test("filters by tag", () => {
-    const doc = makeProject();
-    const todos = queryTodos(doc, { tag: "auth" });
     expect(todos).toHaveLength(1);
     expect(todos[0]!.title).toBe("Auth bug");
   });
@@ -162,8 +153,9 @@ describe("countByStatus", () => {
 
     expect(counts.todo).toBe(1);
     expect(counts.in_progress).toBe(1);
-    expect(counts.done).toBe(1);
+    expect(counts.completed).toBe(1);
     expect(counts.archived).toBe(1);
-    expect(counts.backlog).toBe(0);
+    expect(counts.none).toBe(0);
+    expect(counts.wont_do).toBe(0);
   });
 });

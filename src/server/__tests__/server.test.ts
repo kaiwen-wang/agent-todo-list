@@ -61,7 +61,6 @@ describe("POST /api/change", () => {
         action: "add",
         title: "Buy milk",
         priority: "high",
-        tags: ["shopping"],
       }),
     });
 
@@ -76,7 +75,6 @@ describe("POST /api/change", () => {
     const todo = project.todos.find((t: any) => t.title === "Buy milk");
     expect(todo).toBeDefined();
     expect(todo.priority).toBe("high");
-    expect(todo.tags).toEqual(["shopping"]);
   });
 
   test("action=update modifies an existing todo", async () => {

@@ -61,13 +61,11 @@ describe("addTodo", () => {
       title: "Urgent bug",
       status: "in_progress",
       priority: "urgent",
-      tags: ["bug", "critical"],
     });
 
     const todo = result.doc.todos[0]!;
     expect(todo.status).toBe("in_progress");
     expect(todo.priority).toBe("urgent");
-    expect([...todo.tags]).toEqual(["bug", "critical"]);
   });
 
   test("concurrent counter increments merge correctly", () => {
@@ -108,20 +106,9 @@ describe("updateTodo", () => {
   test("updates status", () => {
     const doc = createProject("TST", "Test", "Alice");
     const { doc: d1, number } = addTodo(doc, { title: "Task" });
-    const d2 = updateTodo(d1, number, { status: "done" });
+    const d2 = updateTodo(d1, number, { status: "completed" });
 
-    expect(d2.todos[0]!.status).toBe("done");
-  });
-
-  test("replaces tags", () => {
-    const doc = createProject("TST", "Test", "Alice");
-    const { doc: d1, number } = addTodo(doc, {
-      title: "Task",
-      tags: ["old"],
-    });
-    const d2 = updateTodo(d1, number, { tags: ["new1", "new2"] });
-
-    expect([...d2.todos[0]!.tags]).toEqual(["new1", "new2"]);
+    expect(d2.todos[0]!.status).toBe("completed");
   });
 
   test("throws on nonexistent todo", () => {

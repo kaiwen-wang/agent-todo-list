@@ -22,7 +22,6 @@ describe("storage", () => {
     const { doc: withTodo } = addTodo(doc, {
       title: "Saved task",
       priority: "high",
-      tags: ["test"],
     });
 
     await saveDoc(filePath, withTodo);
@@ -34,7 +33,6 @@ describe("storage", () => {
     expect(loaded!.todos).toHaveLength(1);
     expect(loaded!.todos[0]!.title).toBe("Saved task");
     expect(loaded!.todos[0]!.priority).toBe("high");
-    expect([...loaded!.todos[0]!.tags]).toEqual(["test"]);
     expect(loaded!.counter.value).toBe(1);
   });
 

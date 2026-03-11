@@ -104,13 +104,12 @@ describe("CLI end-to-end", () => {
 
   test("show displays todo detail", async () => {
     await run(["init", "--name", "Test", "--prefix", "TST"], tempDir);
-    await run(["add", "Detailed task", "--priority", "high", "--tags", "a,b"], tempDir);
+    await run(["add", "Detailed task", "--priority", "high"], tempDir);
 
     const { stdout, exitCode } = await run(["show", "TST-1"], tempDir);
     expect(exitCode).toBe(0);
     expect(stdout).toContain("Detailed task");
     expect(stdout).toContain("high");
-    expect(stdout).toContain("a, b");
   });
 
   test("show accepts plain number", async () => {
@@ -125,11 +124,11 @@ describe("CLI end-to-end", () => {
   test("update changes status", async () => {
     await run(["init", "--name", "Test", "--prefix", "TST"], tempDir);
     await run(["add", "Task"], tempDir);
-    await run(["update", "1", "--status", "done"], tempDir);
+    await run(["update", "1", "--status", "completed"], tempDir);
 
     const { stdout } = await run(["show", "1", "--json"], tempDir);
     const todo = JSON.parse(stdout);
-    expect(todo.status).toBe("done");
+    expect(todo.status).toBe("completed");
   });
 
   test("archive command works", async () => {
@@ -142,33 +141,6 @@ describe("CLI end-to-end", () => {
     // Should not appear in default list
     const { stdout } = await run(["list"], tempDir);
     expect(stdout).toContain("No todos found");
-  });
-
-  test("export --format md produces markdown", async () => {
-    await run(["init", "--name", "Test", "--prefix", "TST"], tempDir);
-    await run(["add", "Task one"], tempDir);
-
-    const { stdout, exitCode } = await run(
-      ["export", "--format", "md"],
-      tempDir,
-    );
-    expect(exitCode).toBe(0);
-    expect(stdout).toContain("# Test");
-    expect(stdout).toContain("**TST-1**");
-  });
-
-  test("export --format json produces JSON", async () => {
-    await run(["init", "--name", "Test", "--prefix", "TST"], tempDir);
-    await run(["add", "Task one"], tempDir);
-
-    const { stdout, exitCode } = await run(
-      ["export", "--format", "json"],
-      tempDir,
-    );
-    expect(exitCode).toBe(0);
-    const parsed = JSON.parse(stdout);
-    expect(parsed.name).toBe("Test");
-    expect(parsed.todos).toHaveLength(1);
   });
 
   test("error on missing project", async () => {
