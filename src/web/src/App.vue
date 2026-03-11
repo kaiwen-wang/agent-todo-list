@@ -182,13 +182,14 @@ body {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 0;
 }
 
 .app-title {
   font-size: 14px;
   font-weight: 700;
   line-height: 1;
+  margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -196,6 +197,8 @@ body {
 
 .app-subtitle {
   font-size: 11px;
+  line-height: 1;
+  margin-top: 0;
   opacity: 0.45;
 }
 
