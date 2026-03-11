@@ -72,6 +72,7 @@ function onDragStart(e: DragEvent) {
       </NIcon>
     </div>
     <div class="card-title">{{ todo.title }}</div>
+    <div v-if="todo.description" class="card-description">{{ todo.description }}</div>
     <div v-if="todo.labels?.length || todo.assigneeName" class="card-footer">
       <div v-if="todo.labels?.length" class="card-labels">
         <span
@@ -142,6 +143,18 @@ function onDragStart(e: DragEvent) {
 .todo-card.done .card-title {
   text-decoration: line-through;
   opacity: 0.7;
+}
+
+.card-description {
+  font-size: 11px;
+  line-height: 1.25;
+  color: #888;
+  margin-top: 3px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
 }
 
 .card-footer {
