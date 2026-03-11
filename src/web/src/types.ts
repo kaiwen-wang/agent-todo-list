@@ -40,7 +40,7 @@ export const STATUSES: Status[] = ['none', 'todo', 'in_progress', 'completed', '
 /** Statuses shown as columns on the board (exclude archived and wont_do) */
 export const BOARD_STATUSES: Status[] = ['none', 'todo', 'in_progress', 'completed']
 
-export const PRIORITIES: Priority[] = ['low', 'medium', 'high', 'urgent']
+export const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low']
 
 export const STATUS_DISPLAY: Record<Status, string> = {
   none: 'None',

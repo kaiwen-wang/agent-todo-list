@@ -1,14 +1,22 @@
 <script setup lang="ts">
-import { ref, computed, h } from 'vue'
+import { ref, computed, h, type Component } from 'vue'
 import {
   NButton,
   NDataTable,
+  NIcon,
   NInput,
   NSelect,
   NSpace,
-  NTag,
+  NTooltip,
   type DataTableColumns,
 } from 'naive-ui'
+import {
+  AntennaBars1,
+  AntennaBars2,
+  AntennaBars3,
+  AntennaBars4,
+  AntennaBars5,
+} from '@vicons/tabler'
 import { useProjectStore } from '@/stores/project'
 import type { Todo, Status, Priority } from '@/types'
 import {
@@ -19,17 +27,36 @@ import {
   STATUS_COLORS,
   PRIORITY_COLORS,
 } from '@/types'
+
 import CreateTodoModal from '@/components/CreateTodoModal.vue'
+
+const PRIORITY_ICON: Record<Priority, Component> = {
+  low: AntennaBars2,
+  medium: AntennaBars3,
+  high: AntennaBars4,
+  urgent: AntennaBars5,
+}
+
+function renderPriority(icon: Component, color: string, label: string) {
+  return h(NTooltip, { trigger: 'hover' }, {
+    trigger: () =>
+      h(NIcon, { size: 20, color }, { default: () => h(icon) }),
+    default: () => label,
+  })
+}
 
 const store = useProjectStore()
 
 const showCreate = ref(false)
 const filterStatus = ref<Status | null>(null)
-const filterPriority = ref<Priority | null>(null)
+const filterPriority = ref<Priority | 'none' | null>(null)
 const searchQuery = ref('')
 
 const statusFilterOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }))
-const priorityFilterOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }))
+const priorityFilterOptions = [
+  { label: 'None', value: 'none' },
+  ...PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p })),
+]
 
 const filteredTodos = computed(() => {
   let list = store.activeTodos
@@ -37,7 +64,9 @@ const filteredTodos = computed(() => {
     list = list.filter((t) => t.status === filterStatus.value)
   }
   if (filterPriority.value) {
-    list = list.filter((t) => t.priority === filterPriority.value)
+    list = list.filter((t) =>
+      filterPriority.value === 'none' ? t.priority === null : t.priority === filterPriority.value,
+    )
   }
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase()
@@ -73,31 +102,23 @@ const columns: DataTableColumns<Todo> = [
     render(row) {
       const status = row.status
       if (!status) return h('span', { style: 'opacity: 0.3' }, '\u2014')
-      return h(
-        NTag,
-        {
-          size: 'small',
-          round: true,
-          bordered: false,
-          color: { color: STATUS_COLORS[status] + '22', textColor: STATUS_COLORS[status] },
-        },
-        () => STATUS_DISPLAY[status],
-      )
+      return h('span', { style: 'display: flex; align-items: center; gap: 6px; font-size: 12px' }, [
+        h('span', {
+          style: `width: 8px; height: 8px; border-radius: 50%; background: ${STATUS_COLORS[status]}; flex-shrink: 0`,
+        }),
+        STATUS_DISPLAY[status],
+      ])
     },
   },
   {
     title: 'Priority',
     key: 'priority',
-    width: 100,
+    width: 70,
+    align: 'center',
     render(row) {
       const priority = row.priority
-      if (!priority) return h('span', { style: 'opacity: 0.3' }, '\u2014')
-      return h('span', { style: 'display: flex; align-items: center; gap: 6px; font-size: 12px' }, [
-        h('span', {
-          style: `width: 8px; height: 8px; border-radius: 50%; background: ${PRIORITY_COLORS[priority]}; flex-shrink: 0`,
-        }),
-        PRIORITY_DISPLAY[priority],
-      ])
+      if (!priority) return renderPriority(AntennaBars1, '#d4d4d8', 'None')
+      return renderPriority(PRIORITY_ICON[priority], PRIORITY_COLORS[priority], PRIORITY_DISPLAY[priority])
     },
   },
   {
@@ -107,7 +128,7 @@ const columns: DataTableColumns<Todo> = [
     render(row) {
       return row.assigneeName
         ? h('span', {}, row.assigneeName)
-        : h('span', { style: 'opacity: 0.3' }, '\u2014')
+        : null
     },
   },
 ]
