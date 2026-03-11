@@ -123,3 +123,14 @@ async function serveStatic(pathname: string, distDir: string) {
 
   return new Response("Not Found", { status: 404 });
 }
+
+/* ── Run standalone when executed directly (`bun src/server/index.ts`) ── */
+if (import.meta.main) {
+  const { findProject } = await import("../lib/project.js");
+  const paths = findProject();
+  if (!paths) {
+    console.error("Not in an agt project. Run 'agt init' first.");
+    process.exit(1);
+  }
+  await startServer(paths.root);
+}
