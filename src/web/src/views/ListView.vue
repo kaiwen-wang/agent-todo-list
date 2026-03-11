@@ -106,19 +106,6 @@ const columns: DataTableColumns<Todo> = [
         : h('span', { style: 'opacity: 0.3' }, '\u2014')
     },
   },
-  {
-    title: 'Tags',
-    key: 'tags',
-    width: 160,
-    render(row) {
-      if (!row.tags.length) return null
-      return h(
-        NSpace,
-        { size: 4 },
-        () => row.tags.map((tag) => h(NTag, { size: 'tiny', round: true, bordered: false }, () => tag)),
-      )
-    },
-  },
 ]
 
 function handleRowClick(row: Todo) {

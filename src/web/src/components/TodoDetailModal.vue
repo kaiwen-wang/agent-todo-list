@@ -108,7 +108,7 @@ function formatDate(iso: string): string {
   <NModal :show="isOpen" @update:show="(v: boolean) => !v && close()">
     <NCard
       :bordered="true"
-      style="width: 680px; max-width: 95vw; min-height: 520px"
+      style="width: 680px; max-width: 95vw; min-height: 70vh"
       role="dialog"
     >
       <div v-if="!todo" class="not-found">
