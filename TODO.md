@@ -1,0 +1,1 @@
+add git commit hooks, linting, etc.

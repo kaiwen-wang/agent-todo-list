@@ -65,7 +65,6 @@ interface Todo {
   status: Status
   priority: Priority
   assignee: string | null   // Member ID
-  tags: string[]
   createdAt: string         // ISO 8601
   updatedAt: string
   createdBy: string         // Member ID
@@ -156,7 +155,7 @@ agent-todo-list/
       project.ts            # .todo/ directory management, config I/O
       merge-driver.ts       # Git merge driver for .automerge files
       migrate.ts            # Schema migration logic
-      export.ts             # Markdown export renderer
+      export.ts             # JSON serialization helpers
 
     cli/                    # CLI application
       index.ts              # Entry point, command router
@@ -168,7 +167,6 @@ agent-todo-list/
         show.ts             # `agt show ABC-1`
         assign.ts           # `agt assign ABC-1 kaiwen`
         browser.ts          # `agt serve` — start web dashboard server
-        export.ts           # `agt export --format md`
       output.ts             # Terminal formatting (tables, colors)
 
     server/                 # Bun.serve() — local web dashboard server
@@ -216,14 +214,13 @@ agt init --name "My Project" --prefix ABC
   # Configures git merge driver in local repo config
 
 # Creating todos
-agt add "Fix authentication bug" --priority high --tags auth,security
+agt add "Fix authentication bug" --priority high
 agt add "Write tests" --status todo --assignee "Kaiwen"
 
 # Listing and filtering
 agt list                              # All non-archived todos
 agt list --status in_progress         # Filter by status
 agt list --assignee kaiwen            # Filter by assignee
-agt list --tag auth                   # Filter by tag
 agt list --json                       # JSON output (for agents)
 
 # Viewing details
@@ -238,13 +235,14 @@ agt archive ABC-1                    # Shorthand for --status archived
 # Bulk operations (agent-friendly)
 agt batch --file changes.json         # Apply multiple ops from JSON
 
+# Members
+agt member add "Kaiwen" --role member  # Add a team member
+agt member list                        # List all members
+agt member remove "Kaiwen"             # Remove a member
+
 # Web dashboard
 agt serve                              # Start web dashboard server
 agt serve --port 8080                  # Custom port
-
-# Export
-agt export --format md                # Print markdown to stdout
-agt export --format json              # Print JSON to stdout
 ```
 
 ### Agent-Friendly Design
@@ -354,4 +352,4 @@ Starts a local Bun server which:
 2. **cli/** — `init`, `add`, `list`, `update`, `show`, `serve` commands
 3. **server/** — `Bun.serve()` local web dashboard server
 4. **web/** — Vue dashboard (kanban board, todo detail)
-5. **Polish** — `--json` flag, `agt batch`, `agt export`, error handling
+5. **Polish** — `--json` flag, `agt batch`, error handling
