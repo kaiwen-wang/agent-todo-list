@@ -42,11 +42,12 @@ const PRIORITY_ICON: Record<Priority, Component> = {
 };
 
 function renderPriority(icon: Component, color: string, label: string) {
+  const style = icon === AntennaBars4 ? "position: relative; top: 0.75px" : undefined;
   return h(
     NTooltip,
     { trigger: "hover" },
     {
-      trigger: () => h(NIcon, { size: 20, color }, { default: () => h(icon) }),
+      trigger: () => h(NIcon, { size: 20, color, style }, { default: () => h(icon) }),
       default: () => label,
     },
   );
