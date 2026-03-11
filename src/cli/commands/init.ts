@@ -46,5 +46,8 @@ export function registerInit(program: Command): void {
       success(`Initialized project "${opts.name}" (${opts.prefix.toUpperCase()}) at ${paths.todoDir}`);
       console.log(`  Config: ${paths.configPath}`);
       console.log(`  Data:   ${paths.dataPath}`);
+      if (isGitRepo(cwd)) {
+        console.log(`  Git merge driver configured for conflict-free sync.`);
+      }
     });
 }

@@ -57,6 +57,9 @@ export function isGitRepo(dir: string = process.cwd()): boolean {
 
 /**
  * Create the .todo/ directory and config file for a new project.
+ *
+ * The data.automerge file IS committed to git (not gitignored).
+ * A custom git merge driver handles binary merges using Automerge.merge().
  */
 export async function initProject(
   dir: string,
@@ -81,22 +84,39 @@ export async function initProject(
 
   await Bun.write(paths.configPath, toml + "\n");
 
-  // Append to .gitignore if it exists
-  const gitignorePath = join(dir, ".gitignore");
-  const gitignoreFile = Bun.file(gitignorePath);
+  // Set up .gitattributes for the Automerge merge driver
+  const gitattrsPath = join(dir, ".gitattributes");
+  const gitattrsFile = Bun.file(gitattrsPath);
+  const mergeDriverLine = ".todo/data.automerge merge=automerge-crdt";
 
-  if (await gitignoreFile.exists()) {
-    const content = await gitignoreFile.text();
-    if (!content.includes(".todo/data.automerge")) {
+  if (await gitattrsFile.exists()) {
+    const content = await gitattrsFile.text();
+    if (!content.includes("merge=automerge-crdt")) {
       await Bun.write(
-        gitignorePath,
-        content.trimEnd() + "\n\n# agent-todo-list CRDT data\n.todo/data.automerge\n",
+        gitattrsPath,
+        content.trimEnd() + "\n\n# CRDT merge driver for Automerge binary data\n" + mergeDriverLine + "\n",
       );
     }
   } else {
     await Bun.write(
-      gitignorePath,
-      "# agent-todo-list CRDT data\n.todo/data.automerge\n",
+      gitattrsPath,
+      "# CRDT merge driver for Automerge binary data\n" + mergeDriverLine + "\n",
+    );
+  }
+
+  // Configure the git merge driver (local repo config only)
+  if (isGitRepo(dir)) {
+    const mergeDriverScript = join(
+      import.meta.dir,
+      "merge-driver.ts",
+    );
+    Bun.spawnSync(
+      ["git", "config", "merge.automerge-crdt.name", "Automerge CRDT merge driver"],
+      { cwd: dir },
+    );
+    Bun.spawnSync(
+      ["git", "config", "merge.automerge-crdt.driver", `bun ${mergeDriverScript} %O %A %B`],
+      { cwd: dir },
     );
   }
 

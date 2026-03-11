@@ -111,22 +111,20 @@ Automerge is schema-less. Migrations are handled at read-time:
 ```
 my-project/                     # Any git repository
   .git/
+  .gitattributes                # Merge driver for .automerge files
   .todo/                        # Created by `agt init`
-    config.toml                 # Project config (prefix, name) — safe to commit
-    data.automerge              # CRDT binary document — gitignored
-  .gitignore                    # Should include .todo/data.automerge
+    config.toml                 # Project config (prefix, name)
+    data.automerge              # CRDT binary document — committed to git
   src/
   ...
 ```
 
 - One project per git repo. `.todo/` is created at the git root (same level as `.git/`).
 - `agt init` warns if no `.git/` is found but still allows creation (for quick experiments).
-  This prevents accidentally creating `.todo/` in a home directory while still supporting
-  non-git use cases.
-- `.todo/config.toml` is small, human-readable, and can be committed so collaborators
-  share the project prefix and name.
-- `.todo/data.automerge` is a binary blob. It should be gitignored. Sync happens via
-  the Automerge sync protocol, not git.
+- **Both files are committed to git.** `config.toml` is human-readable. `data.automerge`
+  is a binary blob, but Automerge's merge semantics make it safe to commit — a custom
+  git merge driver handles binary conflicts using `Automerge.merge()`.
+- Sync between collaborators happens via `git push`/`git pull`. No server needed.
 - The CLI finds the project by walking up directories looking for `.todo/` (like git
   finds `.git/`).
 
@@ -156,7 +154,7 @@ agent-todo-list/
       queries.ts            # Read/filter functions
       storage.ts            # Load/save .automerge files
       project.ts            # .todo/ directory management, config I/O
-      sync.ts               # Automerge sync protocol helpers
+      merge-driver.ts       # Git merge driver for .automerge files
       migrate.ts            # Schema migration logic
       export.ts             # Markdown export renderer
 
@@ -169,12 +167,12 @@ agent-todo-list/
         update.ts           # `agt update ABC-1 --status done`
         show.ts             # `agt show ABC-1`
         assign.ts           # `agt assign ABC-1 kaiwen`
-        serve.ts            # `agt serve` — start server + web dashboard
+        browser.ts          # `agt browser` — open web dashboard in browser
         export.ts           # `agt export --format md`
       output.ts             # Terminal formatting (tables, colors)
 
-    server/                 # Bun.serve() — sync hub + static file server
-      index.ts              # Server entry point
+    server/                 # Bun.serve() — local web dashboard server
+      index.ts              # Server entry point (serves Vue app, reads doc from disk)
 
     web/                    # Vue 3 + Vite frontend (scaffolded by create-vue)
       src/
@@ -214,7 +212,8 @@ development, or install globally via `bun link`.
 agt init --name "My Project" --prefix ABC
   # Warns if no .git/ found (but still allows creation)
   # Creates .todo/ directory with config.toml + data.automerge
-  # Adds .todo/data.automerge to .gitignore
+  # Sets up .gitattributes with Automerge merge driver
+  # Configures git merge driver in local repo config
 
 # Creating todos
 agt add "Fix authentication bug" --priority high --tags auth,security
@@ -240,8 +239,8 @@ agt archive ABC-1                    # Shorthand for --status archived
 agt batch --file changes.json         # Apply multiple ops from JSON
 
 # Web dashboard
-agt serve                             # Start server on default port
-agt serve --port 8080                 # Custom port
+agt browser                            # Open web dashboard in browser
+agt browser --port 8080                # Custom port
 
 # Export
 agt export --format md                # Print markdown to stdout
@@ -258,70 +257,52 @@ agt export --format json              # Print JSON to stdout
 
 ## Sync Architecture
 
-```
-┌─────────────┐    Automerge Sync     ┌──────────────────┐    Automerge Sync     ┌─────────────┐
-│   CLI        │ ◄─── WebSocket ────► │   Bun Server     │ ◄─── WebSocket ────► │  Vue Web     │
-│  (Automerge) │     (binary msgs)    │  (Automerge hub) │     (binary msgs)    │  (Automerge) │
-└─────────────┘                       └──────────────────┘                       └─────────────┘
-      │                                       │
-      │  (offline: direct                     │  Disk
-      │   file read/write)                    │  .todo/data.automerge
-      ▼                                       ▼
-  .todo/data.automerge              .todo/data.automerge
-  (same file)                       (same file)
-```
-
-### How Sync Works
-
-The Automerge sync protocol is built into `@automerge/automerge`. It handles:
-- Determining what each peer is missing
-- Sending minimal deltas (not full documents)
-- Merging concurrent changes conflict-free
-
-**Components:**
-
-1. **Server (`Bun.serve()`)** — The sync hub. Holds the Automerge document in memory,
-   persists to `.todo/data.automerge`. Runs a WebSocket endpoint at `/sync`. Each
-   connected client gets its own `Automerge.SyncState`.
-
-2. **CLI** — Works in two modes:
-   - **Offline (default):** Reads/writes `.todo/data.automerge` directly. No server needed.
-   - **Connected:** If `agt serve` is running, the CLI can optionally connect via
-     WebSocket to sync changes in real-time.
-
-3. **Web dashboard** — Always connects to the server via WebSocket. Holds its own
-   Automerge document in memory. Mutations are local-first (instant UI), then synced.
-
-4. **File watcher** — When the server is running, it watches `.todo/data.automerge`
-   for changes. If the CLI writes to disk while the server is up, the server detects
-   the change, reloads the file, merges via Automerge, and broadcasts to connected
-   WebSocket clients. This bridges the gap between offline CLI usage and live server.
-
-### Sync Protocol Flow
+Sync happens through **git**, not a custom server. The `.todo/data.automerge` file is
+committed to the repository. Automerge's CRDT merge semantics guarantee conflict-free
+resolution when two collaborators edit independently.
 
 ```
-Client connects via WebSocket
-  → Server creates SyncState for this client
-  → Server calls Automerge.generateSyncMessage(doc, syncState)
-  → Server sends sync message to client
-  → Client calls Automerge.receiveSyncMessage(doc, syncState, msg)
-  → Client generates response: Automerge.generateSyncMessage(doc, syncState)
-  → ... messages go back and forth until both sides are in sync
-  → When either side makes a local change, the cycle repeats
+  Dev A                          Git Remote                         Dev B
+┌──────────┐                   ┌──────────┐                    ┌──────────┐
+│ agt add   │  git push/pull   │          │   git push/pull   │ agt add   │
+│ agt update│ ◄──────────────► │  origin  │ ◄───────────────► │ agt update│
+│           │                  │          │                   │           │
+└──────────┘                   └──────────┘                    └──────────┘
+      │                                                              │
+  .todo/data.automerge                                    .todo/data.automerge
+  (committed to git)                                      (committed to git)
 ```
 
-Messages are binary (`Uint8Array`). The protocol is efficient — after initial sync,
-only deltas are exchanged.
+### Git Merge Driver
 
-### Offline-First Behavior
+When `git pull` encounters concurrent edits to `data.automerge`, git would normally
+report a binary conflict. We avoid this with a custom merge driver:
 
-- The CLI always works without the server. It reads/writes the Automerge file directly.
-- The web dashboard requires the server to be running.
-- When the server starts, it loads the current `.todo/data.automerge`. If the CLI made
-  changes while the server was off, the server picks them up on next load.
-- If the CLI and server both modify the document simultaneously (e.g., CLI writes to
-  disk while server has it in memory), the next sync will merge both sets of changes
-  via Automerge — no data loss.
+```gitattributes
+# .gitattributes (created by `agt init`)
+.todo/data.automerge merge=automerge-crdt
+```
+
+The merge driver is a script that calls `Automerge.merge()`:
+
+```
+git config merge.automerge-crdt.driver "bun <path>/merge-driver.ts %O %A %B"
+```
+
+The script loads both sides (`%A` = ours, `%B` = theirs), merges them, and writes the
+result back. Automerge merge is always conflict-free — concurrent changes combine
+cleanly. `git merge` just works.
+
+### Why Not WebSocket Sync?
+
+The original architecture planned a WebSocket sync server. Git sync is better because:
+- **Already there** — every collaborator already has git. No extra infrastructure.
+- **Truly local-first** — works offline, no server dependency.
+- **Simpler** — no sync protocol code, no server process, no connection management.
+- **Auditable** — sync history is git history.
+
+The `agt browser` command starts a local-only server for the web dashboard UI. It reads
+from disk — no WebSocket sync needed.
 
 ## Web Dashboard
 
@@ -355,50 +336,22 @@ export function useAutomerge<T>(initialDoc: Automerge.Doc<T>) {
 `shallowRef` is used because Automerge documents are immutable — every `change()`
 returns a new document object. Vue detects the reference change and re-renders.
 
-### Server Command
+### Browser Command
 
 ```bash
-agt serve --port 3000
+agt browser --port 3000
 ```
 
-Starts the Bun server which:
-1. Serves the built Vue app as static files
-2. Runs the WebSocket sync endpoint at `/sync`
-3. Watches `.todo/data.automerge` for CLI-driven changes
+Starts a local Bun server which:
+1. Loads `.todo/data.automerge` from disk
+2. Serves the built Vue app as static files
+3. Provides a REST API for the frontend to read/write the Automerge doc
 4. Opens the browser automatically
 
 ## Implementation Order
 
-1. **lib/** — Schema types, Automerge operations, storage, project config
-2. **cli/** — `init`, `add`, `list`, `update`, `show` commands
-3. **server/** — `Bun.serve()` with WebSocket sync + static file serving
+1. **lib/** — Schema types, Automerge operations, storage, project config, merge driver
+2. **cli/** — `init`, `add`, `list`, `update`, `show`, `browser` commands
+3. **server/** — `Bun.serve()` local web dashboard server
 4. **web/** — Vue dashboard (kanban board, todo detail)
 5. **Polish** — `--json` flag, `agt batch`, `agt export`, error handling
-6. **Multi-user** — Deploy server, add auth, multiple peers sync
-
-## Open Questions
-
-### automerge-repo
-
-[`@automerge/automerge-repo`](https://github.com/automerge/automerge-repo) is the
-official higher-level wrapper around Automerge. It provides pluggable network adapters
-(WebSocket, MessageChannel), storage adapters (NodeFS, IndexedDB), and multi-document
-management with automatic sync.
-
-Using it would replace the hand-rolled sync code (`sync.ts`, manual `SyncState`
-management, `generateSyncMessage`/`receiveSyncMessage` calls). The tradeoff:
-
-**Pros:**
-- Battle-tested sync protocol implementation
-- Storage adapters handle persistence
-- Less custom code to maintain
-
-**Cons:**
-- WebSocket adapter uses `isomorphic-ws` (depends on `ws` package). Bun has its own
-  native WebSocket — compatibility needs testing.
-- Designed for multi-document repos. We have one document per project. May be overkill.
-- Additional dependency surface
-
-**Status:** Pending Bun compatibility spike before committing to this approach. If it
-works on Bun, use it. If not, hand-roll sync using the low-level Automerge sync API
-(which is straightforward — ~100 lines of code).

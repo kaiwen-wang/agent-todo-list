@@ -93,7 +93,7 @@ describe("initProject + readConfig", () => {
     expect(config.name).toBe("Test Project");
   });
 
-  test("creates .gitignore if not present", async () => {
+  test("creates .gitattributes with merge driver", async () => {
     tempDir = mkdtempSync(join(tmpdir(), "agt-test-"));
 
     await initProject(tempDir, {
@@ -102,13 +102,13 @@ describe("initProject + readConfig", () => {
       name: "Test",
     });
 
-    const gitignore = await Bun.file(join(tempDir, ".gitignore")).text();
-    expect(gitignore).toContain(".todo/data.automerge");
+    const gitattrs = await Bun.file(join(tempDir, ".gitattributes")).text();
+    expect(gitattrs).toContain(".todo/data.automerge merge=automerge-crdt");
   });
 
-  test("appends to existing .gitignore", async () => {
+  test("appends to existing .gitattributes", async () => {
     tempDir = mkdtempSync(join(tmpdir(), "agt-test-"));
-    await Bun.write(join(tempDir, ".gitignore"), "node_modules/\n");
+    await Bun.write(join(tempDir, ".gitattributes"), "*.txt text\n");
 
     await initProject(tempDir, {
       id: "test-id",
@@ -116,8 +116,8 @@ describe("initProject + readConfig", () => {
       name: "Test",
     });
 
-    const gitignore = await Bun.file(join(tempDir, ".gitignore")).text();
-    expect(gitignore).toContain("node_modules/");
-    expect(gitignore).toContain(".todo/data.automerge");
+    const gitattrs = await Bun.file(join(tempDir, ".gitattributes")).text();
+    expect(gitattrs).toContain("*.txt text");
+    expect(gitattrs).toContain("merge=automerge-crdt");
   });
 });
