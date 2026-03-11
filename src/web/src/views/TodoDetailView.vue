@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router'
 import {
   NButton,
   NSpace,
-  NTag,
   NCard,
   NForm,
   NFormItem,
@@ -38,10 +37,14 @@ const message = useMessage()
 const editing = ref(false)
 const editTitle = ref('')
 const editDescription = ref('')
-const editPriority = ref<Priority>('medium')
-const editStatus = ref<Status>('todo')
-const editTags = ref('')
+const editPriority = ref<Priority | null>(null)
+const editStatus = ref<Status | null>(null)
+const editAssignee = ref<string | null>(null)
 const saving = ref(false)
+
+const memberOptions = computed(() =>
+  store.members.map((m) => ({ label: m.name, value: m.id }))
+)
 
 const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }))
 const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }))
@@ -54,7 +57,7 @@ function startEdit() {
   editDescription.value = todo.value.description
   editPriority.value = todo.value.priority
   editStatus.value = todo.value.status
-  editTags.value = todo.value.tags.join(', ')
+  editAssignee.value = todo.value.assignee
   editing.value = true
 }
 
@@ -62,16 +65,12 @@ async function saveEdit() {
   if (!todo.value) return
   saving.value = true
   try {
-    const tags = editTags.value
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean)
     await store.updateTodo(todo.value.number, {
       title: editTitle.value.trim(),
       description: editDescription.value.trim(),
-      priority: editPriority.value,
-      status: editStatus.value,
-      tags,
+      priority: editPriority.value || undefined,
+      status: editStatus.value || undefined,
+      assignee: editAssignee.value,
     })
     editing.value = false
     message.success('Todo updated')
@@ -167,10 +166,11 @@ function formatDate(iso: string): string {
           <NDescriptionsItem label="Priority">
             <NSpace :size="6" align="center">
               <span
+                v-if="todo.priority"
                 class="priority-dot"
                 :style="{ background: PRIORITY_COLORS[todo.priority] }"
               />
-              {{ PRIORITY_DISPLAY[todo.priority] }}
+              {{ todo.priority ? PRIORITY_DISPLAY[todo.priority] : 'None' }}
             </NSpace>
           </NDescriptionsItem>
           <NDescriptionsItem label="Assignee">
@@ -184,14 +184,6 @@ function formatDate(iso: string): string {
           </NDescriptionsItem>
         </NDescriptions>
 
-        <div v-if="todo.tags.length > 0" class="meta-section">
-          <label class="meta-label">Tags</label>
-          <NSpace :size="6">
-            <NTag v-for="tag in todo.tags" :key="tag" size="small" round :bordered="false">
-              {{ tag }}
-            </NTag>
-          </NSpace>
-        </div>
       </NCard>
 
       <!-- Description -->
@@ -221,8 +213,13 @@ function formatDate(iso: string): string {
           </NFormItem>
         </NSpace>
 
-        <NFormItem label="Tags">
-          <NInput v-model:value="editTags" placeholder="comma-separated" />
+        <NFormItem label="Assignee">
+          <NSelect
+            v-model:value="editAssignee"
+            :options="memberOptions"
+            placeholder="Assign to a member..."
+            clearable
+          />
         </NFormItem>
 
         <NSpace justify="end" :size="8">
