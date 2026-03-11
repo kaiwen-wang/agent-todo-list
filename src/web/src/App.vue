@@ -1,17 +1,22 @@
 <script setup lang="ts">
-import { onMounted, h, computed } from 'vue'
+import { onMounted, computed, h, type Component } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import {
   NConfigProvider,
   NMessageProvider,
   NLayout,
   NLayoutHeader,
-  NSpace,
-  NTag,
+  NLayoutSider,
+  NLayoutContent,
   NMenu,
+  NTag,
+  NSpace,
+  NDivider,
+  NStatistic,
   type MenuOption,
 } from 'naive-ui'
 import { useProjectStore } from '@/stores/project'
+import { STATUS_COLORS } from '@/types'
 
 const store = useProjectStore()
 const route = useRoute()
@@ -36,9 +41,14 @@ function handleMenuUpdate(key: string) {
 <template>
   <NConfigProvider>
     <NMessageProvider>
-      <NLayout class="app-layout">
-        <NLayoutHeader class="app-header" bordered>
-          <div class="header-left">
+      <NLayout has-sider class="app-layout">
+        <!-- Sidebar -->
+        <NLayoutSider
+          bordered
+          :width="220"
+          content-class="sidebar-content"
+        >
+          <div class="sidebar-header">
             <h1 class="app-title">{{ store.projectName || 'agt' }}</h1>
             <NTag v-if="store.prefix" type="info" size="small" round>
               {{ store.prefix }}
@@ -46,29 +56,66 @@ function handleMenuUpdate(key: string) {
           </div>
 
           <NMenu
-            mode="horizontal"
             :value="activeKey"
             :options="menuOptions"
             @update:value="handleMenuUpdate"
-            class="header-menu"
           />
 
-          <NSpace class="header-right" :size="8" align="center">
-            <NTag v-if="store.project" size="small" round type="info">
-              {{ store.statusCounts.todo }} todo
-            </NTag>
-            <NTag v-if="store.project" size="small" round type="warning">
-              {{ store.statusCounts.in_progress }} active
-            </NTag>
-            <NTag v-if="store.project" size="small" round type="success">
-              {{ store.statusCounts.done }} done
-            </NTag>
-          </NSpace>
-        </NLayoutHeader>
+          <template v-if="store.project">
+            <NDivider style="margin: 12px 0" />
 
-        <NLayout class="app-main" content-class="main-content">
-          <div v-if="store.loading && !store.project" class="loading">Loading project...</div>
-          <RouterView v-else />
+            <div class="sidebar-section">
+              <div class="section-label">Status</div>
+              <div class="status-counts">
+                <div class="status-row">
+                  <span class="status-dot" :style="{ background: STATUS_COLORS.backlog }" />
+                  <span class="status-name">Backlog</span>
+                  <span class="status-count">{{ store.statusCounts.backlog }}</span>
+                </div>
+                <div class="status-row">
+                  <span class="status-dot" :style="{ background: STATUS_COLORS.todo }" />
+                  <span class="status-name">Todo</span>
+                  <span class="status-count">{{ store.statusCounts.todo }}</span>
+                </div>
+                <div class="status-row">
+                  <span class="status-dot" :style="{ background: STATUS_COLORS.in_progress }" />
+                  <span class="status-name">In Progress</span>
+                  <span class="status-count">{{ store.statusCounts.in_progress }}</span>
+                </div>
+                <div class="status-row">
+                  <span class="status-dot" :style="{ background: STATUS_COLORS.done }" />
+                  <span class="status-name">Done</span>
+                  <span class="status-count">{{ store.statusCounts.done }}</span>
+                </div>
+                <div class="status-row">
+                  <span class="status-dot" :style="{ background: STATUS_COLORS.archived }" />
+                  <span class="status-name">Archived</span>
+                  <span class="status-count">{{ store.statusCounts.archived }}</span>
+                </div>
+              </div>
+            </div>
+
+            <NDivider style="margin: 12px 0" />
+
+            <div class="sidebar-section">
+              <div class="section-label">Members</div>
+              <div class="member-list">
+                <div v-for="m in store.members" :key="m.id" class="member-row">
+                  <span class="member-avatar">{{ m.name.charAt(0).toUpperCase() }}</span>
+                  <span class="member-name">{{ m.name }}</span>
+                  <NTag size="tiny" :bordered="false" round>{{ m.role }}</NTag>
+                </div>
+              </div>
+            </div>
+          </template>
+        </NLayoutSider>
+
+        <!-- Main content -->
+        <NLayout>
+          <NLayoutContent class="main-content">
+            <div v-if="store.loading && !store.project" class="loading">Loading project...</div>
+            <RouterView v-else />
+          </NLayoutContent>
         </NLayout>
       </NLayout>
     </NMessageProvider>
@@ -76,7 +123,6 @@ function handleMenuUpdate(key: string) {
 </template>
 
 <style>
-/* Minimal global overrides — Naive UI handles most styling */
 *,
 *::before,
 *::after {
@@ -92,21 +138,20 @@ body {
 }
 
 .app-layout {
-  min-height: 100vh;
+  height: 100vh;
 }
 
-.app-header {
+.sidebar-content {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-  height: 52px;
+  flex-direction: column;
+  height: 100%;
 }
 
-.header-left {
+.sidebar-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  padding: 16px 16px 12px;
 }
 
 .app-title {
@@ -114,17 +159,87 @@ body {
   font-weight: 700;
 }
 
-.header-menu {
-  flex: 0 0 auto;
+.sidebar-section {
+  padding: 0 16px;
 }
 
-.header-right {
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.45;
+  margin-bottom: 8px;
+}
+
+.status-counts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
   flex-shrink: 0;
 }
 
-.main-content {
-  height: calc(100vh - 52px);
+.status-name {
+  flex: 1;
+}
+
+.status-count {
+  font-weight: 600;
+  font-size: 12px;
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+
+.member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.member-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #e8e8e8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.member-name {
+  flex: 1;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.main-content {
+  height: 100vh;
+  overflow: auto;
 }
 
 .loading {
