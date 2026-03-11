@@ -6,6 +6,9 @@ import type { BrainEvent } from "@/types";
 
 const store = useProjectStore();
 
+// Track focus state — MUST be defined BEFORE the watcher below
+const isFocused = ref(false);
+
 // Local draft text — synced from store on load, debounced save on edits
 const draft = ref("");
 const showProcessed = ref(false);
@@ -22,8 +25,6 @@ watch(
   },
   { immediate: true },
 );
-
-const isFocused = ref(false);
 
 // Debounced save
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
