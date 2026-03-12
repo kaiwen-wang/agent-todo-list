@@ -21,6 +21,15 @@ export type Label = "new_feature" | "bug" | "feature_plus";
 export type Difficulty = "none" | "easy" | "medium" | "hard";
 export type Platform = "cli" | "web" | "unknown";
 export type MemberRole = "owner" | "member" | "agent";
+export type AgentProvider = "claude-code" | "opencode" | "custom";
+
+export const AGENT_PROVIDERS: readonly AgentProvider[] = ["claude-code", "opencode", "custom"] as const;
+
+export const AGENT_PROVIDER_DISPLAY: Record<AgentProvider, string> = {
+  "claude-code": "Claude Code",
+  opencode: "Opencode",
+  custom: "Custom",
+};
 
 export const STATUSES: readonly Status[] = [
   "none",
@@ -114,6 +123,10 @@ export interface Member {
   name: string;
   email: string | null;
   role: MemberRole;
+  /** Only relevant when role === "agent" */
+  agentProvider?: AgentProvider;
+  /** Model identifier, e.g. "claude-sonnet-4-20250514" */
+  agentModel?: string;
 }
 
 export interface Project extends Record<string, unknown> {

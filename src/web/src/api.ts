@@ -99,6 +99,8 @@ export interface AddMemberParams {
   name: string;
   role?: MemberRole;
   email?: string;
+  agentProvider?: string;
+  agentModel?: string;
 }
 
 export async function addMember(params: AddMemberParams): Promise<{ ok: boolean; id: string }> {
@@ -131,6 +133,8 @@ export interface UpdateMemberParams {
   name?: string;
   role?: MemberRole;
   email?: string | null;
+  agentProvider?: string;
+  agentModel?: string;
 }
 
 export async function addCommentApi(number: number, text: string): Promise<{ ok: boolean }> {

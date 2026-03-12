@@ -15,12 +15,17 @@ export function toJSON(doc: Doc): object {
     prefix: doc.prefix,
     name: doc.name,
     description: doc.description,
-    members: doc.members.map((m) => ({
-      id: m.id,
-      name: m.name,
-      email: m.email,
-      role: m.role,
-    })),
+    members: doc.members.map((m) => {
+      const member: Record<string, unknown> = {
+        id: m.id,
+        name: m.name,
+        email: m.email,
+        role: m.role,
+      };
+      if (m.agentProvider) member.agentProvider = m.agentProvider;
+      if (m.agentModel) member.agentModel = m.agentModel;
+      return member;
+    }),
     todos: doc.todos.map((t) => ({
       id: t.id,
       ref: `${doc.prefix}-${t.number}`, // computed

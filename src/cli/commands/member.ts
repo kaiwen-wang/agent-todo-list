@@ -3,7 +3,8 @@
  */
 
 import type { Command } from "commander";
-import type { MemberRole } from "../../lib/schema.js";
+import type { MemberRole, AgentProvider } from "../../lib/schema.js";
+import { AGENT_PROVIDERS } from "../../lib/schema.js";
 import { findProject } from "../../lib/project.js";
 import { loadDoc, saveDoc } from "../../lib/storage.js";
 import { addMember, removeMember, updateMember } from "../../lib/operations.js";
@@ -22,42 +23,66 @@ export function registerMember(program: Command): void {
     .argument("<name>", "Member display name")
     .option("-r, --role <role>", "Role: owner, member, or agent", "member")
     .option("-e, --email <email>", "Email address")
+    .option("--provider <provider>", "Agent provider: claude-code, opencode, or custom")
+    .option("--model <model>", "Agent model identifier")
     .option("--json", "Output as JSON")
-    .action(async (name: string, opts: { role: string; email?: string; json?: boolean }) => {
-      const paths = findProject();
-      if (!paths) error("Not in an agt project. Run 'agt init' first.");
+    .action(
+      async (
+        name: string,
+        opts: { role: string; email?: string; provider?: string; model?: string; json?: boolean },
+      ) => {
+        const paths = findProject();
+        if (!paths) error("Not in an agt project. Run 'agt init' first.");
 
-      let doc = await loadDoc(paths.dataPath);
-      if (!doc) error("Project data not found.");
+        let doc = await loadDoc(paths.dataPath);
+        if (!doc) error("Project data not found.");
 
-      if (!VALID_ROLES.includes(opts.role as MemberRole)) {
-        error(`Invalid role "${opts.role}". Use: ${VALID_ROLES.join(", ")}`);
-      }
+        if (!VALID_ROLES.includes(opts.role as MemberRole)) {
+          error(`Invalid role "${opts.role}". Use: ${VALID_ROLES.join(", ")}`);
+        }
 
-      // Check for duplicate name
-      const existing = findMember(doc, name);
-      if (existing && existing.name.toLowerCase() === name.toLowerCase()) {
-        error(`A member named "${existing.name}" already exists.`);
-      }
+        if (opts.provider && !AGENT_PROVIDERS.includes(opts.provider as AgentProvider)) {
+          error(`Invalid provider "${opts.provider}". Use: ${AGENT_PROVIDERS.join(", ")}`);
+        }
 
-      doc = addMember(doc, name, opts.role as MemberRole, opts.email ?? null);
-      await saveDoc(paths.dataPath, doc);
+        // Check for duplicate name
+        const existing = findMember(doc, name);
+        if (existing && existing.name.toLowerCase() === name.toLowerCase()) {
+          error(`A member named "${existing.name}" already exists.`);
+        }
 
-      const added = doc.members[doc.members.length - 1]!;
+        const agentOpts =
+          opts.role === "agent"
+            ? { provider: opts.provider as AgentProvider | undefined, model: opts.model }
+            : undefined;
 
-      if (opts.json) {
-        console.log(
-          JSON.stringify({
+        doc = addMember(
+          doc,
+          name,
+          opts.role as MemberRole,
+          opts.email ?? null,
+          undefined,
+          agentOpts,
+        );
+        await saveDoc(paths.dataPath, doc);
+
+        const added = doc.members[doc.members.length - 1]!;
+
+        if (opts.json) {
+          const json: Record<string, unknown> = {
             id: added.id,
             name: added.name,
             role: added.role,
             email: added.email,
-          }),
-        );
-      } else {
-        success(`Added member "${name}" (${opts.role})`);
-      }
-    });
+          };
+          if (added.agentProvider) json.agentProvider = added.agentProvider;
+          if (added.agentModel) json.agentModel = added.agentModel;
+          console.log(JSON.stringify(json));
+        } else {
+          success(`Added member "${name}" (${opts.role})`);
+        }
+      },
+    );
 
   member
     .command("list")
@@ -127,12 +152,21 @@ export function registerMember(program: Command): void {
     .argument("<name>", "Member name or ID")
     .option("-r, --role <role>", "New role: owner, member, or agent")
     .option("-e, --email <email>", "New email address")
+    .option("--provider <provider>", "Agent provider: claude-code, opencode, or custom")
+    .option("--model <model>", "Agent model identifier")
     .option("--rename <newName>", "Rename the member")
     .option("--json", "Output as JSON")
     .action(
       async (
         nameOrId: string,
-        opts: { role?: string; email?: string; rename?: string; json?: boolean },
+        opts: {
+          role?: string;
+          email?: string;
+          provider?: string;
+          model?: string;
+          rename?: string;
+          json?: boolean;
+        },
       ) => {
         const paths = findProject();
         if (!paths) error("Not in an agt project. Run 'agt init' first.");
@@ -147,13 +181,25 @@ export function registerMember(program: Command): void {
           error(`Invalid role "${opts.role}". Use: ${VALID_ROLES.join(", ")}`);
         }
 
-        const updates: Partial<{ name: string; email: string | null; role: MemberRole }> = {};
+        if (opts.provider && !AGENT_PROVIDERS.includes(opts.provider as AgentProvider)) {
+          error(`Invalid provider "${opts.provider}". Use: ${AGENT_PROVIDERS.join(", ")}`);
+        }
+
+        const updates: Partial<{
+          name: string;
+          email: string | null;
+          role: MemberRole;
+          agentProvider: AgentProvider;
+          agentModel: string;
+        }> = {};
         if (opts.role !== undefined) updates.role = opts.role as MemberRole;
         if (opts.email !== undefined) updates.email = opts.email;
         if (opts.rename !== undefined) updates.name = opts.rename;
+        if (opts.provider !== undefined) updates.agentProvider = opts.provider as AgentProvider;
+        if (opts.model !== undefined) updates.agentModel = opts.model;
 
         if (Object.keys(updates).length === 0) {
-          error("No updates specified. Use --role, --email, or --rename.");
+          error("No updates specified. Use --role, --email, --rename, --provider, or --model.");
         }
 
         doc = updateMember(doc, found.id, updates);

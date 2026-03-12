@@ -13,6 +13,15 @@ export type Difficulty = "none" | "easy" | "medium" | "hard";
 export type Label = "new_feature" | "bug" | "feature_plus";
 export type Platform = "cli" | "web" | "unknown";
 export type MemberRole = "owner" | "member" | "agent";
+export type AgentProvider = "claude-code" | "opencode" | "custom";
+
+export const AGENT_PROVIDERS: AgentProvider[] = ["claude-code", "opencode", "custom"];
+
+export const AGENT_PROVIDER_DISPLAY: Record<AgentProvider, string> = {
+  "claude-code": "Claude Code",
+  opencode: "Opencode",
+  custom: "Custom",
+};
 
 export type Timestamp = number;
 
@@ -59,6 +68,8 @@ export interface Member {
   name: string;
   email: string | null;
   role: MemberRole;
+  agentProvider?: AgentProvider;
+  agentModel?: string;
 }
 
 export interface Project {

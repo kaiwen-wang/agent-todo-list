@@ -19,6 +19,7 @@ import type {
   Label,
   Platform,
   MemberRole,
+  AgentProvider,
 } from "./schema.js";
 import { CURRENT_SCHEMA_VERSION } from "./schema.js";
 
@@ -291,15 +292,21 @@ export function addMember(
   role: MemberRole = "member",
   email: string | null = null,
   actorId?: MemberId,
+  agentOpts?: { provider?: AgentProvider; model?: string },
 ): Doc {
   return Automerge.change(doc, (d) => {
     const actor = resolveActor(d, actorId);
-    d.members.push({
+    const member: Record<string, unknown> = {
       id: crypto.randomUUID(),
       name,
       email,
       role,
-    });
+    };
+    if (role === "agent" && agentOpts?.provider) {
+      member.agentProvider = agentOpts.provider;
+      if (agentOpts.model) member.agentModel = agentOpts.model;
+    }
+    d.members.push(member as any);
     audit(d, "member.added", actor, name, { role });
   });
 }
@@ -325,11 +332,11 @@ export function removeMember(doc: Doc, memberId: string, actorId?: MemberId): Do
   });
 }
 
-/** Update a member's name, email, or role */
+/** Update a member's name, email, role, or agent config */
 export function updateMember(
   doc: Doc,
   memberId: string,
-  updates: Partial<Pick<Member, "name" | "email" | "role">>,
+  updates: Partial<Pick<Member, "name" | "email" | "role" | "agentProvider" | "agentModel">>,
   actorId?: MemberId,
 ): Doc {
   return Automerge.change(doc, (d) => {
@@ -350,6 +357,14 @@ export function updateMember(
     if (updates.role !== undefined) {
       changed.role = { from: member.role, to: updates.role };
       member.role = updates.role;
+    }
+    if (updates.agentProvider !== undefined) {
+      changed.agentProvider = updates.agentProvider;
+      (member as any).agentProvider = updates.agentProvider;
+    }
+    if (updates.agentModel !== undefined) {
+      changed.agentModel = updates.agentModel;
+      (member as any).agentModel = updates.agentModel;
     }
 
     audit(d, "member.updated", actor, member.name, changed);

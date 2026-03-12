@@ -372,165 +372,175 @@ async function handleRemoveBranch() {
         @keydown.enter="($event.target as HTMLInputElement).blur()"
       />
 
-      <!-- Meta row -->
-      <div class="meta-grid">
-        <div class="meta-item">
-          <label class="meta-label">Status</label>
-          <NSelect
-            ref="statusSelectRef"
-            :value="todo.status"
-            :options="statusOptions"
-            :render-label="renderStatusLabel"
-            size="small"
-            :show="statusPickerOpen"
-            style="width: 160px"
-            @update:value="changeStatus"
-            @update:show="(v: boolean) => (statusPickerOpen = v)"
-          />
+      <div class="detail-columns">
+        <!-- Main content -->
+        <div class="detail-main">
+          <!-- Meta row -->
+          <div class="meta-grid">
+            <div class="meta-item">
+              <label class="meta-label">Status</label>
+              <NSelect
+                ref="statusSelectRef"
+                :value="todo.status"
+                :options="statusOptions"
+                :render-label="renderStatusLabel"
+                size="small"
+                :show="statusPickerOpen"
+                style="width: 160px"
+                @update:value="changeStatus"
+                @update:show="(v: boolean) => (statusPickerOpen = v)"
+              />
+            </div>
+
+            <div class="meta-item">
+              <label class="meta-label">Priority</label>
+              <NSelect
+                ref="prioritySelectRef"
+                :value="todo.priority"
+                :options="priorityOptions"
+                :render-label="renderPriorityLabel"
+                size="small"
+                :show="priorityPickerOpen"
+                style="width: 160px"
+                @update:value="changePriority"
+                @update:show="(v: boolean) => (priorityPickerOpen = v)"
+              />
+            </div>
+
+            <div class="meta-item">
+              <label class="meta-label">Difficulty</label>
+              <NSelect
+                ref="difficultySelectRef"
+                :value="todo.difficulty"
+                :options="difficultyOptions"
+                :render-label="renderDifficultyLabel"
+                size="small"
+                :show="difficultyPickerOpen"
+                style="width: 160px"
+                @update:value="changeDifficulty"
+                @update:show="(v: boolean) => (difficultyPickerOpen = v)"
+              />
+            </div>
+
+            <div class="meta-item">
+              <label class="meta-label">Labels</label>
+              <NSelect
+                :value="todo.labels"
+                :options="labelOptions"
+                :render-label="renderLabelTag"
+                size="small"
+                multiple
+                clearable
+                placeholder="Add labels..."
+                style="min-width: 200px"
+                @update:value="changeLabels"
+              />
+            </div>
+
+            <div class="meta-item">
+              <label class="meta-label">Created</label>
+              <span class="meta-value">{{ formatDate(todo.createdAt) }}</span>
+            </div>
+
+            <div class="meta-item">
+              <label class="meta-label">Updated</label>
+              <span class="meta-value">{{ formatDate(todo.updatedAt) }}</span>
+            </div>
+          </div>
+
+          <!-- Description -->
+          <div class="field-group">
+            <label class="meta-label">Description</label>
+            <NInput
+              v-model:value="description"
+              type="textarea"
+              :autosize="{ minRows: 8, maxRows: 24 }"
+              placeholder="Add a description..."
+              @blur="commitDescription"
+            />
+          </div>
+
+          <!-- Comments -->
+          <div class="field-group">
+            <label class="meta-label">Comments ({{ todo.comments?.length ?? 0 }})</label>
+            <div v-if="todo.comments?.length" class="comments-list">
+              <div v-for="c in todo.comments" :key="c.id" class="comment-item">
+                <div class="comment-header">
+                  <strong>{{ c.authorName }}</strong>
+                  <span class="comment-date">{{ formatDate(c.createdAt) }}</span>
+                </div>
+                <div class="comment-text">{{ c.text }}</div>
+              </div>
+            </div>
+            <div class="comment-input">
+              <NInput
+                v-model:value="commentText"
+                type="textarea"
+                :autosize="{ minRows: 2, maxRows: 6 }"
+                placeholder="Write a comment..."
+                @keydown.meta.enter="submitComment"
+                @keydown.ctrl.enter="submitComment"
+              />
+              <NButton
+                size="small"
+                type="primary"
+                :loading="commentLoading"
+                :disabled="!commentText.trim()"
+                style="align-self: flex-end; margin-top: 8px"
+                @click="submitComment"
+              >
+                Comment
+              </NButton>
+            </div>
+          </div>
         </div>
 
-        <div class="meta-item">
-          <label class="meta-label">Priority</label>
-          <NSelect
-            ref="prioritySelectRef"
-            :value="todo.priority"
-            :options="priorityOptions"
-            :render-label="renderPriorityLabel"
-            size="small"
-            :show="priorityPickerOpen"
-            style="width: 160px"
-            @update:value="changePriority"
-            @update:show="(v: boolean) => (priorityPickerOpen = v)"
-          />
-        </div>
+        <!-- Action sidebar -->
+        <div class="detail-sidebar">
+          <div class="sidebar-section">
+            <label class="meta-label">Assignee</label>
+            <NSelect
+              :value="todo.assignee"
+              :options="assigneeOptions"
+              size="small"
+              clearable
+              placeholder="Unassigned"
+              @update:value="changeAssignee"
+            />
+          </div>
 
-        <div class="meta-item">
-          <label class="meta-label">Difficulty</label>
-          <NSelect
-            ref="difficultySelectRef"
-            :value="todo.difficulty"
-            :options="difficultyOptions"
-            :render-label="renderDifficultyLabel"
-            size="small"
-            :show="difficultyPickerOpen"
-            style="width: 160px"
-            @update:value="changeDifficulty"
-            @update:show="(v: boolean) => (difficultyPickerOpen = v)"
-          />
-        </div>
-
-        <div class="meta-item">
-          <label class="meta-label">Assignee</label>
-          <NSelect
-            :value="todo.assignee"
-            :options="assigneeOptions"
-            size="small"
-            clearable
-            placeholder="Unassigned"
-            style="width: 160px"
-            @update:value="changeAssignee"
-          />
-        </div>
-
-        <div class="meta-item">
-          <label class="meta-label">Labels</label>
-          <NSelect
-            :value="todo.labels"
-            :options="labelOptions"
-            :render-label="renderLabelTag"
-            size="small"
-            multiple
-            clearable
-            placeholder="Add labels..."
-            style="min-width: 200px"
-            @update:value="changeLabels"
-          />
-        </div>
-
-        <div class="meta-item">
-          <label class="meta-label">Created</label>
-          <span class="meta-value">{{ formatDate(todo.createdAt) }}</span>
-        </div>
-
-        <div class="meta-item">
-          <label class="meta-label">Updated</label>
-          <span class="meta-value">{{ formatDate(todo.updatedAt) }}</span>
-        </div>
-      </div>
-
-      <!-- Branch -->
-      <div class="meta-grid" style="margin-top: 8px">
-        <div class="meta-item">
-          <label class="meta-label">Branch</label>
-          <div v-if="todo.branch" class="branch-name">
-            <NTag size="small" :bordered="false" style="font-family: monospace">
-              {{ todo.branch }}
-            </NTag>
+          <div class="sidebar-section">
+            <label class="meta-label">Branch</label>
+            <div v-if="todo.branch" class="branch-info">
+              <NTag
+                size="small"
+                :bordered="false"
+                style="font-family: monospace; word-break: break-all"
+              >
+                {{ todo.branch }}
+              </NTag>
+              <NButton
+                size="tiny"
+                quaternary
+                type="error"
+                :loading="branchLoading"
+                style="margin-top: 6px"
+                @click="handleRemoveBranch"
+              >
+                Remove
+              </NButton>
+            </div>
             <NButton
-              size="tiny"
-              quaternary
-              type="error"
+              v-else
+              size="small"
+              secondary
               :loading="branchLoading"
-              @click="handleRemoveBranch"
+              style="width: 100%"
+              @click="handleCreateBranch"
             >
-              Remove
+              Create Worktree + Branch
             </NButton>
           </div>
-          <NButton
-            v-else
-            size="small"
-            secondary
-            :loading="branchLoading"
-            @click="handleCreateBranch"
-          >
-            Create Worktree + Branch
-          </NButton>
-        </div>
-      </div>
-
-      <!-- Description -->
-      <div class="field-group">
-        <label class="meta-label">Description</label>
-        <NInput
-          v-model:value="description"
-          type="textarea"
-          :autosize="{ minRows: 8, maxRows: 24 }"
-          placeholder="Add a description..."
-          @blur="commitDescription"
-        />
-      </div>
-
-      <!-- Comments -->
-      <div class="field-group">
-        <label class="meta-label">Comments ({{ todo.comments?.length ?? 0 }})</label>
-        <div v-if="todo.comments?.length" class="comments-list">
-          <div v-for="c in todo.comments" :key="c.id" class="comment-item">
-            <div class="comment-header">
-              <strong>{{ c.authorName }}</strong>
-              <span class="comment-date">{{ formatDate(c.createdAt) }}</span>
-            </div>
-            <div class="comment-text">{{ c.text }}</div>
-          </div>
-        </div>
-        <div class="comment-input">
-          <NInput
-            v-model:value="commentText"
-            type="textarea"
-            :autosize="{ minRows: 2, maxRows: 6 }"
-            placeholder="Write a comment..."
-            @keydown.meta.enter="submitComment"
-            @keydown.ctrl.enter="submitComment"
-          />
-          <NButton
-            size="small"
-            type="primary"
-            :loading="commentLoading"
-            :disabled="!commentText.trim()"
-            style="align-self: flex-end; margin-top: 8px"
-            @click="submitComment"
-          >
-            Comment
-          </NButton>
         </div>
       </div>
     </div>
@@ -559,8 +569,35 @@ async function handleRemoveBranch() {
   margin-bottom: 16px;
 }
 
-.detail-content {
-  /* Full page — no height constraints like the modal */
+.detail-columns {
+  display: flex;
+  gap: 24px;
+}
+
+.detail-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.detail-sidebar {
+  width: 200px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  border-left: 1px solid rgba(128, 128, 128, 0.15);
+  padding-left: 24px;
+}
+
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.branch-info {
+  display: flex;
+  flex-direction: column;
 }
 
 .detail-header {
@@ -656,11 +693,5 @@ async function handleRemoveBranch() {
 .comment-input {
   display: flex;
   flex-direction: column;
-}
-
-.branch-name {
-  display: flex;
-  align-items: center;
-  gap: 6px;
 }
 </style>

@@ -143,7 +143,9 @@ const themeOverrides = {
               <div class="section-label">Members</div>
               <div class="member-list">
                 <div v-for="m in store.members" :key="m.id" class="member-row">
-                  <span class="member-avatar">{{ m.name.charAt(0).toUpperCase() }}</span>
+                  <span class="member-avatar" :class="{ 'agent-avatar': m.role === 'agent' }">{{
+                    m.role === "agent" ? "AI" : m.name.charAt(0).toUpperCase()
+                  }}</span>
                   <span class="member-name">{{ m.name }}</span>
                   <NTag size="tiny" :bordered="false" round>{{ m.role }}</NTag>
                 </div>
@@ -403,6 +405,13 @@ body {
   font-weight: 600;
   color: #666;
   flex-shrink: 0;
+}
+
+.agent-avatar {
+  background: #8b5cf622 !important;
+  color: #8b5cf6 !important;
+  font-size: 9px !important;
+  letter-spacing: 0.3px;
 }
 
 .member-name {

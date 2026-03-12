@@ -288,6 +288,8 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
                   body.name ?? "Unnamed",
                   body.role ?? "member",
                   body.email ?? null,
+                  undefined,
+                  { provider: body.agentProvider, model: body.agentModel },
                 );
                 await save();
                 const added = doc.members[doc.members.length - 1]!;
