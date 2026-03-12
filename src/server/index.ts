@@ -49,10 +49,7 @@ function jsonResponse(data: unknown, status = 200): Response {
   });
 }
 
-export interface ServerOptions {
-  dev?: boolean;
-  vitePort?: number;
-}
+export interface ServerOptions {}
 
 const ARTICLES = new Set(["a", "an", "the"]);
 
@@ -387,11 +384,6 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
         return new Response("WebSocket upgrade failed", { status: 400 });
       }
 
-      if (opts.dev) {
-        url.port = String(opts.vitePort ?? 5173);
-        return Response.redirect(url.toString(), 307);
-      }
-
       return serveStatic(url.pathname, distDir);
     },
 
@@ -430,8 +422,6 @@ if (import.meta.main) {
     console.error("Not in an agt project. Run 'agt init' first.");
     process.exit(1);
   }
-  const dev = process.env.AGT_DEV === "1";
-  const vitePort = parseInt(process.env.AGT_VITE_PORT || "5173", 10);
-  const server = await startServer(paths.root, 3000, dev ? { dev: true, vitePort } : {});
+  const server = await startServer(paths.root, 3000);
   console.log(`API server: http://localhost:${server.port}`);
 }
