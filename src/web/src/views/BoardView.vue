@@ -5,6 +5,7 @@ import { useProjectStore } from "@/stores/project";
 import { BOARD_STATUSES } from "@/types";
 import StatusColumn from "@/components/StatusColumn.vue";
 import CreateTodoModal from "@/components/CreateTodoModal.vue";
+import BatchActionBar from "@/components/BatchActionBar.vue";
 
 const store = useProjectStore();
 const showCreate = ref(false);
@@ -25,6 +26,7 @@ const showCreate = ref(false);
       />
     </div>
     <CreateTodoModal :open="showCreate" @close="showCreate = false" />
+    <BatchActionBar />
   </div>
 </template>
 

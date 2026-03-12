@@ -34,6 +34,20 @@ function isTyping(): boolean {
 }
 
 function handleGlobalKeydown(e: KeyboardEvent) {
+  // Escape — clear multi-select (works even when typing)
+  if (e.key === "Escape" && store.hasSelection) {
+    e.preventDefault();
+    store.clearSelection();
+    return;
+  }
+
+  // CMD/Ctrl+A — select all (only on board view)
+  if ((e.metaKey || e.ctrlKey) && e.key === "a" && !isTyping() && route.name === "board") {
+    e.preventDefault();
+    store.selectAll();
+    return;
+  }
+
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (isTyping()) return;
 

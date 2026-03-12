@@ -29,6 +29,7 @@ const PRIORITY_ICON: Record<Priority, Component> = {
 
 const props = defineProps<{
   todo: Todo;
+  columnTodos?: Todo[];
 }>();
 
 const emit = defineEmits<{
@@ -42,8 +43,29 @@ const priorityIcon = computed(() => PRIORITY_ICON[props.todo.priority]);
 const priorityColor = computed(() => PRIORITY_COLORS[props.todo.priority]);
 const priorityLabel = computed(() => PRIORITY_DISPLAY[props.todo.priority]);
 
-function openDetail() {
-  if (isDragging.value) {
+const isSelected = computed(() => store.selectedTodoIds.has(props.todo.id));
+
+function handleClick(e: MouseEvent) {
+  if (isDragging.value) return;
+
+  // CMD/Ctrl+Click → toggle selection
+  if (e.metaKey || e.ctrlKey) {
+    e.preventDefault();
+    store.toggleSelect(props.todo.id);
+    return;
+  }
+
+  // Shift+Click → range select within column
+  if (e.shiftKey && props.columnTodos) {
+    e.preventDefault();
+    store.rangeSelect(props.todo.id, props.columnTodos);
+    return;
+  }
+
+  // Plain click → open detail (if no selection active, or deselect first)
+  if (store.hasSelection) {
+    // Plain click while items are selected → clear selection
+    store.clearSelection();
     return;
   }
   store.openTodo(props.todo.number);
@@ -67,8 +89,8 @@ function onDragStart(e: DragEvent) {
     draggable="true"
     size="small"
     class="todo-card"
-    :class="{ done: todo.status === 'completed' }"
-    @click="openDetail"
+    :class="{ done: todo.status === 'completed', selected: isSelected }"
+    @click="handleClick"
     @dragstart="onDragStart"
     content-class="card-content"
   >
@@ -121,6 +143,11 @@ function onDragStart(e: DragEvent) {
 
 .todo-card :deep(.n-card__content) {
   border-radius: 0 !important;
+}
+
+.todo-card.selected {
+  background: rgba(59, 130, 246, 0.08) !important;
+  border-left: 2px solid #3b82f6 !important;
 }
 
 .todo-card:hover .card-title {

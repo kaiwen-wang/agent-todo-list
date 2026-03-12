@@ -70,7 +70,7 @@ async function onDrop(e: DragEvent) {
       @dragleave="onDragLeave"
       @drop="onDrop"
     >
-      <TodoCard v-for="todo in todos" :key="todo.id" :todo="todo" />
+      <TodoCard v-for="todo in todos" :key="todo.id" :todo="todo" :column-todos="todos" />
       <div v-if="todos.length === 0" class="column-empty">No items</div>
     </div>
     <CreateTodoModal :open="showCreate" :default-status="status" @close="showCreate = false" />

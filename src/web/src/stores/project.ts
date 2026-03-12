@@ -310,6 +310,95 @@ export const useProjectStore = defineStore("project", () => {
     selectedTodoNumber.value = null;
   }
 
+  // ── Multi-select state for kanban ──
+
+  /** Set of selected todo IDs (for CMD+click / Shift+click multi-select) */
+  const selectedTodoIds = ref<Set<string>>(new Set());
+  /** Last individually toggled todo ID — anchor for Shift+click range select */
+  const lastSelectedId = ref<string | null>(null);
+  /** Whether any selection is active */
+  const hasSelection = computed(() => selectedTodoIds.value.size > 0);
+  /** Number of selected items */
+  const selectionCount = computed(() => selectedTodoIds.value.size);
+
+  function toggleSelect(todoId: string) {
+    const next = new Set(selectedTodoIds.value);
+    if (next.has(todoId)) {
+      next.delete(todoId);
+    } else {
+      next.add(todoId);
+    }
+    selectedTodoIds.value = next;
+    lastSelectedId.value = todoId;
+  }
+
+  /**
+   * Shift+click range select: selects all items between the last-selected item
+   * and the clicked item within the provided column todo list.
+   */
+  function rangeSelect(todoId: string, columnTodos: Todo[]) {
+    if (!lastSelectedId.value) {
+      // No anchor — just toggle this one
+      toggleSelect(todoId);
+      return;
+    }
+    const anchorIdx = columnTodos.findIndex((t) => t.id === lastSelectedId.value);
+    const targetIdx = columnTodos.findIndex((t) => t.id === todoId);
+    if (anchorIdx === -1 || targetIdx === -1) {
+      toggleSelect(todoId);
+      return;
+    }
+    const start = Math.min(anchorIdx, targetIdx);
+    const end = Math.max(anchorIdx, targetIdx);
+    const next = new Set(selectedTodoIds.value);
+    for (let i = start; i <= end; i++) {
+      next.add(columnTodos[i]!.id);
+    }
+    selectedTodoIds.value = next;
+    // Don't update lastSelectedId so further Shift+clicks extend from original anchor
+  }
+
+  function clearSelection() {
+    selectedTodoIds.value = new Set();
+    lastSelectedId.value = null;
+  }
+
+  function selectAll() {
+    const next = new Set<string>();
+    for (const todo of activeTodos.value) {
+      next.add(todo.id);
+    }
+    selectedTodoIds.value = next;
+  }
+
+  // ── Bulk actions ──
+
+  async function bulkUpdateTodos(updates: api.UpdateTodoParams) {
+    error.value = null;
+    try {
+      const selected = todos.value.filter((t) => selectedTodoIds.value.has(t.id));
+      await Promise.all(selected.map((t) => api.updateTodo(t.number, updates)));
+      clearSelection();
+      await load();
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
+  async function bulkDeleteTodos() {
+    error.value = null;
+    try {
+      const selected = todos.value.filter((t) => selectedTodoIds.value.has(t.id));
+      await Promise.all(selected.map((t) => api.deleteTodo(t.number)));
+      clearSelection();
+      await load();
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
   return {
     project,
     loading,
@@ -345,5 +434,15 @@ export const useProjectStore = defineStore("project", () => {
     openTodo,
     closeTodo,
     connectWebSocket,
+    selectedTodoIds,
+    lastSelectedId,
+    hasSelection,
+    selectionCount,
+    toggleSelect,
+    rangeSelect,
+    clearSelection,
+    selectAll,
+    bulkUpdateTodos,
+    bulkDeleteTodos,
   };
 });
