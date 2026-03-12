@@ -138,14 +138,27 @@ const themeOverrides = {
               </div>
             </div>
 
+            <!-- Agents -->
+            <div v-if="store.agents.length" class="sidebar-section">
+              <div class="section-label">Agents</div>
+              <div class="member-list">
+                <div v-for="a in store.agents" :key="a.id" class="member-row">
+                  <span class="member-avatar agent-avatar">AI</span>
+                  <span class="member-name">{{ a.name }}</span>
+                </div>
+              </div>
+            </div>
+
             <!-- Members -->
             <div class="sidebar-section">
               <div class="section-label">Members</div>
               <div class="member-list">
-                <div v-for="m in store.members" :key="m.id" class="member-row">
-                  <span class="member-avatar" :class="{ 'agent-avatar': m.role === 'agent' }">{{
-                    m.role === "agent" ? "AI" : m.name.charAt(0).toUpperCase()
-                  }}</span>
+                <div
+                  v-for="m in store.members.filter((m) => m.role !== 'agent')"
+                  :key="m.id"
+                  class="member-row"
+                >
+                  <span class="member-avatar">{{ m.name.charAt(0).toUpperCase() }}</span>
                   <span class="member-name">{{ m.name }}</span>
                   <NTag size="tiny" :bordered="false" round>{{ m.role }}</NTag>
                 </div>

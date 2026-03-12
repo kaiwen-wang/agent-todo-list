@@ -25,18 +25,8 @@ import {
   AntennaBars5,
 } from "@vicons/tabler";
 import { useProjectStore } from "@/stores/project";
-import type { AddMemberParams } from "@/api";
 import type { Member, MemberRole, Todo, Priority, AgentProvider } from "@/types";
-import {
-  STATUS_DISPLAY,
-  STATUS_COLORS,
-  PRIORITY_DISPLAY,
-  PRIORITY_COLORS,
-  LABEL_DISPLAY,
-  LABEL_COLORS,
-  AGENT_PROVIDERS,
-  AGENT_PROVIDER_DISPLAY,
-} from "@/types";
+import { STATUS_DISPLAY, STATUS_COLORS, PRIORITY_COLORS, AGENT_PROVIDER_DISPLAY } from "@/types";
 
 const PRIORITY_ICON: Record<Priority, Component> = {
   none: AntennaBars1,
@@ -54,38 +44,70 @@ const showEditModal = ref(false);
 const selectedMember = ref<Member | null>(null);
 const editingMember = ref<Member | null>(null);
 
-// Add form state
+// Add form state (human members only)
 const addName = ref("");
 const addEmail = ref("");
 const addRole = ref<MemberRole>("member");
-const addProvider = ref<AgentProvider>("claude-code");
-const addModel = ref("");
 const addSubmitting = ref(false);
 
-// Edit form state
+// Edit form state (human members only)
 const editName = ref("");
 const editEmail = ref("");
 const editRole = ref<MemberRole>("member");
-const editProvider = ref<AgentProvider>("claude-code");
-const editModel = ref("");
 const editSubmitting = ref(false);
 
 const roleOptions = [
   { label: "Owner", value: "owner" },
   { label: "Member", value: "member" },
-  { label: "Agent", value: "agent" },
 ];
-
-const providerOptions = AGENT_PROVIDERS.map((p) => ({
-  label: AGENT_PROVIDER_DISPLAY[p],
-  value: p,
-}));
 
 const ROLE_COLORS: Record<MemberRole, string> = {
   owner: "#f59e0b",
   member: "#3b82f6",
   agent: "#8b5cf6",
 };
+
+// ── Agents ──
+
+const humanMembers = computed(() => store.members.filter((m) => m.role !== "agent"));
+const agentLoading = ref<string | null>(null); // tracks which provider is loading
+
+const AGENT_OPTIONS: { provider: AgentProvider; name: string; description: string }[] = [
+  { provider: "claude-code", name: "Claude Code", description: "Anthropic's coding agent" },
+  { provider: "opencode", name: "Opencode", description: "Open-source coding agent" },
+];
+
+function isAgentEnabled(provider: AgentProvider): boolean {
+  return store.agents.some((a) => a.agentProvider === provider);
+}
+
+function getAgentMember(provider: AgentProvider) {
+  return store.agents.find((a) => a.agentProvider === provider);
+}
+
+async function toggleAgent(provider: AgentProvider) {
+  agentLoading.value = provider;
+  try {
+    const existing = getAgentMember(provider);
+    if (existing) {
+      await store.removeMember(existing.id);
+      message.success(`${AGENT_PROVIDER_DISPLAY[provider]} disabled`);
+    } else {
+      await store.addMember({
+        name: AGENT_PROVIDER_DISPLAY[provider],
+        role: "agent",
+        agentProvider: provider,
+      });
+      message.success(`${AGENT_PROVIDER_DISPLAY[provider]} enabled`);
+    }
+  } catch {
+    message.error("Failed to update agent");
+  } finally {
+    agentLoading.value = null;
+  }
+}
+
+// ── Table ──
 
 const columns: DataTableColumns<Member> = [
   {
@@ -114,16 +136,9 @@ const columns: DataTableColumns<Member> = [
     },
   },
   {
-    title: "Details",
-    key: "details",
+    title: "Email",
+    key: "email",
     render(row) {
-      if (row.role === "agent" && row.agentProvider) {
-        return h(
-          "span",
-          { style: "font-size: 12px; opacity: 0.6" },
-          AGENT_PROVIDER_DISPLAY[row.agentProvider],
-        );
-      }
       return row.email ? h("span", { style: "font-size: 12px; opacity: 0.6" }, row.email) : "";
     },
   },
@@ -204,8 +219,6 @@ function openAdd() {
   addName.value = "";
   addEmail.value = "";
   addRole.value = "member";
-  addProvider.value = "claude-code";
-  addModel.value = "";
   showAddModal.value = true;
 }
 
@@ -214,8 +227,6 @@ function openEdit(member: Member) {
   editName.value = member.name;
   editEmail.value = member.email ?? "";
   editRole.value = member.role;
-  editProvider.value = member.agentProvider ?? "claude-code";
-  editModel.value = member.agentModel ?? "";
   showEditModal.value = true;
 }
 
@@ -233,16 +244,11 @@ async function handleAdd() {
   if (!addName.value.trim()) return;
   addSubmitting.value = true;
   try {
-    const params: AddMemberParams = {
+    await store.addMember({
       name: addName.value.trim(),
       role: addRole.value,
       email: addEmail.value.trim() || undefined,
-    };
-    if (addRole.value === "agent") {
-      params.agentProvider = addProvider.value;
-      if (addModel.value.trim()) params.agentModel = addModel.value.trim();
-    }
-    await store.addMember(params);
+    });
     message.success("Member added");
     showAddModal.value = false;
   } catch {
@@ -266,15 +272,6 @@ async function handleEdit() {
     const newEmail = editEmail.value.trim() || null;
     if (newEmail !== editingMember.value.email) {
       updates.email = newEmail;
-    }
-    if (editRole.value === "agent") {
-      if (editProvider.value !== editingMember.value.agentProvider) {
-        updates.agentProvider = editProvider.value;
-      }
-      const newModel = editModel.value.trim() || null;
-      if (newModel !== (editingMember.value.agentModel ?? null)) {
-        updates.agentModel = newModel;
-      }
     }
     if (Object.keys(updates).length > 0) {
       await store.updateMember(editingMember.value.id, updates);
@@ -303,15 +300,42 @@ async function handleRemove(member: Member) {
 
 <template>
   <div class="members-view">
+    <!-- Agent section -->
+    <div class="agent-section">
+      <div class="section-header">
+        <h3>Agents</h3>
+      </div>
+      <div class="agent-picker">
+        <button
+          v-for="opt in AGENT_OPTIONS"
+          :key="opt.provider"
+          class="agent-card"
+          :class="{ 'agent-card-enabled': isAgentEnabled(opt.provider) }"
+          :disabled="agentLoading === opt.provider"
+          @click="toggleAgent(opt.provider)"
+        >
+          <span class="agent-avatar">AI</span>
+          <div class="agent-info">
+            <div class="agent-name">{{ opt.name }}</div>
+            <div class="agent-desc">{{ opt.description }}</div>
+          </div>
+          <span class="agent-toggle" :class="{ on: isAgentEnabled(opt.provider) }">
+            {{ isAgentEnabled(opt.provider) ? "Enabled" : "Disabled" }}
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Members section -->
     <div class="members-toolbar">
-      <h2>Members</h2>
+      <h3>Members</h3>
       <NButton type="primary" size="small" @click="openAdd">+ Add Member</NButton>
     </div>
 
     <div class="members-table-container">
       <NDataTable
         :columns="columns"
-        :data="store.members"
+        :data="humanMembers"
         :row-props="rowProps"
         :bordered="false"
         size="small"
@@ -330,13 +354,9 @@ async function handleRemove(member: Member) {
       >
         <template #header>
           <div class="member-detail-header">
-            <span
-              class="member-detail-avatar"
-              :class="{ 'agent-avatar': selectedMember.role === 'agent' }"
-              >{{
-                selectedMember.role === "agent" ? "AI" : selectedMember.name.charAt(0).toUpperCase()
-              }}</span
-            >
+            <span class="member-detail-avatar">{{
+              selectedMember.name.charAt(0).toUpperCase()
+            }}</span>
             <div>
               <div class="member-detail-name">{{ selectedMember.name }}</div>
               <div class="member-detail-meta">
@@ -350,16 +370,7 @@ async function handleRemove(member: Member) {
                   }"
                   >{{ selectedMember.role }}</NTag
                 >
-                <span
-                  v-if="selectedMember.role === 'agent' && selectedMember.agentProvider"
-                  class="member-detail-email"
-                >
-                  {{ AGENT_PROVIDER_DISPLAY[selectedMember.agentProvider] }}
-                  <template v-if="selectedMember.agentModel">
-                    &middot; {{ selectedMember.agentModel }}</template
-                  >
-                </span>
-                <span v-else-if="selectedMember.email" class="member-detail-email">{{
+                <span v-if="selectedMember.email" class="member-detail-email">{{
                   selectedMember.email
                 }}</span>
               </div>
@@ -411,19 +422,11 @@ async function handleRemove(member: Member) {
               @keydown.enter.prevent="handleAdd"
             />
           </NFormItem>
+          <NFormItem label="Email">
+            <NInput v-model:value="addEmail" placeholder="email@example.com (optional)" />
+          </NFormItem>
           <NFormItem label="Role">
             <NSelect v-model:value="addRole" :options="roleOptions" />
-          </NFormItem>
-          <template v-if="addRole === 'agent'">
-            <NFormItem label="Provider">
-              <NSelect v-model:value="addProvider" :options="providerOptions" />
-            </NFormItem>
-            <NFormItem label="Model (optional)">
-              <NInput v-model:value="addModel" placeholder="e.g. claude-sonnet-4-20250514" />
-            </NFormItem>
-          </template>
-          <NFormItem v-else label="Email">
-            <NInput v-model:value="addEmail" placeholder="email@example.com (optional)" />
           </NFormItem>
           <NSpace justify="end" :size="8">
             <NButton @click="showAddModal = false">Cancel</NButton>
@@ -459,19 +462,11 @@ async function handleRemove(member: Member) {
               @keydown.enter.prevent="handleEdit"
             />
           </NFormItem>
+          <NFormItem label="Email">
+            <NInput v-model:value="editEmail" placeholder="email@example.com (optional)" />
+          </NFormItem>
           <NFormItem label="Role">
             <NSelect v-model:value="editRole" :options="roleOptions" />
-          </NFormItem>
-          <template v-if="editRole === 'agent'">
-            <NFormItem label="Provider">
-              <NSelect v-model:value="editProvider" :options="providerOptions" />
-            </NFormItem>
-            <NFormItem label="Model (optional)">
-              <NInput v-model:value="editModel" placeholder="e.g. claude-sonnet-4-20250514" />
-            </NFormItem>
-          </template>
-          <NFormItem v-else label="Email">
-            <NInput v-model:value="editEmail" placeholder="email@example.com (optional)" />
           </NFormItem>
           <NSpace justify="end" :size="8">
             <NButton @click="showEditModal = false">Cancel</NButton>
@@ -498,17 +493,126 @@ async function handleRemove(member: Member) {
   overflow: hidden;
 }
 
+/* ── Agent section ── */
+
+.agent-section {
+  padding: 16px 24px 0;
+  flex-shrink: 0;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.section-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.agent-picker {
+  display: flex;
+  gap: 10px;
+}
+
+.agent-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+  background: #fafafa;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  text-align: left;
+  flex: 1;
+}
+
+.agent-card:hover:not(:disabled) {
+  border-color: #8b5cf6;
+  background: #8b5cf608;
+}
+
+.agent-card:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.agent-card-enabled {
+  border-color: #8b5cf6;
+  background: #8b5cf608;
+}
+
+.agent-toggle {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #e8e8e8;
+  color: #999;
+  flex-shrink: 0;
+}
+
+.agent-toggle.on {
+  background: #8b5cf622;
+  color: #8b5cf6;
+}
+
+.agent-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #8b5cf622;
+  color: #8b5cf6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+
+.agent-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.agent-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.agent-desc {
+  font-size: 12px;
+  opacity: 0.5;
+  margin-top: 1px;
+}
+
+/* ── Members section ── */
+
 .members-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
+  padding: 20px 24px 12px;
   flex-shrink: 0;
 }
 
-.members-toolbar h2 {
-  font-size: 16px;
+.members-toolbar h3 {
+  font-size: 14px;
   font-weight: 600;
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .members-table-container {
@@ -516,6 +620,8 @@ async function handleRemove(member: Member) {
   padding: 0 24px 24px;
   overflow: auto;
 }
+
+/* ── Member detail modal ── */
 
 .member-detail-header {
   display: flex;
@@ -535,13 +641,6 @@ async function handleRemove(member: Member) {
   font-weight: 700;
   color: #666;
   flex-shrink: 0;
-}
-
-.member-detail-avatar.agent-avatar {
-  background: #8b5cf622;
-  color: #8b5cf6;
-  font-size: 11px;
-  letter-spacing: 0.5px;
 }
 
 .member-detail-name {

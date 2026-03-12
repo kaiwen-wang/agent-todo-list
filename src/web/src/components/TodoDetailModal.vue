@@ -10,9 +10,11 @@ import {
   AntennaBars5,
   ExternalLink,
   Trash,
+  PlayerPlay,
 } from "@vicons/tabler";
 import { useProjectStore } from "@/stores/project";
 import type { Status, Priority, Difficulty, Label } from "@/types";
+import { AGENT_PROVIDER_DISPLAY } from "@/types";
 import {
   STATUSES,
   PRIORITIES,
@@ -524,6 +526,22 @@ async function handleRemoveBranch() {
                 @click="handleCreateBranch"
               >
                 Create Worktree + Branch
+              </NButton>
+            </div>
+
+            <div v-if="store.agents.length" class="sidebar-section">
+              <label class="meta-label">Run with</label>
+              <NButton
+                v-for="agent in store.agents"
+                :key="agent.id"
+                size="small"
+                secondary
+                style="width: 100%; margin-bottom: 6px"
+              >
+                <template #icon>
+                  <NIcon :size="14"><PlayerPlay /></NIcon>
+                </template>
+                {{ agent.agentProvider ? AGENT_PROVIDER_DISPLAY[agent.agentProvider] : agent.name }}
               </NButton>
             </div>
           </div>

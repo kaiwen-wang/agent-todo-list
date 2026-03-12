@@ -13,6 +13,7 @@ export const useProjectStore = defineStore("project", () => {
   // Getters
   const todos = computed(() => project.value?.todos ?? []);
   const members = computed(() => project.value?.members ?? []);
+  const agents = computed(() => members.value.filter((m) => m.role === "agent"));
   const projectName = computed(() => project.value?.name ?? "");
   const prefix = computed(() => project.value?.prefix ?? "");
   const auditLog = computed(() => project.value?.auditLog ?? []);
@@ -483,6 +484,7 @@ export const useProjectStore = defineStore("project", () => {
     error,
     todos,
     members,
+    agents,
     projectName,
     prefix,
     auditLog,
