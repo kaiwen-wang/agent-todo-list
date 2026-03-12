@@ -48,23 +48,24 @@ const isSelected = computed(() => store.selectedTodoIds.has(props.todo.id));
 function handleClick(e: MouseEvent) {
   if (isDragging.value) return;
 
-  // CMD/Ctrl+Click → toggle selection
-  if (e.metaKey || e.ctrlKey) {
-    e.preventDefault();
-    store.toggleSelect(props.todo.id);
-    return;
-  }
+  const isMod = e.metaKey || e.ctrlKey;
 
-  // Shift+Click → range select within column
-  if (e.shiftKey && props.columnTodos) {
+  // CMD/Ctrl+Shift+Click → range select within column
+  if (isMod && e.shiftKey && props.columnTodos) {
     e.preventDefault();
     store.rangeSelect(props.todo.id, props.columnTodos);
     return;
   }
 
-  // Plain click → open detail (if no selection active, or deselect first)
+  // CMD/Ctrl+Click → toggle selection
+  if (isMod) {
+    e.preventDefault();
+    store.toggleSelect(props.todo.id);
+    return;
+  }
+
+  // Plain click (or Shift+Click without CMD) → open detail or clear selection
   if (store.hasSelection) {
-    // Plain click while items are selected → clear selection
     store.clearSelection();
     return;
   }
@@ -146,8 +147,7 @@ function onDragStart(e: DragEvent) {
 }
 
 .todo-card.selected {
-  background: rgba(59, 130, 246, 0.08) !important;
-  border-left: 2px solid #3b82f6 !important;
+  background: rgba(59, 130, 246, 0.1) !important;
 }
 
 .todo-card:hover .card-title {

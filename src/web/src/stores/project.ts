@@ -377,7 +377,10 @@ export const useProjectStore = defineStore("project", () => {
     error.value = null;
     try {
       const selected = todos.value.filter((t) => selectedTodoIds.value.has(t.id));
-      await Promise.all(selected.map((t) => api.updateTodo(t.number, updates)));
+      // Serialize calls — automerge can't handle concurrent writes reliably
+      for (const t of selected) {
+        await api.updateTodo(t.number, updates);
+      }
       clearSelection();
       await load();
     } catch (e: unknown) {
@@ -390,7 +393,9 @@ export const useProjectStore = defineStore("project", () => {
     error.value = null;
     try {
       const selected = todos.value.filter((t) => selectedTodoIds.value.has(t.id));
-      await Promise.all(selected.map((t) => api.deleteTodo(t.number)));
+      for (const t of selected) {
+        await api.deleteTodo(t.number);
+      }
       clearSelection();
       await load();
     } catch (e: unknown) {
