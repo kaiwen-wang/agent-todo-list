@@ -77,7 +77,21 @@ export const useProjectStore = defineStore("project", () => {
   });
 
   // Actions
+
+  /** Deduplicated load — if a fetch is already in-flight, piggyback on it */
+  let loadPromise: Promise<void> | null = null;
+
   async function load() {
+    if (loadPromise) return loadPromise;
+    loadPromise = doLoad();
+    try {
+      await loadPromise;
+    } finally {
+      loadPromise = null;
+    }
+  }
+
+  async function doLoad() {
     loading.value = true;
     error.value = null;
     try {
@@ -382,8 +396,8 @@ export const useProjectStore = defineStore("project", () => {
         updates,
       }));
       await api.bulkChange(ops);
-      clearSelection();
       await load();
+      clearSelection(); // Same tick as load — Vue batches both into one render
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : String(e);
       throw e;
@@ -399,8 +413,8 @@ export const useProjectStore = defineStore("project", () => {
         number: t.number,
       }));
       await api.bulkChange(ops);
-      clearSelection();
       await load();
+      clearSelection(); // Same tick as load — Vue batches both into one render
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : String(e);
       throw e;
