@@ -1,58 +1,58 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { NModal, NCard, NForm, NFormItem, NInput, NButton, NSpace, useMessage } from 'naive-ui'
-import { useProjectStore } from '@/stores/project'
+import { ref, watch } from "vue";
+import { NModal, NCard, NForm, NFormItem, NInput, NButton, NSpace, useMessage } from "naive-ui";
+import { useProjectStore } from "@/stores/project";
 
 const props = defineProps<{
-  open: boolean
-}>()
+  open: boolean;
+}>();
 
 const emit = defineEmits<{
-  close: []
-}>()
+  close: [];
+}>();
 
-const store = useProjectStore()
-const message = useMessage()
+const store = useProjectStore();
+const message = useMessage();
 
-const name = ref('')
-const prefix = ref('')
-const description = ref('')
-const submitting = ref(false)
+const name = ref("");
+const prefix = ref("");
+const description = ref("");
+const submitting = ref(false);
 
 watch(
   () => props.open,
   (isOpen) => {
     if (isOpen && store.project) {
-      name.value = store.project.name
-      prefix.value = store.project.prefix
-      description.value = store.project.description ?? ''
+      name.value = store.project.name;
+      prefix.value = store.project.prefix;
+      description.value = store.project.description ?? "";
     }
   },
-)
+);
 
 async function submit() {
-  if (!name.value.trim() || !prefix.value.trim()) return
-  submitting.value = true
+  if (!name.value.trim() || !prefix.value.trim()) return;
+  submitting.value = true;
   try {
-    const updates: Record<string, string> = {}
+    const updates: Record<string, string> = {};
     if (name.value.trim() !== store.project?.name) {
-      updates.name = name.value.trim()
+      updates.name = name.value.trim();
     }
     if (prefix.value.trim().toUpperCase() !== store.project?.prefix) {
-      updates.prefix = prefix.value.trim()
+      updates.prefix = prefix.value.trim();
     }
-    if (description.value.trim() !== (store.project?.description ?? '')) {
-      updates.description = description.value.trim()
+    if (description.value.trim() !== (store.project?.description ?? "")) {
+      updates.description = description.value.trim();
     }
     if (Object.keys(updates).length > 0) {
-      await store.updateProjectSettings(updates)
-      message.success('Settings saved')
+      await store.updateProjectSettings(updates);
+      message.success("Settings saved");
     }
-    emit('close')
+    emit("close");
   } catch {
-    message.error('Failed to save settings')
+    message.error("Failed to save settings");
   } finally {
-    submitting.value = false
+    submitting.value = false;
   }
 }
 </script>
@@ -67,35 +67,37 @@ async function submit() {
       style="width: 440px; max-width: 95vw"
       role="dialog"
     >
-      <NForm @submit.prevent="submit" label-placement="top">
-        <NFormItem label="Project Name">
+      <NForm @submit.prevent="submit" label-placement="top" :show-feedback="false">
+        <NFormItem label="Project Name" style="margin-bottom: 20px">
           <NInput
             v-model:value="name"
             placeholder="My Project"
             autofocus
+            style="border-radius: 0"
             @keydown.enter.prevent="submit"
           />
         </NFormItem>
 
-        <NFormItem label="Prefix">
+        <NFormItem label="Prefix" style="margin-bottom: 4px">
           <NInput
             v-model:value="prefix"
             placeholder="TODO"
-            style="text-transform: uppercase"
+            style="text-transform: uppercase; border-radius: 0"
             @keydown.enter.prevent="submit"
           />
-          <template #feedback>
-            Used for todo references like {{ (prefix || 'TODO').toUpperCase() }}-1,
-            {{ (prefix || 'TODO').toUpperCase() }}-2, etc.
-          </template>
         </NFormItem>
+        <div style="font-size: 12px; opacity: 0.5; margin-bottom: 20px">
+          Used for todo references like {{ (prefix || "TODO").toUpperCase() }}-1,
+          {{ (prefix || "TODO").toUpperCase() }}-2, etc.
+        </div>
 
-        <NFormItem label="Description">
+        <NFormItem label="Description" style="margin-bottom: 20px">
           <NInput
             v-model:value="description"
             type="textarea"
             placeholder="Brief project description"
             :rows="3"
+            style="border-radius: 0"
           />
         </NFormItem>
 

@@ -495,55 +495,6 @@ async function handleRemoveBranch() {
                 @update:value="changeAssignee"
               />
             </div>
-
-            <div class="sidebar-section">
-              <label class="meta-label">Branch</label>
-              <div v-if="todo.branch" class="branch-info">
-                <NTag
-                  size="small"
-                  :bordered="false"
-                  style="font-family: monospace; word-break: break-all"
-                >
-                  {{ todo.branch }}
-                </NTag>
-                <NButton
-                  size="tiny"
-                  quaternary
-                  type="error"
-                  :loading="branchLoading"
-                  style="margin-top: 6px"
-                  @click="handleRemoveBranch"
-                >
-                  Remove
-                </NButton>
-              </div>
-              <NButton
-                v-else
-                size="small"
-                secondary
-                :loading="branchLoading"
-                style="width: 100%"
-                @click="handleCreateBranch"
-              >
-                Create Worktree + Branch
-              </NButton>
-            </div>
-
-            <div v-if="store.agents.length" class="sidebar-section">
-              <label class="meta-label">Run with</label>
-              <NButton
-                v-for="agent in store.agents"
-                :key="agent.id"
-                size="small"
-                secondary
-                style="width: 100%; margin-bottom: 6px"
-              >
-                <template #icon>
-                  <NIcon :size="14"><PlayerPlay /></NIcon>
-                </template>
-                {{ agent.agentProvider ? AGENT_PROVIDER_DISPLAY[agent.agentProvider] : agent.name }}
-              </NButton>
-            </div>
           </div>
         </div>
       </div>

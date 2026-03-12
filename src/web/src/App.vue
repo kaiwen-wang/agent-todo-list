@@ -138,17 +138,6 @@ const themeOverrides = {
               </div>
             </div>
 
-            <!-- Agents -->
-            <div v-if="store.agents.length" class="sidebar-section">
-              <div class="section-label">Agents</div>
-              <div class="member-list">
-                <div v-for="a in store.agents" :key="a.id" class="member-row">
-                  <span class="member-avatar agent-avatar">AI</span>
-                  <span class="member-name">{{ a.name }}</span>
-                </div>
-              </div>
-            </div>
-
             <!-- Members -->
             <div class="sidebar-section">
               <div class="section-label">Members</div>

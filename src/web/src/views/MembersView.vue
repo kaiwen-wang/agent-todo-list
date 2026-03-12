@@ -300,32 +300,6 @@ async function handleRemove(member: Member) {
 
 <template>
   <div class="members-view">
-    <!-- Agent section -->
-    <div class="agent-section">
-      <div class="section-header">
-        <h3>Agents</h3>
-      </div>
-      <div class="agent-picker">
-        <button
-          v-for="opt in AGENT_OPTIONS"
-          :key="opt.provider"
-          class="agent-card"
-          :class="{ 'agent-card-enabled': isAgentEnabled(opt.provider) }"
-          :disabled="agentLoading === opt.provider"
-          @click="toggleAgent(opt.provider)"
-        >
-          <span class="agent-avatar">AI</span>
-          <div class="agent-info">
-            <div class="agent-name">{{ opt.name }}</div>
-            <div class="agent-desc">{{ opt.description }}</div>
-          </div>
-          <span class="agent-toggle" :class="{ on: isAgentEnabled(opt.provider) }">
-            {{ isAgentEnabled(opt.provider) ? "Enabled" : "Disabled" }}
-          </span>
-        </button>
-      </div>
-    </div>
-
     <!-- Members section -->
     <div class="members-toolbar">
       <h3>Members</h3>
