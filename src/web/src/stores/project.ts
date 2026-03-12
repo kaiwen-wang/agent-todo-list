@@ -261,6 +261,13 @@ export const useProjectStore = defineStore("project", () => {
   let ws: WebSocket | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   const WS_RECONNECT_MS = 2000;
+
+  /**
+   * Skip the next WebSocket-triggered refresh. Used after optimistic updates
+   * to prevent a redundant re-render from our own server write.
+   */
+  let skipNextRefresh = false;
+
   function connectWebSocket() {
     if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
 
@@ -272,7 +279,11 @@ export const useProjectStore = defineStore("project", () => {
         const msg = JSON.parse(event.data);
         switch (msg.type) {
           case "refresh":
-            load();
+            if (skipNextRefresh) {
+              skipNextRefresh = false;
+            } else {
+              load();
+            }
             break;
           case "brain:log":
           case "brain:task":
@@ -291,7 +302,11 @@ export const useProjectStore = defineStore("project", () => {
       } catch {
         // Legacy plain-text messages (backward compat)
         if (event.data === "refresh") {
-          load();
+          if (skipNextRefresh) {
+            skipNextRefresh = false;
+          } else {
+            load();
+          }
         }
       }
     };
@@ -384,40 +399,66 @@ export const useProjectStore = defineStore("project", () => {
     selectedTodoIds.value = next;
   }
 
-  // ── Bulk actions ──
+  // ── Bulk actions (optimistic) ──
 
   async function bulkUpdateTodos(updates: api.UpdateTodoParams) {
     error.value = null;
+    const selected = todos.value.filter((t) => selectedTodoIds.value.has(t.id));
+    const ops: api.BulkOperation[] = selected.map((t) => ({
+      action: "update" as const,
+      number: t.number,
+      updates,
+    }));
+
+    // Optimistic: apply changes to local state immediately (no await = one Vue render)
+    if (project.value) {
+      const ids = selectedTodoIds.value;
+      project.value = {
+        ...project.value,
+        todos: project.value.todos.map((t) =>
+          ids.has(t.id) ? { ...t, ...updates, updatedAt: Date.now() } : t,
+        ),
+      };
+    }
+    clearSelection();
+
+    // Fire API call — skip the WebSocket refresh it triggers (we already updated locally)
+    skipNextRefresh = true;
     try {
-      const selected = todos.value.filter((t) => selectedTodoIds.value.has(t.id));
-      const ops: api.BulkOperation[] = selected.map((t) => ({
-        action: "update" as const,
-        number: t.number,
-        updates,
-      }));
       await api.bulkChange(ops);
-      await load();
-      clearSelection(); // Same tick as load — Vue batches both into one render
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : String(e);
-      throw e;
+      skipNextRefresh = false;
+      await load(); // Rollback on error
     }
   }
 
   async function bulkDeleteTodos() {
     error.value = null;
+    const selected = todos.value.filter((t) => selectedTodoIds.value.has(t.id));
+    const ops: api.BulkOperation[] = selected.map((t) => ({
+      action: "delete" as const,
+      number: t.number,
+    }));
+
+    // Optimistic: remove items from local state immediately
+    if (project.value) {
+      const ids = selectedTodoIds.value;
+      project.value = {
+        ...project.value,
+        todos: project.value.todos.filter((t) => !ids.has(t.id)),
+      };
+    }
+    clearSelection();
+
+    // Fire API call — skip the WebSocket refresh it triggers (we already updated locally)
+    skipNextRefresh = true;
     try {
-      const selected = todos.value.filter((t) => selectedTodoIds.value.has(t.id));
-      const ops: api.BulkOperation[] = selected.map((t) => ({
-        action: "delete" as const,
-        number: t.number,
-      }));
       await api.bulkChange(ops);
-      await load();
-      clearSelection(); // Same tick as load — Vue batches both into one render
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : String(e);
-      throw e;
+      skipNextRefresh = false;
+      await load(); // Rollback on error
     }
   }
 
