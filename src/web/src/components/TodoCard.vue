@@ -75,7 +75,13 @@ function handleClick(e: MouseEvent) {
 function onDragStart(e: DragEvent) {
   if (e.dataTransfer) {
     e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", props.todo.id);
+    // If this card is part of a multi-selection, encode all selected IDs
+    if (store.selectedTodoIds.has(props.todo.id) && store.selectedTodoIds.size > 1) {
+      e.dataTransfer.setData("text/plain", JSON.stringify([...store.selectedTodoIds]));
+      e.dataTransfer.setData("application/x-multi-drag", "true");
+    } else {
+      e.dataTransfer.setData("text/plain", props.todo.id);
+    }
     emit("dragStart", props.todo);
     isDragging.value = true;
     setTimeout(() => {

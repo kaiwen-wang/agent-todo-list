@@ -420,7 +420,6 @@ export const useProjectStore = defineStore("project", () => {
         ),
       };
     }
-    clearSelection();
 
     // Fire API call — skip the WebSocket refresh it triggers (we already updated locally)
     skipNextRefresh = true;
@@ -449,7 +448,7 @@ export const useProjectStore = defineStore("project", () => {
         todos: project.value.todos.filter((t) => !ids.has(t.id)),
       };
     }
-    clearSelection();
+    clearSelection(); // Clear for delete since items no longer exist
 
     // Fire API call — skip the WebSocket refresh it triggers (we already updated locally)
     skipNextRefresh = true;

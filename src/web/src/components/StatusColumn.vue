@@ -42,9 +42,16 @@ async function onDrop(e: DragEvent) {
   e.preventDefault();
   isDragOver.value = false;
 
-  const todoId = e.dataTransfer?.getData("text/plain");
-  if (todoId) {
-    const todo = store.todos.find((t) => t.id === todoId);
+  const isMulti = e.dataTransfer?.getData("application/x-multi-drag");
+  const raw = e.dataTransfer?.getData("text/plain");
+  if (!raw) return;
+
+  if (isMulti) {
+    // Multi-drag: move all selected cards to this column
+    await store.bulkUpdateTodos({ status: props.status });
+  } else {
+    // Single drag
+    const todo = store.todos.find((t) => t.id === raw);
     if (todo && todo.status !== props.status) {
       await store.moveTodo(todo.number, props.status);
     }
