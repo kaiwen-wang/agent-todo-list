@@ -190,6 +190,27 @@ export async function updateMemberApi(
   return res.json();
 }
 
+// ── Bulk API ──
+
+export type BulkOperation =
+  | { action: "update"; number: number; updates: UpdateTodoParams }
+  | { action: "delete"; number: number };
+
+export async function bulkChange(
+  operations: BulkOperation[],
+): Promise<{ ok: boolean; count: number }> {
+  const res = await fetch(`${BASE}/api/change`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "bulk", operations }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || "Bulk operation failed");
+  }
+  return res.json();
+}
+
 // ── Inbox API ──
 
 export async function updateInbox(text: string): Promise<{ ok: boolean }> {

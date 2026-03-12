@@ -247,9 +247,6 @@ export const useProjectStore = defineStore("project", () => {
   let ws: WebSocket | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   const WS_RECONNECT_MS = 2000;
-  /** When true, WebSocket "refresh" events are ignored (used during bulk operations) */
-  let suppressRefresh = false;
-
   function connectWebSocket() {
     if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
 
@@ -261,7 +258,7 @@ export const useProjectStore = defineStore("project", () => {
         const msg = JSON.parse(event.data);
         switch (msg.type) {
           case "refresh":
-            if (!suppressRefresh) load();
+            load();
             break;
           case "brain:log":
           case "brain:task":
@@ -279,7 +276,7 @@ export const useProjectStore = defineStore("project", () => {
         }
       } catch {
         // Legacy plain-text messages (backward compat)
-        if (event.data === "refresh" && !suppressRefresh) {
+        if (event.data === "refresh") {
           load();
         }
       }
@@ -377,37 +374,36 @@ export const useProjectStore = defineStore("project", () => {
 
   async function bulkUpdateTodos(updates: api.UpdateTodoParams) {
     error.value = null;
-    suppressRefresh = true;
     try {
       const selected = todos.value.filter((t) => selectedTodoIds.value.has(t.id));
-      for (const t of selected) {
-        await api.updateTodo(t.number, updates);
-      }
+      const ops: api.BulkOperation[] = selected.map((t) => ({
+        action: "update" as const,
+        number: t.number,
+        updates,
+      }));
+      await api.bulkChange(ops);
       clearSelection();
+      await load();
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : String(e);
       throw e;
-    } finally {
-      suppressRefresh = false;
-      await load();
     }
   }
 
   async function bulkDeleteTodos() {
     error.value = null;
-    suppressRefresh = true;
     try {
       const selected = todos.value.filter((t) => selectedTodoIds.value.has(t.id));
-      for (const t of selected) {
-        await api.deleteTodo(t.number);
-      }
+      const ops: api.BulkOperation[] = selected.map((t) => ({
+        action: "delete" as const,
+        number: t.number,
+      }));
+      await api.bulkChange(ops);
       clearSelection();
+      await load();
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : String(e);
       throw e;
-    } finally {
-      suppressRefresh = false;
-      await load();
     }
   }
 

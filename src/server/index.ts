@@ -342,6 +342,27 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
                 return jsonResponse({ ok: true, message: "Brain processing started" });
               }
 
+              case "bulk": {
+                // Apply multiple operations in one request: single reload, single save, single broadcast.
+                // body.operations: Array<{ action: "update", number, updates } | { action: "delete", number }>
+                const ops: Array<{ action: string; number?: number; updates?: Record<string, unknown> }> =
+                  body.operations ?? [];
+                for (const op of ops) {
+                  switch (op.action) {
+                    case "update":
+                      doc = updateTodo(doc, op.number!, op.updates ?? {});
+                      break;
+                    case "delete":
+                      doc = deleteTodo(doc, op.number!);
+                      break;
+                    default:
+                      return jsonResponse({ error: `Unknown bulk operation: ${op.action}` }, 400);
+                  }
+                }
+                await save();
+                return jsonResponse({ ok: true, count: ops.length });
+              }
+
               default:
                 return jsonResponse({ error: `Unknown action: ${body.action}` }, 400);
             }
