@@ -157,6 +157,7 @@ async function onDrop(e: DragEvent) {
   padding: 24px;
   text-align: center;
   font-size: 12px;
+  user-select: none;
   opacity: 0.35;
 }
 

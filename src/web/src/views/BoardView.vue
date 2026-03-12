@@ -9,6 +9,14 @@ import BatchActionBar from "@/components/BatchActionBar.vue";
 
 const store = useProjectStore();
 const showCreate = ref(false);
+
+function onBoardClick(e: MouseEvent) {
+  if (!store.hasSelection) return;
+  // If click originated inside a todo card, let the card handle it
+  const target = e.target as HTMLElement;
+  if (target.closest(".todo-card")) return;
+  store.clearSelection();
+}
 </script>
 
 <template>
@@ -17,7 +25,7 @@ const showCreate = ref(false);
       <h2>Board</h2>
       <NButton type="primary" size="small" @click="showCreate = true">+ New Todo</NButton>
     </div>
-    <div class="board">
+    <div class="board" @click="onBoardClick">
       <StatusColumn
         v-for="status in BOARD_STATUSES"
         :key="status"
