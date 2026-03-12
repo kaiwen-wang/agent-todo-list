@@ -73,9 +73,14 @@ function handleClick(e: MouseEvent) {
 }
 
 function onDragStart(e: DragEvent) {
+  // Block drag when modifier keys are held — CMD/Ctrl+Click is for selection only
+  if (e.metaKey || e.ctrlKey || e.shiftKey) {
+    e.preventDefault();
+    return;
+  }
   if (e.dataTransfer) {
     e.dataTransfer.effectAllowed = "move";
-    // If this card is part of a multi-selection, encode all selected IDs
+    // If this card is part of a multi-selection, move all selected cards
     if (store.selectedTodoIds.has(props.todo.id) && store.selectedTodoIds.size > 1) {
       e.dataTransfer.setData("text/plain", JSON.stringify([...store.selectedTodoIds]));
       e.dataTransfer.setData("application/x-multi-drag", "true");
