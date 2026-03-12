@@ -1,27 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, h, type Component } from "vue";
+import { ref, computed, watch, h, onMounted, onUnmounted, type Component } from "vue";
 import { useRouter } from "vue-router";
-import {
-  NButton,
-  NIcon,
-  NSpace,
-  NCard,
-  NForm,
-  NFormItem,
-  NInput,
-  NSelect,
-  NDescriptions,
-  NDescriptionsItem,
-  NPopconfirm,
-  NButtonGroup,
-  useMessage,
-} from "naive-ui";
+import { NTag, NIcon, NSelect, NInput, NButton, useMessage } from "naive-ui";
 import {
   AntennaBars1,
   AntennaBars2,
   AntennaBars3,
   AntennaBars4,
   AntennaBars5,
+  ChevronLeft,
+  Trash,
 } from "@vicons/tabler";
 import { useProjectStore } from "@/stores/project";
 import type { Status, Priority, Difficulty, Label } from "@/types";
@@ -33,6 +21,7 @@ import {
   STATUS_DISPLAY,
   PRIORITY_DISPLAY,
   PRIORITY_COLORS,
+  STATUS_COLORS,
   DIFFICULTY_DISPLAY,
   DIFFICULTY_COLORS,
   LABEL_DISPLAY,
@@ -55,23 +44,20 @@ const store = useProjectStore();
 const router = useRouter();
 const message = useMessage();
 
-const editing = ref(false);
-const editTitle = ref("");
-const editDescription = ref("");
-const editPriority = ref<Priority | null>(null);
-const editDifficulty = ref<Difficulty | null>(null);
-const editStatus = ref<Status | null>(null);
-const editLabels = ref<Label[]>([]);
-const editAssignee = ref<string | null>(null);
-const saving = ref(false);
-
-const memberOptions = computed(() => store.members.map((m) => ({ label: m.name, value: m.id })));
-
 const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }));
 const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }));
 const difficultyOptions = DIFFICULTIES.map((d) => ({ label: DIFFICULTY_DISPLAY[d], value: d }));
-
 const labelOptions = LABELS.map((l) => ({ label: LABEL_DISPLAY[l], value: l }));
+
+function renderStatusLabel(option: { label: string; value: string }) {
+  const s = option.value as Status;
+  return h("span", { style: "display: flex; align-items: center; gap: 8px" }, [
+    h("span", {
+      style: `width: 8px; height: 8px; border-radius: 50%; background: ${STATUS_COLORS[s]}; flex-shrink: 0`,
+    }),
+    option.label,
+  ]);
+}
 
 function renderPriorityLabel(option: { label: string; value: string }) {
   const p = option.value as Priority;
@@ -93,7 +79,7 @@ function renderDifficultyLabel(option: { label: string; value: string }) {
 
 function renderLabelTag(option: { label: string; value: string }) {
   const l = option.value as Label;
-  return h("span", { style: "display: flex; align-items: center; gap: 6px" }, [
+  return h("span", { style: `display: flex; align-items: center; gap: 6px` }, [
     h("span", {
       style: `width: 8px; height: 8px; border-radius: 50%; background: ${LABEL_COLORS[l]}; flex-shrink: 0`,
     }),
@@ -101,44 +87,70 @@ function renderLabelTag(option: { label: string; value: string }) {
   ]);
 }
 
+const assigneeOptions = computed(() => store.members.map((m) => ({ label: m.name, value: m.id })));
+
 const todo = computed(() => store.todos.find((t) => t.number === props.number));
 
-function startEdit() {
-  if (!todo.value) return;
-  editTitle.value = todo.value.title;
-  editDescription.value = todo.value.description;
-  editPriority.value = todo.value.priority;
-  editDifficulty.value = todo.value.difficulty;
-  editStatus.value = todo.value.status;
-  editLabels.value = [...(todo.value.labels ?? [])];
-  editAssignee.value = todo.value.assignee;
-  editing.value = true;
-}
+// Local editable copies
+const title = ref("");
+const description = ref("");
 
-async function saveEdit() {
+watch(
+  () => props.number,
+  () => {
+    if (todo.value) {
+      title.value = todo.value.title;
+      description.value = todo.value.description;
+    }
+  },
+  { immediate: true },
+);
+
+// Also sync when store data updates (e.g. from WebSocket)
+watch(
+  () => todo.value?.title,
+  (newTitle) => {
+    if (
+      newTitle !== undefined &&
+      document.activeElement?.classList.contains("inline-title") === false
+    ) {
+      title.value = newTitle;
+    }
+  },
+);
+
+watch(
+  () => todo.value?.description,
+  (newDesc) => {
+    if (newDesc !== undefined) {
+      description.value = newDesc;
+    }
+  },
+);
+
+async function saveField(field: string, value: unknown) {
   if (!todo.value) return;
-  saving.value = true;
   try {
-    await store.updateTodo(todo.value.number, {
-      title: editTitle.value.trim(),
-      description: editDescription.value.trim(),
-      priority: editPriority.value || undefined,
-      difficulty: editDifficulty.value || undefined,
-      status: editStatus.value || undefined,
-      labels: editLabels.value,
-      assignee: editAssignee.value,
-    });
-    editing.value = false;
-    message.success("Todo updated");
+    await store.updateTodo(todo.value.number, { [field]: value });
   } catch {
-    message.error("Failed to update todo");
-  } finally {
-    saving.value = false;
+    message.error("Failed to update");
   }
 }
 
-function cancelEdit() {
-  editing.value = false;
+function commitTitle() {
+  const trimmed = title.value.trim();
+  if (!todo.value || trimmed === todo.value.title) return;
+  if (!trimmed) {
+    title.value = todo.value.title;
+    return;
+  }
+  saveField("title", trimmed);
+}
+
+function commitDescription() {
+  const trimmed = description.value.trim();
+  if (!todo.value || trimmed === todo.value.description) return;
+  saveField("description", trimmed);
 }
 
 async function changeStatus(status: Status) {
@@ -150,30 +162,182 @@ async function changeStatus(status: Status) {
   }
 }
 
-async function handleDelete() {
+async function changePriority(priority: Priority) {
+  if (!todo.value || priority === todo.value.priority) return;
+  saveField("priority", priority);
+}
+
+async function changeDifficulty(difficulty: Difficulty) {
+  if (!todo.value || difficulty === todo.value.difficulty) return;
+  saveField("difficulty", difficulty);
+}
+
+async function changeLabels(labels: Label[]) {
+  if (!todo.value) return;
+  saveField("labels", labels);
+}
+
+async function changeAssignee(assignee: string | null) {
+  if (!todo.value || assignee === todo.value.assignee) return;
+  saveField("assignee", assignee);
+}
+
+async function handleArchive() {
   if (!todo.value) return;
   try {
-    await store.deleteTodo(todo.value.number);
-    message.success("Todo deleted");
-    router.back();
+    await store.moveTodo(todo.value.number, "archived");
+    message.success("Todo moved to trash");
+    router.push({ name: "board" });
   } catch {
-    message.error("Failed to delete todo");
+    message.error("Failed to archive todo");
   }
+}
+
+function formatDate(ts: number | string): string {
+  return new Date(ts).toLocaleString();
 }
 
 function goBack() {
   router.back();
 }
 
-function formatDate(iso: string | number): string {
-  return new Date(iso).toLocaleString();
+// ── Keyboard shortcuts (Linear-style) ──
+const statusSelectRef = ref<InstanceType<typeof NSelect> | null>(null);
+const prioritySelectRef = ref<InstanceType<typeof NSelect> | null>(null);
+const difficultySelectRef = ref<InstanceType<typeof NSelect> | null>(null);
+const statusPickerOpen = ref(false);
+const priorityPickerOpen = ref(false);
+const difficultyPickerOpen = ref(false);
+
+const PRIORITY_KEYS: Record<string, Priority> = {
+  "0": "none",
+  "1": "urgent",
+  "2": "high",
+  "3": "medium",
+  "4": "low",
+};
+
+const DIFFICULTY_KEYS: Record<string, Difficulty> = {
+  "0": "none",
+  "1": "easy",
+  "2": "medium",
+  "3": "hard",
+};
+
+const STATUS_KEYS: Record<string, Status> = {};
+STATUSES.forEach((s, i) => {
+  STATUS_KEYS[String(i)] = s;
+});
+
+function isTyping(): boolean {
+  const el = document.activeElement as HTMLElement | null;
+  if (!el) return false;
+  const tag = el.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || !!el.isContentEditable;
+}
+
+function handleDetailKeydown(e: KeyboardEvent) {
+  if (!todo.value) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+  if (statusPickerOpen.value && STATUS_KEYS[e.key]) {
+    e.preventDefault();
+    changeStatus(STATUS_KEYS[e.key]);
+    statusPickerOpen.value = false;
+    return;
+  }
+
+  if (priorityPickerOpen.value && PRIORITY_KEYS[e.key]) {
+    e.preventDefault();
+    changePriority(PRIORITY_KEYS[e.key]);
+    priorityPickerOpen.value = false;
+    return;
+  }
+
+  if (difficultyPickerOpen.value && DIFFICULTY_KEYS[e.key]) {
+    e.preventDefault();
+    changeDifficulty(DIFFICULTY_KEYS[e.key]);
+    difficultyPickerOpen.value = false;
+    return;
+  }
+
+  if (isTyping()) return;
+
+  if (e.key === "s") {
+    e.preventDefault();
+    statusPickerOpen.value = true;
+  } else if (e.key === "p") {
+    e.preventDefault();
+    priorityPickerOpen.value = true;
+  } else if (e.key === "d") {
+    e.preventDefault();
+    difficultyPickerOpen.value = true;
+  }
+}
+
+onMounted(() => window.addEventListener("keydown", handleDetailKeydown));
+onUnmounted(() => window.removeEventListener("keydown", handleDetailKeydown));
+
+// ── Comments ──
+const commentText = ref("");
+const commentLoading = ref(false);
+
+async function submitComment() {
+  if (!todo.value || !commentText.value.trim()) return;
+  commentLoading.value = true;
+  try {
+    await store.addComment(todo.value.number, commentText.value.trim());
+    commentText.value = "";
+  } catch (e: unknown) {
+    message.error(e instanceof Error ? e.message : "Failed to add comment");
+  } finally {
+    commentLoading.value = false;
+  }
+}
+
+// ── Branch ──
+const branchLoading = ref(false);
+
+async function handleCreateBranch() {
+  if (!todo.value) return;
+  branchLoading.value = true;
+  try {
+    const result = await store.createBranch(todo.value.number);
+    if (result.alreadyExists) {
+      message.info(`Branch already exists: ${result.branch}`);
+    } else {
+      message.success(`Created branch: ${result.branch}`);
+    }
+  } catch (e: unknown) {
+    message.error(e instanceof Error ? e.message : "Failed to create branch");
+  } finally {
+    branchLoading.value = false;
+  }
+}
+
+async function handleRemoveBranch() {
+  if (!todo.value?.branch) return;
+  branchLoading.value = true;
+  try {
+    await store.removeBranch(todo.value.number);
+    message.success("Removed worktree + branch");
+  } catch (e: unknown) {
+    message.error(e instanceof Error ? e.message : "Failed to remove branch");
+  } finally {
+    branchLoading.value = false;
+  }
 }
 </script>
 
 <template>
-  <div class="detail-view">
+  <div class="detail-page">
     <div class="detail-nav">
-      <NButton size="small" @click="goBack">&larr; Back</NButton>
+      <NButton size="small" quaternary @click="goBack">
+        <template #icon>
+          <NIcon :size="16"><ChevronLeft /></NIcon>
+        </template>
+        Back
+      </NButton>
     </div>
 
     <div v-if="!todo" class="not-found">
@@ -181,173 +345,208 @@ function formatDate(iso: string | number): string {
       <NButton @click="goBack">Go back</NButton>
     </div>
 
-    <div v-else-if="!editing">
-      <!-- View mode -->
+    <div v-else class="detail-content">
+      <!-- Header: ref + archive -->
       <div class="detail-header">
-        <div class="detail-header-left">
-          <NTag size="small" :bordered="false" style="font-family: monospace">
-            {{ todo.ref }}
-          </NTag>
-          <h1 class="detail-title">{{ todo.title }}</h1>
-        </div>
-        <NSpace :size="8">
-          <NButton size="small" @click="startEdit">Edit</NButton>
-          <NPopconfirm @positive-click="handleDelete">
-            <template #trigger>
-              <NButton size="small" type="error" ghost>Delete</NButton>
-            </template>
-            Delete this todo permanently?
-          </NPopconfirm>
-        </NSpace>
+        <NTag size="small" :bordered="false" style="font-family: monospace; flex-shrink: 0">
+          {{ todo.ref }}
+        </NTag>
+        <NButton
+          v-if="todo.status !== 'archived'"
+          size="tiny"
+          quaternary
+          type="error"
+          style="flex-shrink: 0"
+          @click="handleArchive"
+        >
+          <template #icon>
+            <NIcon :size="14"><Trash /></NIcon>
+          </template>
+        </NButton>
       </div>
 
-      <!-- Status buttons -->
-      <NCard size="small" class="detail-meta">
-        <div class="meta-section">
+      <input
+        v-model="title"
+        class="inline-title"
+        @blur="commitTitle"
+        @keydown.enter="($event.target as HTMLInputElement).blur()"
+      />
+
+      <!-- Meta row -->
+      <div class="meta-grid">
+        <div class="meta-item">
           <label class="meta-label">Status</label>
-          <NButtonGroup size="tiny">
-            <NButton
-              v-for="s in STATUSES"
-              :key="s"
-              :type="todo.status === s ? 'primary' : 'default'"
-              :ghost="todo.status !== s"
-              @click="changeStatus(s)"
-            >
-              {{ STATUS_DISPLAY[s] }}
-            </NButton>
-          </NButtonGroup>
+          <NSelect
+            ref="statusSelectRef"
+            :value="todo.status"
+            :options="statusOptions"
+            :render-label="renderStatusLabel"
+            size="small"
+            :show="statusPickerOpen"
+            style="width: 160px"
+            @update:value="changeStatus"
+            @update:show="(v: boolean) => (statusPickerOpen = v)"
+          />
         </div>
 
-        <NDescriptions :column="4" label-placement="top" size="small" class="meta-descriptions">
-          <NDescriptionsItem label="Priority">
-            <NSpace :size="6" align="center">
-              <NIcon :size="18" :color="PRIORITY_COLORS[todo.priority]">
-                <component :is="PRIORITY_ICON[todo.priority]" />
-              </NIcon>
-              {{ PRIORITY_DISPLAY[todo.priority] }}
-            </NSpace>
-          </NDescriptionsItem>
-          <NDescriptionsItem label="Difficulty">
-            <NSpace :size="6" align="center">
-              <span
-                :style="{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  background: DIFFICULTY_COLORS[todo.difficulty || 'none'],
-                  flexShrink: 0,
-                  display: 'inline-block',
-                }"
-              />
-              {{ DIFFICULTY_DISPLAY[todo.difficulty || "none"] }}
-            </NSpace>
-          </NDescriptionsItem>
-          <NDescriptionsItem label="Labels">
-            <NSpace v-if="todo.labels?.length" :size="4">
-              <span
-                v-for="l in todo.labels"
-                :key="l"
-                :style="{
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  padding: '1px 8px',
-                  borderRadius: '8px',
-                  background: LABEL_COLORS[l] + '22',
-                  color: LABEL_COLORS[l],
-                }"
-                >{{ LABEL_DISPLAY[l] }}</span
-              >
-            </NSpace>
-            <span v-else style="opacity: 0.35">None</span>
-          </NDescriptionsItem>
-          <NDescriptionsItem label="Assignee">
-            {{ todo.assigneeName || "Unassigned" }}
-          </NDescriptionsItem>
-          <NDescriptionsItem label="Created">
-            {{ formatDate(todo.createdAt) }}
-          </NDescriptionsItem>
-          <NDescriptionsItem label="Updated">
-            {{ formatDate(todo.updatedAt) }}
-          </NDescriptionsItem>
-        </NDescriptions>
-      </NCard>
-
-      <!-- Description -->
-      <NCard size="small" title="Description" class="detail-description">
-        <div v-if="todo.description" class="description-body">{{ todo.description }}</div>
-        <div v-else class="description-empty">No description provided.</div>
-      </NCard>
-    </div>
-
-    <!-- Edit mode -->
-    <NCard v-else title="Edit Todo" size="small">
-      <NForm label-placement="top" @submit.prevent="saveEdit">
-        <NFormItem label="Title">
-          <NInput v-model:value="editTitle" />
-        </NFormItem>
-
-        <NFormItem label="Description">
-          <NInput v-model:value="editDescription" type="textarea" :rows="5" />
-        </NFormItem>
-
-        <NSpace :size="12">
-          <NFormItem label="Status" style="flex: 1">
-            <NSelect v-model:value="editStatus" :options="statusOptions" />
-          </NFormItem>
-          <NFormItem label="Priority" style="flex: 1">
-            <NSelect
-              v-model:value="editPriority"
-              :options="priorityOptions"
-              :render-label="renderPriorityLabel"
-            />
-          </NFormItem>
-          <NFormItem label="Difficulty" style="flex: 1">
-            <NSelect
-              v-model:value="editDifficulty"
-              :options="difficultyOptions"
-              :render-label="renderDifficultyLabel"
-            />
-          </NFormItem>
-        </NSpace>
-
-        <NFormItem label="Labels">
+        <div class="meta-item">
+          <label class="meta-label">Priority</label>
           <NSelect
-            v-model:value="editLabels"
+            ref="prioritySelectRef"
+            :value="todo.priority"
+            :options="priorityOptions"
+            :render-label="renderPriorityLabel"
+            size="small"
+            :show="priorityPickerOpen"
+            style="width: 160px"
+            @update:value="changePriority"
+            @update:show="(v: boolean) => (priorityPickerOpen = v)"
+          />
+        </div>
+
+        <div class="meta-item">
+          <label class="meta-label">Difficulty</label>
+          <NSelect
+            ref="difficultySelectRef"
+            :value="todo.difficulty"
+            :options="difficultyOptions"
+            :render-label="renderDifficultyLabel"
+            size="small"
+            :show="difficultyPickerOpen"
+            style="width: 160px"
+            @update:value="changeDifficulty"
+            @update:show="(v: boolean) => (difficultyPickerOpen = v)"
+          />
+        </div>
+
+        <div class="meta-item">
+          <label class="meta-label">Assignee</label>
+          <NSelect
+            :value="todo.assignee"
+            :options="assigneeOptions"
+            size="small"
+            clearable
+            placeholder="Unassigned"
+            style="width: 160px"
+            @update:value="changeAssignee"
+          />
+        </div>
+
+        <div class="meta-item">
+          <label class="meta-label">Labels</label>
+          <NSelect
+            :value="todo.labels"
             :options="labelOptions"
             :render-label="renderLabelTag"
+            size="small"
             multiple
             clearable
             placeholder="Add labels..."
+            style="min-width: 200px"
+            @update:value="changeLabels"
           />
-        </NFormItem>
+        </div>
 
-        <NFormItem label="Assignee">
-          <NSelect
-            v-model:value="editAssignee"
-            :options="memberOptions"
-            placeholder="Assign to a member..."
-            clearable
+        <div class="meta-item">
+          <label class="meta-label">Created</label>
+          <span class="meta-value">{{ formatDate(todo.createdAt) }}</span>
+        </div>
+
+        <div class="meta-item">
+          <label class="meta-label">Updated</label>
+          <span class="meta-value">{{ formatDate(todo.updatedAt) }}</span>
+        </div>
+      </div>
+
+      <!-- Branch -->
+      <div class="meta-grid" style="margin-top: 8px">
+        <div class="meta-item">
+          <label class="meta-label">Branch</label>
+          <div v-if="todo.branch" class="branch-name">
+            <NTag size="small" :bordered="false" style="font-family: monospace">
+              {{ todo.branch }}
+            </NTag>
+            <NButton
+              size="tiny"
+              quaternary
+              type="error"
+              :loading="branchLoading"
+              @click="handleRemoveBranch"
+            >
+              Remove
+            </NButton>
+          </div>
+          <NButton
+            v-else
+            size="small"
+            secondary
+            :loading="branchLoading"
+            @click="handleCreateBranch"
+          >
+            Create Worktree + Branch
+          </NButton>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="field-group">
+        <label class="meta-label">Description</label>
+        <NInput
+          v-model:value="description"
+          type="textarea"
+          :autosize="{ minRows: 8, maxRows: 24 }"
+          placeholder="Add a description..."
+          @blur="commitDescription"
+        />
+      </div>
+
+      <!-- Comments -->
+      <div class="field-group">
+        <label class="meta-label">Comments ({{ todo.comments?.length ?? 0 }})</label>
+        <div v-if="todo.comments?.length" class="comments-list">
+          <div v-for="c in todo.comments" :key="c.id" class="comment-item">
+            <div class="comment-header">
+              <strong>{{ c.authorName }}</strong>
+              <span class="comment-date">{{ formatDate(c.createdAt) }}</span>
+            </div>
+            <div class="comment-text">{{ c.text }}</div>
+          </div>
+        </div>
+        <div class="comment-input">
+          <NInput
+            v-model:value="commentText"
+            type="textarea"
+            :autosize="{ minRows: 2, maxRows: 6 }"
+            placeholder="Write a comment..."
+            @keydown.meta.enter="submitComment"
+            @keydown.ctrl.enter="submitComment"
           />
-        </NFormItem>
-
-        <NSpace justify="end" :size="8">
-          <NButton @click="cancelEdit">Cancel</NButton>
-          <NButton type="primary" @click="saveEdit" :loading="saving">Save Changes</NButton>
-        </NSpace>
-      </NForm>
-    </NCard>
+          <NButton
+            size="small"
+            type="primary"
+            :loading="commentLoading"
+            :disabled="!commentText.trim()"
+            style="align-self: flex-end; margin-top: 8px"
+            @click="submitComment"
+          >
+            Comment
+          </NButton>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.detail-view {
-  max-width: 800px;
+.detail-page {
+  max-width: 880px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 24px 32px;
+  overflow-x: hidden;
 }
 
 .detail-nav {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .not-found {
@@ -360,66 +559,108 @@ function formatDate(iso: string | number): string {
   margin-bottom: 16px;
 }
 
+.detail-content {
+  /* Full page — no height constraints like the modal */
+}
+
 .detail-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
-  gap: 16px;
+  margin-bottom: 8px;
 }
 
-.detail-header-left {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 1;
-}
-
-.detail-title {
+.inline-title {
+  width: 100%;
   font-size: 22px;
   font-weight: 700;
   line-height: 1.3;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 4px 0;
+  margin-bottom: 16px;
+  color: inherit;
+  font-family: inherit;
+  border-bottom: 2px solid transparent;
 }
 
-.detail-meta {
+.inline-title:focus {
+  border-bottom-color: var(--n-primary-color, #18a058);
+}
+
+.meta-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
   margin-bottom: 16px;
 }
 
-.meta-section {
-  margin-bottom: 12px;
-}
-
-.meta-section:last-child {
-  margin-bottom: 0;
+.meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .meta-label {
-  display: block;
   font-size: 11px;
   font-weight: 600;
   opacity: 0.5;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.meta-value {
+  font-size: 13px;
+  line-height: 28px;
+}
+
+.field-group {
+  margin-bottom: 16px;
+}
+
+.field-group .meta-label {
   margin-bottom: 6px;
+  display: block;
 }
 
-.meta-descriptions {
-  margin-top: 12px;
+.comments-list {
+  margin-bottom: 12px;
 }
 
-.detail-description {
-  margin-top: 16px;
+.comment-item {
+  padding: 10px 12px;
+  border: 1px solid rgba(128, 128, 128, 0.15);
+  border-radius: 6px;
+  margin-bottom: 8px;
 }
 
-.description-body {
-  font-size: 14px;
-  line-height: 1.6;
+.comment-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.comment-date {
+  font-size: 11px;
+  opacity: 0.5;
+}
+
+.comment-text {
+  font-size: 13px;
   white-space: pre-wrap;
 }
 
-.description-empty {
-  font-size: 13px;
-  opacity: 0.35;
-  font-style: italic;
+.comment-input {
+  display: flex;
+  flex-direction: column;
+}
+
+.branch-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 </style>

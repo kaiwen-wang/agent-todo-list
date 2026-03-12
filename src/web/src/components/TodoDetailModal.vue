@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, h, onMounted, onUnmounted, type Component } from "vue";
+import { useRouter } from "vue-router";
 import { NModal, NCard, NTag, NIcon, NSelect, NInput, NButton, useMessage } from "naive-ui";
 import {
   AntennaBars1,
@@ -7,6 +8,8 @@ import {
   AntennaBars3,
   AntennaBars4,
   AntennaBars5,
+  ExternalLink,
+  Trash,
 } from "@vicons/tabler";
 import { useProjectStore } from "@/stores/project";
 import type { Status, Priority, Difficulty, Label } from "@/types";
@@ -34,6 +37,7 @@ const PRIORITY_ICON: Record<Priority, Component> = {
 };
 
 const store = useProjectStore();
+const router = useRouter();
 const message = useMessage();
 
 const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }));
@@ -104,6 +108,13 @@ watch(
 
 function close() {
   store.closeTodo();
+}
+
+function openFullPage() {
+  if (!todo.value) return;
+  const num = todo.value.number;
+  store.closeTodo();
+  router.push({ name: "todo-detail", params: { number: num } });
 }
 
 async function saveField(field: string, value: unknown) {
@@ -309,17 +320,22 @@ async function handleRemoveBranch() {
 
 <template>
   <NModal :show="isOpen" @update:show="(v: boolean) => !v && close()">
-    <NCard :bordered="true" style="width: 680px; max-width: 95vw; min-height: 70vh" role="dialog">
+    <NCard :bordered="true" style="width: 880px; max-width: 95vw; min-height: 70vh" role="dialog">
       <div v-if="!todo" class="not-found">
         <p>Todo not found.</p>
       </div>
 
       <div v-else>
-        <!-- Header: ref + title -->
+        <!-- Header: ref + outlink + archive -->
         <div class="detail-header">
-          <NTag size="small" :bordered="false" style="font-family: monospace; flex-shrink: 0">
-            {{ todo.ref }}
-          </NTag>
+          <div class="header-left">
+            <NTag size="small" :bordered="false" style="font-family: monospace; flex-shrink: 0">
+              {{ todo.ref }}
+            </NTag>
+            <button class="outlink-btn" title="Open full page" @click="openFullPage">
+              <NIcon :size="14"><ExternalLink /></NIcon>
+            </button>
+          </div>
           <NButton
             v-if="todo.status !== 'archived'"
             size="tiny"
@@ -329,21 +345,7 @@ async function handleRemoveBranch() {
             @click="handleArchive"
           >
             <template #icon>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M3 6h18" />
-                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-              </svg>
+              <NIcon :size="14"><Trash /></NIcon>
             </template>
           </NButton>
         </div>
@@ -533,6 +535,31 @@ async function handleRemoveBranch() {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 8px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.outlink-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.35;
+  color: inherit;
+}
+
+.outlink-btn:hover {
+  opacity: 0.8;
+  background: rgba(0, 0, 0, 0.06);
 }
 
 .inline-title {

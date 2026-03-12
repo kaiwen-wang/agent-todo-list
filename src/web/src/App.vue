@@ -416,12 +416,12 @@ body {
 
 .main-content {
   height: calc(100vh - 20px);
-  overflow: auto;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
   background: #ffffff;
   margin: 10px;
   border-radius: 6px;
   border: 1px solid #d9d9d9;
-  overscroll-behavior: contain;
 }
 
 .loading {

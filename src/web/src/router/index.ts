@@ -27,6 +27,12 @@ const router = createRouter({
       name: "members",
       component: () => import("@/views/MembersView.vue"),
     },
+    {
+      path: "/todo/:number",
+      name: "todo-detail",
+      component: () => import("@/views/TodoDetailView.vue"),
+      props: (route) => ({ number: Number(route.params.number) }),
+    },
   ],
 });
 
