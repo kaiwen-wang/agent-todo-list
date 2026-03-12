@@ -138,7 +138,23 @@ export const useProjectStore = defineStore("project", () => {
   }
 
   async function moveTodo(number: number, status: Status) {
-    return updateTodo(number, { status });
+    // Optimistic: update local state immediately
+    if (project.value) {
+      project.value = {
+        ...project.value,
+        todos: project.value.todos.map((t) =>
+          t.number === number ? { ...t, status, updatedAt: Date.now() } : t,
+        ),
+      };
+    }
+    skipNextRefresh = true;
+    try {
+      await api.updateTodo(number, { status });
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e);
+      skipNextRefresh = false;
+      await load();
+    }
   }
 
   async function addComment(number: number, text: string) {
