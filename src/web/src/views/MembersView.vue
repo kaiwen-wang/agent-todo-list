@@ -25,8 +25,8 @@ import {
   AntennaBars5,
 } from "@vicons/tabler";
 import { useProjectStore } from "@/stores/project";
-import type { Member, MemberRole, Todo, Priority, AgentProvider } from "@/types";
-import { STATUS_DISPLAY, STATUS_COLORS, PRIORITY_COLORS, AGENT_PROVIDER_DISPLAY } from "@/types";
+import type { Member, MemberRole, Todo, Priority } from "@/types";
+import { STATUS_DISPLAY, STATUS_COLORS, PRIORITY_COLORS } from "@/types";
 
 const PRIORITY_ICON: Record<Priority, Component> = {
   none: AntennaBars1,
@@ -70,42 +70,6 @@ const ROLE_COLORS: Record<MemberRole, string> = {
 // ── Agents ──
 
 const humanMembers = computed(() => store.members.filter((m) => m.role !== "agent"));
-const agentLoading = ref<string | null>(null); // tracks which provider is loading
-
-const AGENT_OPTIONS: { provider: AgentProvider; name: string; description: string }[] = [
-  { provider: "claude-code", name: "Claude Code", description: "Anthropic's coding agent" },
-  { provider: "opencode", name: "Opencode", description: "Open-source coding agent" },
-];
-
-function isAgentEnabled(provider: AgentProvider): boolean {
-  return store.agents.some((a) => a.agentProvider === provider);
-}
-
-function getAgentMember(provider: AgentProvider) {
-  return store.agents.find((a) => a.agentProvider === provider);
-}
-
-async function toggleAgent(provider: AgentProvider) {
-  agentLoading.value = provider;
-  try {
-    const existing = getAgentMember(provider);
-    if (existing) {
-      await store.removeMember(existing.id);
-      message.success(`${AGENT_PROVIDER_DISPLAY[provider]} disabled`);
-    } else {
-      await store.addMember({
-        name: AGENT_PROVIDER_DISPLAY[provider],
-        role: "agent",
-        agentProvider: provider,
-      });
-      message.success(`${AGENT_PROVIDER_DISPLAY[provider]} enabled`);
-    }
-  } catch {
-    message.error("Failed to update agent");
-  } finally {
-    agentLoading.value = null;
-  }
-}
 
 // ── Table ──
 

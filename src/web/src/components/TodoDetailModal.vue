@@ -10,11 +10,9 @@ import {
   AntennaBars5,
   ExternalLink,
   Trash,
-  PlayerPlay,
 } from "@vicons/tabler";
 import { useProjectStore } from "@/stores/project";
 import type { Status, Priority, Difficulty, Label } from "@/types";
-import { AGENT_PROVIDER_DISPLAY } from "@/types";
 import {
   STATUSES,
   PRIORITIES,
@@ -283,39 +281,6 @@ async function submitComment() {
     message.error(e instanceof Error ? e.message : "Failed to add comment");
   } finally {
     commentLoading.value = false;
-  }
-}
-
-// ── Branch ──
-const branchLoading = ref(false);
-
-async function handleCreateBranch() {
-  if (!todo.value) return;
-  branchLoading.value = true;
-  try {
-    const result = await store.createBranch(todo.value.number);
-    if (result.alreadyExists) {
-      message.info(`Branch already exists: ${result.branch}`);
-    } else {
-      message.success(`Created branch: ${result.branch}`);
-    }
-  } catch (e: unknown) {
-    message.error(e instanceof Error ? e.message : "Failed to create branch");
-  } finally {
-    branchLoading.value = false;
-  }
-}
-
-async function handleRemoveBranch() {
-  if (!todo.value?.branch) return;
-  branchLoading.value = true;
-  try {
-    await store.removeBranch(todo.value.number);
-    message.success("Removed worktree + branch");
-  } catch (e: unknown) {
-    message.error(e instanceof Error ? e.message : "Failed to remove branch");
-  } finally {
-    branchLoading.value = false;
   }
 }
 </script>

@@ -2,14 +2,7 @@
 import { ref } from "vue";
 import { NButton, NPopselect } from "naive-ui";
 import { useProjectStore } from "@/stores/project";
-import {
-  STATUSES,
-  STATUS_DISPLAY,
-  STATUS_COLORS,
-  PRIORITIES,
-  PRIORITY_DISPLAY,
-  PRIORITY_COLORS,
-} from "@/types";
+import { STATUSES, STATUS_DISPLAY, PRIORITIES, PRIORITY_DISPLAY } from "@/types";
 import type { Status, Priority } from "@/types";
 
 const store = useProjectStore();
