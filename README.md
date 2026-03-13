@@ -1,15 +1,16 @@
 # agent-todo-list
 
-To install dependencies:
+![alt text](image.png)
 
-```bash
-bun install
-```
+- always felt tasks should be local
+- inspired by:
+    - https://github.com/hmans/beans
+    - https://github.com/MrLesk/Backlog.md
 
-To run:
+# architecture
 
-```bash
-bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.3.8. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+- cli, vue frontend
+    - automerge, lefthook, oxfmt, oxlint
+    - naive ui
+    - makefile
+    - bun (will rewrite in Rust or go, binary is too big)
