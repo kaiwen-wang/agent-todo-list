@@ -5,6 +5,7 @@
 
 import type * as Automerge from "@automerge/automerge";
 import type { Project, Todo, Status, Priority, Difficulty } from "./schema.js";
+import { getGitIdentity } from "./git-identity.js";
 
 type Doc = Automerge.Doc<Project>;
 
@@ -87,8 +88,27 @@ export function parseTodoRef(ref: string, prefix: string): number | null {
   return Number.isNaN(num) ? null : num;
 }
 
-/** Find a member by name (case-insensitive partial match) or ID. */
+/** Find a member by name (case-insensitive partial match), ID, or "me" (git identity). */
 export function findMember(doc: Doc, nameOrId: string): (typeof doc.members)[number] | undefined {
+  // Resolve "me" via git config user.email / user.name
+  if (nameOrId.toLowerCase() === "me") {
+    const git = getGitIdentity();
+    // Match by email first (more stable identifier), then by name
+    if (git.email) {
+      const byEmail = doc.members.find(
+        (m) => m.email && m.email.toLowerCase() === git.email!.toLowerCase(),
+      );
+      if (byEmail) return byEmail;
+    }
+    if (git.name) {
+      const byName = doc.members.find(
+        (m) => m.name.toLowerCase() === git.name!.toLowerCase(),
+      );
+      if (byName) return byName;
+    }
+    return undefined;
+  }
+
   const lower = nameOrId.toLowerCase();
   return (
     doc.members.find((m) => m.id === nameOrId) ||
