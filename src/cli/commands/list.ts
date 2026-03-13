@@ -81,8 +81,9 @@ export function registerList(program: Command): void {
           return;
         }
 
+        const members = [...doc.members];
         for (const todo of todos) {
-          console.log(formatTodoLine(todo, config.prefix));
+          console.log(formatTodoLine(todo, config.prefix, members));
         }
       },
     );

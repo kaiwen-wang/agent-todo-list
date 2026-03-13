@@ -4,7 +4,7 @@
  */
 
 import chalk from "chalk";
-import type { Todo, Status, Priority, Difficulty, Timestamp } from "../lib/schema.js";
+import type { Todo, Member, Status, Priority, Difficulty, Timestamp } from "../lib/schema.js";
 import { LABEL_DISPLAY } from "../lib/schema.js";
 
 const STATUS_COLORS: Record<Status, (s: string) => string> = {
@@ -58,7 +58,7 @@ const DIFFICULTY_LABELS: Record<Difficulty, string> = {
 };
 
 /** Format a single todo as a one-line summary for list view. */
-export function formatTodoLine(todo: Todo, prefix: string): string {
+export function formatTodoLine(todo: Todo, prefix: string, members?: Member[]): string {
   const ref = chalk.bold(`${prefix}-${todo.number}`);
   const icon = STATUS_ICONS[todo.status];
   const statusColor = STATUS_COLORS[todo.status];
@@ -71,7 +71,11 @@ export function formatTodoLine(todo: Todo, prefix: string): string {
     todo.difficulty && todo.difficulty !== "none"
       ? " " + DIFFICULTY_COLORS[todo.difficulty](DIFFICULTY_LABELS[todo.difficulty])
       : "";
-  return `[${icon}] ${ref} ${title}${priority}${difficulty}`;
+  const assignee =
+    todo.assignee && members
+      ? " " + chalk.dim(`@${members.find((m) => m.id === todo.assignee)?.name ?? "unknown"}`)
+      : "";
+  return `[${icon}] ${ref} ${title}${priority}${difficulty}${assignee}`;
 }
 
 /** Format a todo's full detail view. */
