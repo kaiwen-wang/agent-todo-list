@@ -18,6 +18,7 @@
 
 - mcps are outdated
 - terminal ui often too hard to use, went for solely cli + web
+- `agt` is short and easy to type
 
 # todo:
 
