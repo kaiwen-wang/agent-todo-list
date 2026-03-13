@@ -20,6 +20,7 @@ import { registerConfig } from "./commands/config.js";
 import { registerServe } from "./commands/browser.js";
 import { registerInbox } from "./commands/inbox.js";
 import { registerBrain } from "./commands/brain.js";
+import { registerLog } from "./commands/log.js";
 
 const program = new Command();
 
@@ -41,5 +42,6 @@ registerConfig(program);
 registerServe(program);
 registerInbox(program);
 registerBrain(program);
+registerLog(program);
 
 program.parse();

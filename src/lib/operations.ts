@@ -411,3 +411,28 @@ export function updateMember(
     audit(d, "member.updated", actor, member.name, changed);
   });
 }
+
+// ── Audit log operations ──────────────────────────────────────────
+
+/** Clear all audit log entries */
+export function clearAuditLog(doc: Doc): Doc {
+  return Automerge.change(doc, (d) => {
+    if (d.auditLog) {
+      d.auditLog.splice(0, d.auditLog.length);
+    }
+  });
+}
+
+/** Remove audit log entries older than the given date */
+export function trimAuditLog(doc: Doc, before: Date): Doc {
+  return Automerge.change(doc, (d) => {
+    if (!d.auditLog) return;
+    const cutoff = before.getTime();
+    // Iterate backwards to safely splice while iterating
+    for (let i = d.auditLog.length - 1; i >= 0; i--) {
+      if (d.auditLog[i]!.timestamp < cutoff) {
+        d.auditLog.splice(i, 1);
+      }
+    }
+  });
+}
