@@ -1,7 +1,13 @@
 {
   "name": "agent-todo-list",
+  "description": "Local-first, CRDT-backed todo/project management for AI coding agents",
   "type": "module",
   "private": true,
+  "license": "AGPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kaiwen-wang/agent-todo-list.git"
+  },
   "workspaces": ["src/web"],
   "bin": {
     "agt": "src/cli/index.ts"
