@@ -73,7 +73,7 @@ async function loadAndMigrate(dataPath: string): Promise<Doc | null> {
   return doc;
 }
 
-export async function startServer(projectPath: string, port = 3000, opts: ServerOptions = {}) {
+export async function startServer(projectPath: string, port = 3000, _opts: ServerOptions = {}) {
   const todoDir = join(projectPath, ".todo");
   const dataPath = join(todoDir, "data.automerge");
   const configPath = join(todoDir, "config.toml");
@@ -115,9 +115,9 @@ export async function startServer(projectPath: string, port = 3000, opts: Server
   }
 
   // ── File watcher — detect CLI writes to the automerge file ──
-  let fileWatcher: FSWatcher | undefined;
+  let _fileWatcher: FSWatcher | undefined;
   try {
-    fileWatcher = watch(dataPath, { persistent: false }, async (eventType) => {
+    _fileWatcher = watch(dataPath, { persistent: false }, async (eventType) => {
       if (saving) return; // ignore our own writes
       if (eventType === "change") {
         await reload();

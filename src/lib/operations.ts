@@ -12,7 +12,6 @@ import type {
   MemberId,
   Project,
   Todo,
-  Comment,
   Status,
   Priority,
   Difficulty,

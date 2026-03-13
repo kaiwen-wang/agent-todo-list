@@ -14,8 +14,7 @@ import { readInbox, writeInbox, appendProcessed, type ProcessedEntry } from "./i
 import { loadDoc } from "./storage.js";
 import { toJSON } from "./export.js";
 import { migrateDoc, needsMigration } from "./migrate.js";
-import type { Project } from "./schema.js";
-import type * as Automerge from "@automerge/automerge";
+
 
 // ── Event types ─────────────────────────────────────────────────────
 
