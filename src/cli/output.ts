@@ -89,7 +89,9 @@ export function formatTodoDetail(todo: Todo, prefix: string, memberName?: string
   lines.push(`  Priority: ${PRIORITY_COLORS[todo.priority](PRIORITY_LABELS[todo.priority])}`);
 
   if (todo.difficulty && todo.difficulty !== "none") {
-    lines.push(`  Difficulty: ${DIFFICULTY_COLORS[todo.difficulty](DIFFICULTY_LABELS[todo.difficulty])}`);
+    lines.push(
+      `  Difficulty: ${DIFFICULTY_COLORS[todo.difficulty](DIFFICULTY_LABELS[todo.difficulty])}`,
+    );
   }
 
   if (todo.assignee) {

@@ -353,8 +353,11 @@ export async function startServer(projectPath: string, port = 3000, _opts: Serve
               case "bulk": {
                 // Apply multiple operations in one request: single reload, single save, single broadcast.
                 // body.operations: Array<{ action: "update", number, updates } | { action: "delete", number }>
-                const ops: Array<{ action: string; number?: number; updates?: Record<string, unknown> }> =
-                  body.operations ?? [];
+                const ops: Array<{
+                  action: string;
+                  number?: number;
+                  updates?: Record<string, unknown>;
+                }> = body.operations ?? [];
                 for (const op of ops) {
                   switch (op.action) {
                     case "update":

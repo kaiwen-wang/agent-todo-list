@@ -101,9 +101,7 @@ export function findMember(doc: Doc, nameOrId: string): (typeof doc.members)[num
       if (byEmail) return byEmail;
     }
     if (git.name) {
-      const byName = doc.members.find(
-        (m) => m.name.toLowerCase() === git.name!.toLowerCase(),
-      );
+      const byName = doc.members.find((m) => m.name.toLowerCase() === git.name!.toLowerCase());
       if (byName) return byName;
     }
     return undefined;

@@ -15,7 +15,14 @@ export type Timestamp = number;
 
 // ── Enums ───────────────────────────────────────────────────────────
 
-export type Status = "none" | "todo" | "in_progress" | "completed" | "archived" | "wont_do" | "needs_elaboration";
+export type Status =
+  | "none"
+  | "todo"
+  | "in_progress"
+  | "completed"
+  | "archived"
+  | "wont_do"
+  | "needs_elaboration";
 export type Priority = "none" | "low" | "medium" | "high" | "urgent";
 export type Label = "new_feature" | "bug" | "feature_plus";
 export type Difficulty = "none" | "easy" | "medium" | "hard";
@@ -23,7 +30,11 @@ export type Platform = "cli" | "web" | "unknown";
 export type MemberRole = "owner" | "member" | "agent";
 export type AgentProvider = "claude-code" | "opencode" | "custom";
 
-export const AGENT_PROVIDERS: readonly AgentProvider[] = ["claude-code", "opencode", "custom"] as const;
+export const AGENT_PROVIDERS: readonly AgentProvider[] = [
+  "claude-code",
+  "opencode",
+  "custom",
+] as const;
 
 export const AGENT_PROVIDER_DISPLAY: Record<AgentProvider, string> = {
   "claude-code": "Claude Code",

@@ -26,9 +26,9 @@ const VERSION = "0.9.0";
 const program = new Command();
 
 program
-	.name("agt")
-	.description("Agent-native todo/project management tool")
-	.version(VERSION, "-v, --version", "output the version number");
+  .name("agt")
+  .description("Agent-native todo/project management tool")
+  .version(VERSION, "-v, --version", "output the version number");
 
 // Register all commands
 registerInit(program);
@@ -53,12 +53,12 @@ const args = process.argv.slice(2);
 const hasHelp = args.includes("--help") || args.includes("-h") || args.includes("-hf");
 const hasFull = args.includes("--full") || args.includes("-f") || args.includes("-hf");
 if (hasHelp && hasFull) {
-	program.outputHelp();
-	for (const sub of program.commands) {
-		console.log("\n" + "─".repeat(60));
-		sub.outputHelp();
-	}
-	process.exit(0);
+  program.outputHelp();
+  for (const sub of program.commands) {
+    console.log("\n" + "─".repeat(60));
+    sub.outputHelp();
+  }
+  process.exit(0);
 }
 
 program.parse();

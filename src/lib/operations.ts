@@ -55,7 +55,12 @@ function resolveActor(d: Project, actorId?: MemberId): MemberId {
 // ── Project operations ──────────────────────────────────────────────
 
 /** Create a brand new empty project document */
-export function createProject(prefix: string, name: string, ownerName: string, ownerEmail?: string | null): Doc {
+export function createProject(
+  prefix: string,
+  name: string,
+  ownerName: string,
+  ownerEmail?: string | null,
+): Doc {
   const ownerId = crypto.randomUUID();
 
   return Automerge.from<Project>({
@@ -161,7 +166,10 @@ export function updateTodo(
   doc: Doc,
   todoNumber: number,
   updates: Partial<
-    Pick<Todo, "title" | "description" | "status" | "priority" | "difficulty" | "labels" | "assignee">
+    Pick<
+      Todo,
+      "title" | "description" | "status" | "priority" | "difficulty" | "labels" | "assignee"
+    >
   >,
   actorId?: MemberId,
 ): Doc {
@@ -177,7 +185,10 @@ export function updateTodo(
       todo.title = updates.title;
     }
     if (updates.description !== undefined) {
-      changed.description = { lengthBefore: todo.description.length, lengthAfter: updates.description.length };
+      changed.description = {
+        lengthBefore: todo.description.length,
+        lengthAfter: updates.description.length,
+      };
       todo.description = updates.description;
     }
     if (updates.status !== undefined) {
@@ -201,10 +212,10 @@ export function updateTodo(
     }
     if (updates.assignee !== undefined) {
       const oldAssigneeName = todo.assignee
-        ? d.members.find((m) => m.id === todo.assignee)?.name ?? null
+        ? (d.members.find((m) => m.id === todo.assignee)?.name ?? null)
         : null;
       const newAssigneeName = updates.assignee
-        ? d.members.find((m) => m.id === updates.assignee)?.name ?? null
+        ? (d.members.find((m) => m.id === updates.assignee)?.name ?? null)
         : null;
       changed.assignee = { from: oldAssigneeName, to: newAssigneeName };
       todo.assignee = updates.assignee;
@@ -224,7 +235,7 @@ export function deleteTodo(doc: Doc, todoNumber: number, actorId?: MemberId): Do
     const actor = resolveActor(d, actorId);
     const todo = d.todos[idx]!;
     const assigneeName = todo.assignee
-      ? d.members.find((m) => m.id === todo.assignee)?.name ?? null
+      ? (d.members.find((m) => m.id === todo.assignee)?.name ?? null)
       : null;
     audit(d, "todo.deleted", actor, `${d.prefix}-${todoNumber}`, {
       title: todo.title,
@@ -246,7 +257,7 @@ export function unassignTodo(doc: Doc, todoNumber: number, actorId?: MemberId): 
 
     const actor = resolveActor(d, actorId);
     const oldAssigneeName = todo.assignee
-      ? d.members.find((m) => m.id === todo.assignee)?.name ?? null
+      ? (d.members.find((m) => m.id === todo.assignee)?.name ?? null)
       : null;
 
     todo.assignee = null;

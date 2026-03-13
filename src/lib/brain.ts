@@ -15,7 +15,6 @@ import { loadDoc } from "./storage.js";
 import { toJSON } from "./export.js";
 import { migrateDoc, needsMigration } from "./migrate.js";
 
-
 // ── Event types ─────────────────────────────────────────────────────
 
 export type BrainEvent =
