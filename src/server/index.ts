@@ -157,7 +157,8 @@ export async function startServer(projectPath: string, port = 3000, _opts: Serve
           await reload();
           if (!doc) return jsonResponse({ error: "No data" }, 500);
 
-          const body = await req.json();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const body: any = await req.json();
           try {
             switch (body.action) {
               case "add": {

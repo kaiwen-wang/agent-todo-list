@@ -244,21 +244,21 @@ function handleDetailKeydown(e: KeyboardEvent) {
 
   if (statusPickerOpen.value && STATUS_KEYS[e.key]) {
     e.preventDefault();
-    changeStatus(STATUS_KEYS[e.key]);
+    changeStatus(STATUS_KEYS[e.key]!);
     statusPickerOpen.value = false;
     return;
   }
 
   if (priorityPickerOpen.value && PRIORITY_KEYS[e.key]) {
     e.preventDefault();
-    changePriority(PRIORITY_KEYS[e.key]);
+    changePriority(PRIORITY_KEYS[e.key]!);
     priorityPickerOpen.value = false;
     return;
   }
 
   if (difficultyPickerOpen.value && DIFFICULTY_KEYS[e.key]) {
     e.preventDefault();
-    changeDifficulty(DIFFICULTY_KEYS[e.key]);
+    changeDifficulty(DIFFICULTY_KEYS[e.key]!);
     difficultyPickerOpen.value = false;
     return;
   }
