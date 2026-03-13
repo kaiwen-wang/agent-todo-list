@@ -239,6 +239,26 @@ export function deleteTodo(doc: Doc, todoNumber: number, actorId?: MemberId): Do
   });
 }
 
+/** Unassign a todo (clear its assignee) */
+export function unassignTodo(doc: Doc, todoNumber: number, actorId?: MemberId): Doc {
+  return Automerge.change(doc, (d) => {
+    const todo = d.todos.find((t) => t.number === todoNumber);
+    if (!todo) throw new Error(`Todo #${todoNumber} not found`);
+
+    const actor = resolveActor(d, actorId);
+    const oldAssigneeName = todo.assignee
+      ? d.members.find((m) => m.id === todo.assignee)?.name ?? null
+      : null;
+
+    todo.assignee = null;
+    todo.updatedAt = Date.now();
+
+    audit(d, "todo.unassigned", actor, `${d.prefix}-${todoNumber}`, {
+      from: oldAssigneeName,
+    });
+  });
+}
+
 /** Add a comment to a todo */
 export function addComment(doc: Doc, todoNumber: number, text: string, actorId?: MemberId): Doc {
   return Automerge.change(doc, (d) => {
