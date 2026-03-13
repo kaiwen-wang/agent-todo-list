@@ -19,7 +19,8 @@ export function registerList(program: Command): void {
     .option("--difficulty <difficulty>", "Filter by difficulty (easy, medium, hard)")
     .option("-a, --assignee <name>", "Filter by assignee")
     .option("-q, --search <query>", "Search title and description")
-    .option("--all", "Include archived todos")
+    .option("--archived", "Show only archived todos")
+    .option("--all", "Include all todos (archived + won't do)")
     .option("--json", "Output as JSON")
     .action(
       async (opts: {
@@ -28,6 +29,7 @@ export function registerList(program: Command): void {
         difficulty?: string;
         assignee?: string;
         search?: string;
+        archived?: boolean;
         all?: boolean;
         json?: boolean;
       }) => {
@@ -42,6 +44,8 @@ export function registerList(program: Command): void {
 
         if (opts.status) {
           filter.status = opts.status as Status;
+        } else if (opts.archived) {
+          filter.status = ["archived"];
         } else if (opts.all) {
           // No status filter — include everything
           filter.status = [

@@ -27,7 +27,7 @@ export function queryTodos(doc: Doc, filter: TodoFilter = {}): Todo[] {
     const statuses = Array.isArray(statusFilter) ? statusFilter : [statusFilter];
     todos = todos.filter((t) => statuses.includes(t.status));
   } else {
-    todos = todos.filter((t) => t.status !== "archived");
+    todos = todos.filter((t) => t.status !== "archived" && t.status !== "wont_do");
   }
 
   if (filter.priority) {
