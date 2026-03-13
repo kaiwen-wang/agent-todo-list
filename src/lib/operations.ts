@@ -56,7 +56,7 @@ function resolveActor(d: Project, actorId?: MemberId): MemberId {
 // ── Project operations ──────────────────────────────────────────────
 
 /** Create a brand new empty project document */
-export function createProject(prefix: string, name: string, ownerName: string): Doc {
+export function createProject(prefix: string, name: string, ownerName: string, ownerEmail?: string | null): Doc {
   const ownerId = crypto.randomUUID();
 
   return Automerge.from<Project>({
@@ -71,7 +71,7 @@ export function createProject(prefix: string, name: string, ownerName: string): 
       {
         id: ownerId,
         name: ownerName,
-        email: null,
+        email: ownerEmail ?? null,
         role: "owner",
       },
     ],

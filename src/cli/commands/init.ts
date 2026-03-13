@@ -6,6 +6,7 @@ import type { Command } from "commander";
 import { findProject, isGitRepo, initProject } from "../../lib/project.js";
 import { createProject } from "../../lib/operations.js";
 import { saveDoc } from "../../lib/storage.js";
+import { getGitIdentity } from "../../lib/git-identity.js";
 import { error, warn, success } from "../output.js";
 
 export function registerInit(program: Command): void {
@@ -39,8 +40,13 @@ export function registerInit(program: Command): void {
         name: opts.name,
       });
 
+      // Resolve owner name and email from git config if not explicitly set
+      const git = getGitIdentity();
+      const ownerName = opts.owner !== "default" ? opts.owner : (git.name ?? "default");
+      const ownerEmail = git.email ?? null;
+
       // Create Automerge document
-      const doc = createProject(opts.prefix, opts.name, opts.owner);
+      const doc = createProject(opts.prefix, opts.name, ownerName, ownerEmail);
       await saveDoc(paths.dataPath, doc);
 
       success(
