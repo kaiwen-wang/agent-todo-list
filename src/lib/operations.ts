@@ -178,7 +178,7 @@ export function updateTodo(
       todo.title = updates.title;
     }
     if (updates.description !== undefined) {
-      changed.description = true;
+      changed.description = { lengthBefore: todo.description.length, lengthAfter: updates.description.length };
       todo.description = updates.description;
     }
     if (updates.status !== undefined) {
@@ -194,14 +194,20 @@ export function updateTodo(
       todo.difficulty = updates.difficulty;
     }
     if (updates.labels !== undefined) {
-      changed.labels = updates.labels;
+      changed.labels = { from: [...todo.labels], to: updates.labels };
       todo.labels.splice(0, todo.labels.length);
       for (const label of updates.labels) {
         todo.labels.push(label);
       }
     }
     if (updates.assignee !== undefined) {
-      changed.assignee = updates.assignee;
+      const oldAssigneeName = todo.assignee
+        ? d.members.find((m) => m.id === todo.assignee)?.name ?? null
+        : null;
+      const newAssigneeName = updates.assignee
+        ? d.members.find((m) => m.id === updates.assignee)?.name ?? null
+        : null;
+      changed.assignee = { from: oldAssigneeName, to: newAssigneeName };
       todo.assignee = updates.assignee;
     }
     todo.updatedAt = Date.now();
@@ -218,7 +224,16 @@ export function deleteTodo(doc: Doc, todoNumber: number, actorId?: MemberId): Do
 
     const actor = resolveActor(d, actorId);
     const todo = d.todos[idx]!;
-    audit(d, "todo.deleted", actor, `${d.prefix}-${todoNumber}`, { title: todo.title });
+    const assigneeName = todo.assignee
+      ? d.members.find((m) => m.id === todo.assignee)?.name ?? null
+      : null;
+    audit(d, "todo.deleted", actor, `${d.prefix}-${todoNumber}`, {
+      title: todo.title,
+      status: todo.status,
+      priority: todo.priority,
+      difficulty: todo.difficulty,
+      assignee: assigneeName,
+    });
 
     d.todos.splice(idx, 1);
   });
@@ -319,14 +334,20 @@ export function removeMember(doc: Doc, memberId: string, actorId?: MemberId): Do
 
     const actor = resolveActor(d, actorId);
     const member = d.members[idx]!;
-    audit(d, "member.removed", actor, member.name, {});
 
-    // Unassign any todos assigned to this member
+    // Count and unassign any todos assigned to this member
+    let todosUnassigned = 0;
     for (const todo of d.todos) {
       if (todo.assignee === memberId) {
         todo.assignee = null;
+        todosUnassigned++;
       }
     }
+
+    audit(d, "member.removed", actor, member.name, {
+      role: member.role,
+      todosUnassigned,
+    });
 
     d.members.splice(idx, 1);
   });
