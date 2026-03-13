@@ -10,6 +10,7 @@
 
 import * as Automerge from "@automerge/automerge";
 import { join } from "node:path";
+import { homedir } from "node:os";
 import { existsSync } from "node:fs";
 import { watch, type FSWatcher } from "node:fs";
 import type { ServerWebSocket } from "bun";
@@ -35,6 +36,14 @@ import { readInbox, writeInbox, readProcessed, ensureInboxFiles } from "../lib/i
 import { processInbox } from "../lib/brain.js";
 
 type Doc = Automerge.Doc<Project>;
+
+/** Locate the web dist directory: installed location first, then dev source. */
+function resolveDistDir(): string {
+  const installed = join(homedir(), ".local", "share", "agt", "web");
+  if (existsSync(installed)) return installed;
+  // Dev fallback: relative to source
+  return join(import.meta.dir, "..", "web", "dist");
+}
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -77,7 +86,7 @@ export async function startServer(projectPath: string, port = 3000, _opts: Serve
   const todoDir = join(projectPath, ".todo");
   const dataPath = join(todoDir, "data.automerge");
   const configPath = join(todoDir, "config.toml");
-  const distDir = join(import.meta.dir, "..", "web", "dist");
+  const distDir = resolveDistDir();
   let doc: Doc | null = await loadAndMigrate(dataPath);
 
   if (!doc) throw new Error(`Cannot load project data from ${dataPath}`);
