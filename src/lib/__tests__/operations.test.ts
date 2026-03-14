@@ -1,5 +1,5 @@
 import { test, expect, describe } from "bun:test";
-import * as Automerge from "@automerge/automerge";
+import * as Automerge from "#automerge";
 import {
   createProject,
   addTodo,

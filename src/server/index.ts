@@ -8,7 +8,7 @@
  * Serves the Vue dist/ as static files.
  */
 
-import * as Automerge from "@automerge/automerge";
+import * as Automerge from "#automerge";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { existsSync } from "node:fs";

@@ -15,7 +15,7 @@
  * - Exits 0 on success (tells git the merge succeeded)
  */
 
-import * as Automerge from "@automerge/automerge";
+import * as Automerge from "#automerge";
 import type { Project } from "./schema.js";
 
 const [, , basePath, oursPath, theirsPath] = process.argv;

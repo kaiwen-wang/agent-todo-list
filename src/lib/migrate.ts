@@ -6,7 +6,7 @@
  * version bump.
  */
 
-import * as Automerge from "@automerge/automerge";
+import * as Automerge from "#automerge";
 import type { Project } from "./schema.js";
 import { CURRENT_SCHEMA_VERSION } from "./schema.js";
 

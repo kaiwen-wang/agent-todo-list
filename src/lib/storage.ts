@@ -2,7 +2,7 @@
  * Load and save Automerge documents to disk.
  */
 
-import * as Automerge from "@automerge/automerge";
+import * as Automerge from "#automerge";
 import type { Project } from "./schema.js";
 
 type Doc = Automerge.Doc<Project>;

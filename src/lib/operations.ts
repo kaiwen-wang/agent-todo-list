@@ -5,8 +5,8 @@
  * Every mutation appends to the audit log automatically.
  */
 
-import * as Automerge from "@automerge/automerge";
-import { Counter } from "@automerge/automerge";
+import * as Automerge from "#automerge";
+import { Counter } from "#automerge";
 import type {
   Member,
   MemberId,
