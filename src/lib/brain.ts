@@ -160,6 +160,7 @@ export async function processInbox(projectPath: string, onEvent: EventCallback):
       "claude",
       "-p",
       prompt,
+      "--verbose",
       "--output-format",
       "stream-json",
       "--allowedTools",
@@ -346,10 +347,24 @@ function processStreamLine(
       }
 
       case "result": {
-        // Final result — optionally extract any last text
-        const text = extractText(event);
-        if (text) {
-          onEvent({ type: "brain:log", message: text });
+        // Check if the result indicates an error (e.g., auth failure)
+        if (event.is_error) {
+          const text = typeof event.result === "string" ? event.result : extractText(event);
+          onEvent({ type: "brain:error", message: text || "Claude encountered an unknown error" });
+        } else {
+          const text = extractText(event);
+          if (text) {
+            onEvent({ type: "brain:log", message: text });
+          }
+        }
+        break;
+      }
+
+      default: {
+        // Log unhandled event types for debugging (e.g., "system" init events)
+        if (event.error) {
+          const msg = typeof event.error === "string" ? event.error : JSON.stringify(event.error);
+          onEvent({ type: "brain:error", message: msg });
         }
         break;
       }
@@ -364,7 +379,7 @@ function processStreamLine(
 
 /** Extract text content from a stream-json event. */
 function extractText(event: Record<string, unknown>): string {
-  // Different event shapes depending on the stream-json format version
+  // Direct content field
   if (typeof event.content === "string") return event.content;
   if (Array.isArray(event.content)) {
     return event.content
@@ -372,7 +387,20 @@ function extractText(event: Record<string, unknown>): string {
       .map((c: { text?: string }) => c.text ?? "")
       .join("");
   }
+  // Nested message.content (assistant events wrap content inside message)
+  if (event.message && typeof event.message === "object") {
+    const msg = event.message as Record<string, unknown>;
+    if (Array.isArray(msg.content)) {
+      return msg.content
+        .filter((c: { type?: string }) => c.type === "text")
+        .map((c: { text?: string }) => c.text ?? "")
+        .join("");
+    }
+    if (typeof msg.content === "string") return msg.content;
+  }
   if (typeof event.message === "string") return event.message;
+  // Result events put text in the result field
+  if (typeof event.result === "string") return event.result;
   return "";
 }
 
