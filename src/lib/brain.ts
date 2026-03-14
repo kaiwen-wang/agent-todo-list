@@ -133,6 +133,15 @@ async function getProjectContext(dataPath: string): Promise<string> {
   return lines.join("\n");
 }
 
+/** Get all todo refs and titles from the current doc on disk. */
+async function getTodoRefs(dataPath: string): Promise<Array<{ ref: string; title: string }>> {
+  let doc = await loadDoc(dataPath);
+  if (!doc) return [];
+  if (needsMigration(doc)) doc = migrateDoc(doc);
+  const json = toJSON(doc) as { todos: Array<{ ref: string; title: string }> };
+  return json.todos.map((t) => ({ ref: t.ref, title: t.title }));
+}
+
 // ── Main processor ──────────────────────────────────────────────────
 
 export async function processInbox(projectPath: string, onEvent: EventCallback): Promise<void> {
@@ -152,9 +161,12 @@ export async function processInbox(projectPath: string, onEvent: EventCallback):
   const context = await getProjectContext(dataPath);
   const prompt = buildPrompt(inboxText, context);
 
+  // 3. Snapshot existing todo refs before spawning Claude
+  const existingRefs = await getTodoRefs(dataPath);
+
   onEvent({ type: "brain:log", message: "Spawning Claude agent..." });
 
-  // 3. Spawn claude CLI
+  // 4. Spawn claude CLI
   const proc = Bun.spawn(
     [
       "claude",
@@ -177,9 +189,7 @@ export async function processInbox(projectPath: string, onEvent: EventCallback):
     },
   );
 
-  // 4. Stream stdout line-by-line, parse stream-json events
-  const createdTasks: Array<{ ref: string; title: string }> = [];
-  const processedEntries: ProcessedEntry[] = [];
+  // 5. Stream stdout line-by-line, parse stream-json events
   const decoder = new TextDecoder();
   let buffer = "";
 
@@ -198,13 +208,13 @@ export async function processInbox(projectPath: string, onEvent: EventCallback):
 
       for (const line of lines) {
         if (!line.trim()) continue;
-        processStreamLine(line, onEvent, createdTasks);
+        processStreamLine(line, onEvent);
       }
     }
 
     // Process any remaining buffer
     if (buffer.trim()) {
-      processStreamLine(buffer, onEvent, createdTasks);
+      processStreamLine(buffer, onEvent);
     }
   } catch (err) {
     onEvent({
@@ -213,7 +223,7 @@ export async function processInbox(projectPath: string, onEvent: EventCallback):
     });
   }
 
-  // 5. Wait for process to exit
+  // 6. Wait for process to exit
   const exitCode = await proc.exited;
 
   // Check stderr for errors
@@ -225,16 +235,20 @@ export async function processInbox(projectPath: string, onEvent: EventCallback):
     });
   }
 
-  // 6. Archive processed items and clear inbox
-  if (createdTasks.length > 0) {
-    // Build processed entries — match created tasks back to inbox lines
+  // 7. Detect newly created tasks by comparing doc state before/after
+  const currentRefs = await getTodoRefs(dataPath);
+  const existingRefSet = new Set(existingRefs.map((t) => t.ref));
+  const newTasks = currentRefs.filter((t) => !existingRefSet.has(t.ref));
+
+  // 8. Archive processed items and clear inbox
+  if (newTasks.length > 0) {
     const inboxLines = inboxText
       .split("\n")
       .map((l) => l.replace(/^[-*]\s*/, "").trim())
       .filter(Boolean);
 
-    for (const task of createdTasks) {
-      // Find the closest matching inbox line
+    const processedEntries: ProcessedEntry[] = [];
+    for (const task of newTasks) {
       const match =
         inboxLines.find(
           (line) =>
@@ -242,11 +256,8 @@ export async function processInbox(projectPath: string, onEvent: EventCallback):
             line.toLowerCase().includes(task.title.toLowerCase().slice(0, 20)),
         ) ?? "(auto-expanded)";
 
-      processedEntries.push({
-        original: match,
-        ref: task.ref,
-        title: task.title,
-      });
+      processedEntries.push({ original: match, ref: task.ref, title: task.title });
+      onEvent({ type: "brain:task", ref: task.ref, title: task.title, original: match });
     }
 
     await appendProcessed(todoDir, processedEntries);
@@ -258,110 +269,52 @@ export async function processInbox(projectPath: string, onEvent: EventCallback):
     });
   }
 
-  // 7. Done
+  // 9. Done
   onEvent({
     type: "brain:done",
-    processed: createdTasks.length,
-    tasks: createdTasks,
+    processed: newTasks.length,
+    tasks: newTasks,
   });
 }
 
 /**
  * Parse a single line from Claude's stream-json output and emit events.
  *
- * The stream-json format outputs one JSON object per line with varying types:
- * - { type: "assistant", ... } — Claude's text output
- * - { type: "tool_use", ... } — Claude is running a tool
- * - { type: "tool_result", ... } — Tool execution result
- * - { type: "result", ... } — Final result
+ * The stream-json format outputs one JSON object per line:
+ * - { type: "system", subtype: "init", ... } — Session init
+ * - { type: "assistant", message: { content: [...] } } — Claude's response
+ *     Content blocks can be { type: "text" } or { type: "tool_use" }
+ * - { type: "result", is_error, result, ... } — Final result
  */
-function processStreamLine(
-  line: string,
-  onEvent: EventCallback,
-  createdTasks: Array<{ ref: string; title: string }>,
-): void {
+function processStreamLine(line: string, onEvent: EventCallback): void {
   try {
     const event = JSON.parse(line);
 
     switch (event.type) {
       case "assistant": {
-        // Claude text output — forward as log
-        const text = extractText(event);
-        if (text) {
-          onEvent({ type: "brain:log", message: text });
-        }
-        break;
-      }
-
-      case "tool_use": {
-        // Claude is about to run a command
-        const input = event.tool_use?.input ?? event.input;
-        if (input?.command) {
-          onEvent({ type: "brain:log", message: `$ ${input.command}` });
-        }
-        break;
-      }
-
-      case "tool_result": {
-        // Tool finished — check if it was an agt add that created a task
-        const content = event.tool_result?.content ?? event.content;
-        const text = typeof content === "string" ? content : JSON.stringify(content);
-
-        if (text) {
-          // Try to parse agt add --json output: { "ref": "ISD-5", "number": 5, "title": "..." }
-          const taskMatch = text.match(/"ref"\s*:\s*"([^"]+)"/);
-          const titleMatch = text.match(/"title"\s*:\s*"([^"]+)"/);
-          // Also try the simpler format: { ref, number, title }
-          const numberMatch = text.match(/"number"\s*:\s*(\d+)/);
-
-          if (taskMatch || numberMatch) {
-            try {
-              // Try to parse the full JSON for accurate extraction
-              const jsonStr = text.match(/\{[^{}]*\}/)?.[0];
-              if (jsonStr) {
-                const parsed = JSON.parse(jsonStr);
-                if (parsed.ref || parsed.number) {
-                  const ref = parsed.ref ?? `?-${parsed.number}`;
-                  const title = parsed.title ?? "(untitled)";
-                  createdTasks.push({ ref, title });
-                  onEvent({ type: "brain:task", ref, title, original: "" });
-                }
-              }
-            } catch {
-              // If JSON parsing fails, use regex matches
-              if (taskMatch?.[1]) {
-                const ref = taskMatch[1];
-                const title = titleMatch?.[1] ?? "(untitled)";
-                createdTasks.push({ ref, title });
-                onEvent({ type: "brain:task", ref, title, original: "" });
-              }
+        // Assistant events contain content blocks: text and tool_use
+        const content = event.message?.content;
+        if (Array.isArray(content)) {
+          for (const block of content) {
+            if (block.type === "text" && block.text) {
+              onEvent({ type: "brain:log", message: block.text });
+            } else if (block.type === "tool_use" && block.input?.command) {
+              onEvent({ type: "brain:log", message: `$ ${block.input.command}` });
             }
-          }
-
-          // Forward non-JSON output as log
-          if (!text.startsWith("{")) {
-            onEvent({ type: "brain:log", message: text });
           }
         }
         break;
       }
 
       case "result": {
-        // Check if the result indicates an error (e.g., auth failure)
         if (event.is_error) {
           const text = typeof event.result === "string" ? event.result : extractText(event);
           onEvent({ type: "brain:error", message: text || "Claude encountered an unknown error" });
-        } else {
-          const text = extractText(event);
-          if (text) {
-            onEvent({ type: "brain:log", message: text });
-          }
         }
         break;
       }
 
       default: {
-        // Log unhandled event types for debugging (e.g., "system" init events)
         if (event.error) {
           const msg = typeof event.error === "string" ? event.error : JSON.stringify(event.error);
           onEvent({ type: "brain:error", message: msg });
