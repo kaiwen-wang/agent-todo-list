@@ -6,8 +6,7 @@ import { join, dirname, basename } from "node:path";
 import { existsSync, mkdirSync, statSync } from "node:fs";
 import type { ProjectConfig } from "./schema.js";
 
-const ARTICLES = new Set(["a", "an", "the"]);
-const STOP_WORDS = new Set([...ARTICLES, "and", "or", "of", "for", "in", "on", "to", "with"]);
+
 
 const TODO_DIR = ".todo";
 const CONFIG_FILE = "config.toml";
@@ -228,12 +227,13 @@ function prettifyName(slug: string): string {
 
 /**
  * Derive a short prefix from a project name.
- * Takes the first letter of each significant word (skipping stop words),
- * up to 4 characters. Falls back to first 3 chars if only one word.
+ * Takes the first letter of each word, up to 4 characters.
+ * Falls back to first 3 chars if only one word.
  *
- *   "Agent Todo List"  →  "ATL"
- *   "my-app"           →  "MA"
- *   "server"           →  "SER"
+ *   "Agent Todo List"    →  "ATL"
+ *   "my-app"             →  "MA"
+ *   "server"             →  "SER"
+ *   "The Great Project"  →  "TGP"
  */
 export function derivePrefix(name: string): string {
   const words = name
@@ -241,14 +241,11 @@ export function derivePrefix(name: string): string {
     .split(/[-_\s]+/)
     .filter(Boolean);
 
-  const significant = words.filter((w) => !STOP_WORDS.has(w.toLowerCase()));
-  const source = significant.length > 0 ? significant : words;
-
-  if (source.length === 1) {
-    return source[0]!.slice(0, 3).toUpperCase();
+  if (words.length === 1) {
+    return words[0]!.slice(0, 3).toUpperCase();
   }
 
-  return source
+  return words
     .slice(0, 4)
     .map((w) => w.charAt(0))
     .join("")
