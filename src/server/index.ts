@@ -82,6 +82,9 @@ async function loadAndMigrate(dataPath: string): Promise<Doc | null> {
   return doc;
 }
 
+/** Maximum number of ports to try before giving up. */
+const MAX_PORT_ATTEMPTS = 10;
+
 export async function startServer(projectPath: string, port = 3000, _opts: ServerOptions = {}) {
   const todoDir = join(projectPath, ".todo");
   const dataPath = join(todoDir, "data.automerge");
@@ -137,10 +140,16 @@ export async function startServer(projectPath: string, port = 3000, _opts: Serve
     // File watching not available — graceful degradation
   }
 
-  const server = Bun.serve({
-    port,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let server: any;
+  let lastError: unknown;
+  for (let attempt = 0; attempt < MAX_PORT_ATTEMPTS; attempt++) {
+    const tryPort = port + attempt;
+    try {
+      server = Bun.serve({
+        port: tryPort,
 
-    routes: {
+        routes: {
       "/api/project": {
         async GET() {
           await reload();
@@ -415,7 +424,19 @@ export async function startServer(projectPath: string, port = 3000, _opts: Serve
     },
   });
 
-  return server;
+      // Successfully started
+      return server;
+    } catch (err: unknown) {
+      const isAddrInUse =
+        err instanceof Error && "code" in err && (err as NodeJS.ErrnoException).code === "EADDRINUSE";
+      if (!isAddrInUse || attempt === MAX_PORT_ATTEMPTS - 1) throw err;
+      lastError = err;
+      // Try next port
+    }
+  }
+
+  // Should not reach here, but satisfy TypeScript
+  throw lastError ?? new Error(`Could not find an available port after ${MAX_PORT_ATTEMPTS} attempts`);
 }
 
 async function serveStatic(pathname: string, distDir: string) {

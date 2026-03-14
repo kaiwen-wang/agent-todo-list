@@ -16,7 +16,7 @@
 
     // Module aliases
     "paths": {
-      "#automerge": ["./node_modules/@automerge/automerge/dist/mjs/entrypoints/fullfat_base64.js"]
+      "#automerge": ["./node_modules/@automerge/automerge/dist/mjs/entrypoints/fullfat_node.js"]
     },
 
     // Best practices

@@ -1,12 +1,12 @@
 /**
  * Type declaration for the #automerge subpath import.
  *
- * The default "node" entrypoint loads WASM via fs.readFileSync(__dirname + "..."),
- * which breaks in `bun build --compile` standalone binaries because __dirname
- * gets hardcoded to the build machine's absolute path.
+ * We use the "fullfat_node" entrypoint which uses Node-compatible WASM loading
+ * (CJS require) and avoids the deprecated `initSync()` parameter warning that
+ * the "fullfat_base64" (web) entrypoint triggers.
  *
- * The #automerge import (defined in package.json "imports") resolves to the
- * base64 entrypoint which embeds WASM inline and works everywhere.
+ * The #automerge path alias is defined in tsconfig.json "paths" and resolved
+ * by Bun at runtime.
  */
 declare module "#automerge" {
   export * from "@automerge/automerge";

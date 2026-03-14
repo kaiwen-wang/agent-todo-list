@@ -19,8 +19,12 @@ export function registerServe(program: Command): void {
 
       const port = parseInt(opts.port, 10);
       const server = await startServer(paths!.root, port);
-      const url = `http://localhost:${server.port}`;
+      const actualPort = server.port;
+      const url = `http://localhost:${actualPort}`;
 
+      if (actualPort !== port) {
+        console.log(`\nPort ${port} was in use, using ${actualPort} instead.`);
+      }
       console.log(`\nDashboard running at ${url}`);
       console.log("Press Ctrl+C to stop.\n");
 
