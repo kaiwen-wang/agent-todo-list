@@ -3,7 +3,13 @@
  */
 
 import type { Command } from "commander";
-import { findProject, isGitRepo, initProject } from "../../lib/project.js";
+import {
+  findProject,
+  isGitRepo,
+  initProject,
+  detectProjectName,
+  derivePrefix,
+} from "../../lib/project.js";
 import { createProject } from "../../lib/operations.js";
 import { saveDoc } from "../../lib/storage.js";
 import { getGitIdentity } from "../../lib/git-identity.js";
@@ -13,10 +19,13 @@ export function registerInit(program: Command): void {
   program
     .command("init")
     .description("Initialize a new project in the current directory")
-    .option("-n, --name <name>", "Project name", "My Project")
-    .option("-p, --prefix <prefix>", "Issue prefix (e.g. ABC)", "TODO")
-    .option("-o, --owner <name>", "Owner name", "default")
-    .action(async (opts: { name: string; prefix: string; owner: string }) => {
+    .option(
+      "-n, --name <name>",
+      "Project name (auto-detected from package.json / git remote / dirname)",
+    )
+    .option("-p, --prefix <prefix>", "Issue prefix (auto-derived from name)")
+    .option("-o, --owner <name>", "Owner name (auto-detected from git config)")
+    .action(async (opts: { name?: string; prefix?: string; owner?: string }) => {
       const cwd = process.cwd();
 
       // Check if already initialized
@@ -32,26 +41,24 @@ export function registerInit(program: Command): void {
         );
       }
 
+      // Auto-detect name → derive prefix
+      const name = opts.name ?? detectProjectName(cwd);
+      const prefix = (opts.prefix ?? derivePrefix(name)).toUpperCase();
+
       // Create project
       const id = crypto.randomUUID();
-      const paths = await initProject(cwd, {
-        id,
-        prefix: opts.prefix.toUpperCase(),
-        name: opts.name,
-      });
+      const paths = await initProject(cwd, { id, prefix, name });
 
       // Resolve owner name and email from git config if not explicitly set
       const git = getGitIdentity();
-      const ownerName = opts.owner !== "default" ? opts.owner : (git.name ?? "default");
+      const ownerName = opts.owner ?? git.name ?? "default";
       const ownerEmail = git.email ?? null;
 
       // Create Automerge document
-      const doc = createProject(opts.prefix, opts.name, ownerName, ownerEmail);
+      const doc = createProject(prefix, name, ownerName, ownerEmail);
       await saveDoc(paths.dataPath, doc);
 
-      success(
-        `Initialized project "${opts.name}" (${opts.prefix.toUpperCase()}) at ${paths.todoDir}`,
-      );
+      success(`Initialized project "${name}" (${prefix}) at ${paths.todoDir}`);
       console.log(`  Config: ${paths.configPath}`);
       console.log(`  Data:   ${paths.dataPath}`);
       console.log(`  Inbox:  ${paths.inboxPath}`);

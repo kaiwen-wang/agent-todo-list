@@ -2,9 +2,12 @@
  * .todo/ directory management — finding, creating, and reading project config.
  */
 
-import { join, dirname } from "node:path";
+import { join, dirname, basename } from "node:path";
 import { existsSync, mkdirSync, statSync } from "node:fs";
 import type { ProjectConfig } from "./schema.js";
+
+const ARTICLES = new Set(["a", "an", "the"]);
+const STOP_WORDS = new Set([...ARTICLES, "and", "or", "of", "for", "in", "on", "to", "with"]);
 
 const TODO_DIR = ".todo";
 const CONFIG_FILE = "config.toml";
@@ -172,4 +175,82 @@ export async function readConfig(configPath: string): Promise<ProjectConfig> {
     prefix: config.prefix,
     name: config.name,
   };
+}
+
+/**
+ * Auto-detect a human-friendly project name from the environment.
+ * Priority: package.json "name" → git remote repo name → directory name.
+ */
+export function detectProjectName(dir: string): string {
+  // 1. package.json name
+  const pkgPath = join(dir, "package.json");
+  if (existsSync(pkgPath)) {
+    try {
+      const pkg = JSON.parse(require("node:fs").readFileSync(pkgPath, "utf-8"));
+      if (typeof pkg.name === "string" && pkg.name.trim()) {
+        return prettifyName(pkg.name.trim());
+      }
+    } catch {
+      // malformed package.json — fall through
+    }
+  }
+
+  // 2. git remote (origin) repo name
+  const remoteResult = Bun.spawnSync(["git", "remote", "get-url", "origin"], {
+    cwd: dir,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  if (remoteResult.exitCode === 0) {
+    const url = remoteResult.stdout.toString().trim();
+    // Handle both HTTPS and SSH URLs:
+    //   https://github.com/user/repo-name.git  →  repo-name
+    //   git@github.com:user/repo-name.git      →  repo-name
+    const repoName = basename(url).replace(/\.git$/, "");
+    if (repoName) return prettifyName(repoName);
+  }
+
+  // 3. Directory name
+  return prettifyName(basename(dir));
+}
+
+/**
+ * Turn a slug like "agent-todo-list" into "Agent Todo List".
+ */
+function prettifyName(slug: string): string {
+  return slug
+    .replace(/^@[^/]+\//, "") // strip npm scope
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+/**
+ * Derive a short prefix from a project name.
+ * Takes the first letter of each significant word (skipping stop words),
+ * up to 4 characters. Falls back to first 3 chars if only one word.
+ *
+ *   "Agent Todo List"  →  "ATL"
+ *   "my-app"           →  "MA"
+ *   "server"           →  "SER"
+ */
+export function derivePrefix(name: string): string {
+  const words = name
+    .replace(/^@[^/]+\//, "")
+    .split(/[-_\s]+/)
+    .filter(Boolean);
+
+  const significant = words.filter((w) => !STOP_WORDS.has(w.toLowerCase()));
+  const source = significant.length > 0 ? significant : words;
+
+  if (source.length === 1) {
+    return source[0]!.slice(0, 3).toUpperCase();
+  }
+
+  return source
+    .slice(0, 4)
+    .map((w) => w.charAt(0))
+    .join("")
+    .toUpperCase();
 }
