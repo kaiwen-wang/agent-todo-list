@@ -56,7 +56,7 @@ fn priority_label(priority: &Priority) -> &'static str {
 }
 
 fn colored_priority_short(priority: &Priority) -> String {
-    let label = priority_label(priority);
+    let label = format!("!{}", priority_label(priority));
     match priority {
         Priority::None => String::new(),
         Priority::Low => label.dimmed().to_string(),
@@ -89,7 +89,7 @@ fn difficulty_label(difficulty: &Difficulty) -> &'static str {
 }
 
 fn colored_difficulty_short(difficulty: &Difficulty) -> String {
-    let label = difficulty_label(difficulty);
+    let label = format!("^{}", difficulty_label(difficulty));
     match difficulty {
         Difficulty::None => String::new(),
         Difficulty::Easy => label.green().to_string(),
@@ -112,7 +112,7 @@ pub fn print_todo_list(todos: &[Todo], prefix: &str, members: &[Member]) {
         let todo_ref = format!("{}-{}", prefix, todo.number).bold().to_string();
         let title = colored_title(&todo.title, &todo.status);
 
-        let priority = if todo.priority != Priority::None && todo.priority != Priority::Medium {
+        let priority = if todo.priority != Priority::None {
             format!(" {}", colored_priority_short(&todo.priority))
         } else {
             String::new()

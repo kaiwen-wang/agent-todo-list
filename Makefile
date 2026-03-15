@@ -1,4 +1,9 @@
-.PHONY: deploy undeploy build web
+.PHONY: dev build web deploy undeploy test lint
+
+dev: ## Start Rust API server + Vite dev server
+	agt-rs/target/debug/agt serve & \
+	until curl -s http://localhost:3000/api/project > /dev/null 2>&1; do sleep 0.2; done && \
+	cd src/web && bunx vite
 
 build: web ## Build Rust binary (release) and web assets
 	cd agt-rs && cargo build --release
@@ -6,6 +11,13 @@ build: web ## Build Rust binary (release) and web assets
 web: ## Build Vue frontend
 	bun install
 	bun run --cwd src/web build-only
+
+test: ## Run Rust tests
+	cd agt-rs && cargo test
+
+lint: ## Run oxlint + oxfmt
+	bunx oxlint src/web/src --fix
+	bunx oxfmt src/web/src
 
 deploy: build ## Build and install `agt` binary + web assets to ~/.local
 	install -d ~/.local/bin
