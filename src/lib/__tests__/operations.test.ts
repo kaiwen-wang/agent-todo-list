@@ -20,7 +20,7 @@ describe("createProject", () => {
     expect(doc.members[0]!.name).toBe("Alice");
     expect(doc.members[0]!.role).toBe("owner");
     expect(doc.todos).toHaveLength(0);
-    expect(doc._version).toBe(4);
+    expect(doc._version).toBe(5);
   });
 
   test("uppercases the prefix", () => {

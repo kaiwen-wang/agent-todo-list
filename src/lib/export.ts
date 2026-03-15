@@ -5,6 +5,7 @@
 
 import type * as Automerge from "@automerge/automerge";
 import type { Project } from "./schema.js";
+import { getAuditLog } from "./history.js";
 
 type Doc = Automerge.Doc<Project>;
 
@@ -51,14 +52,14 @@ export function toJSON(doc: Doc): object {
       createdBy: t.createdBy,
       platform: t.platform ?? "unknown",
     })),
-    auditLog: (doc.auditLog ?? []).map((e) => ({
-      id: e.id,
+    auditLog: getAuditLog(doc).map((e) => ({
       action: e.action,
-      actor: e.actor,
+      actorId: e.actorId,
       actorName: e.actorName,
       target: e.target,
       details: e.details,
       timestamp: e.timestamp,
+      hash: e.hash,
     })),
   };
 }

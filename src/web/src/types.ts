@@ -34,13 +34,13 @@ export interface Comment {
 }
 
 export interface AuditEntry {
-  id: string;
   action: string;
-  actor: string;
+  actorId: string;
   actorName: string;
   target: string;
-  details: string;
+  details: Record<string, unknown>;
   timestamp: Timestamp;
+  hash: string;
 }
 
 export interface Todo {

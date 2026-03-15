@@ -23,6 +23,17 @@ type MigrationFn = (d: Project) => void;
  * e.g. migrations[1] upgrades from v1 → v2.
  */
 const migrations: Record<number, MigrationFn> = {
+  4: (d) => {
+    // v4 → v5:
+    //   - Remove auditLog array from the document.
+    //     Audit history is now derived from Automerge's built-in change history
+    //     via getAuditLog() in src/lib/history.ts.
+    //     We delete the field to stop it from growing the CRDT binary.
+    if ((d as any).auditLog) {
+      delete (d as any).auditLog;
+    }
+  },
+
   3: (d) => {
     // v3 → v4:
     //   - Add difficulty field to each todo (default "none" for pre-existing items)

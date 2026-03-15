@@ -2,7 +2,15 @@
  * Automerge mutation functions for the Project document.
  * All writes to the CRDT go through these functions.
  *
- * Every mutation appends to the audit log automatically.
+ * Audit metadata is embedded in each Automerge change's `message` field
+ * as a JSON string. This leverages Automerge's built-in history tracking
+ * instead of maintaining a separate auditLog array on the document.
+ *
+ * Change message format:
+ *   { action, target, actorId, actorName, details? }
+ *
+ * Use getAuditLog() from ./history.ts to reconstruct the audit log
+ * from Automerge's change history at read time.
  */
 
 import * as Automerge from "#automerge";
@@ -24,27 +32,43 @@ import { CURRENT_SCHEMA_VERSION } from "./schema.js";
 
 type Doc = Automerge.Doc<Project>;
 
-// ── Audit log helper ────────────────────────────────────────────────
+// ── Change message helper ───────────────────────────────────────────
 
-/** Append an audit entry inside an Automerge change callback. */
-function audit(
+/**
+ * Shape of the structured metadata stored in Automerge's change.message.
+ * Kept compact but readable since columnar compression handles repetition well.
+ */
+export interface ChangeMessage {
+  action: string;
+  target: string;
+  actorId: string;
+  actorName: string;
+  details?: Record<string, unknown>;
+}
+
+/**
+ * Build a JSON change message string. Called inside Automerge.change()
+ * callbacks and assigned to the mutable opts.message — Automerge reads
+ * the message from the opts object after the callback completes.
+ */
+function buildMsg(
   d: Project,
   action: string,
   actorId: MemberId,
   target: string,
-  details: Record<string, unknown> = {},
-): void {
-  if (!d.auditLog) (d as any).auditLog = [];
+  details?: Record<string, unknown>,
+): string {
   const actor = d.members.find((m) => m.id === actorId);
-  d.auditLog.push({
-    id: crypto.randomUUID(),
+  const msg: ChangeMessage = {
     action,
-    actor: actorId,
-    actorName: actor?.name ?? actorId,
     target,
-    details: JSON.stringify(details),
-    timestamp: Date.now(),
-  });
+    actorId,
+    actorName: actor?.name ?? actorId,
+  };
+  if (details && Object.keys(details).length > 0) {
+    msg.details = details;
+  }
+  return JSON.stringify(msg);
 }
 
 /** Resolve the "current actor" — first member if none specified. */
@@ -80,7 +104,6 @@ export function createProject(
       },
     ],
     todos: [],
-    auditLog: [],
   });
 }
 
@@ -90,7 +113,8 @@ export function updateProject(
   updates: Partial<Pick<Project, "name" | "description" | "prefix">>,
   actorId?: MemberId,
 ): Doc {
-  return Automerge.change(doc, (d) => {
+  const opts = { message: "" };
+  return Automerge.change(doc, opts, (d) => {
     const actor = resolveActor(d, actorId);
     const changed: Record<string, unknown> = {};
     if (updates.name !== undefined) {
@@ -105,7 +129,7 @@ export function updateProject(
       d.prefix = updates.prefix.toUpperCase();
       changed.prefix = d.prefix;
     }
-    audit(d, "project.updated", actor, d.name, changed);
+    opts.message = buildMsg(d, "project.updated", actor, d.name, changed);
   });
 }
 
@@ -128,7 +152,8 @@ export function addTodo(
 ): { doc: Doc; number: number } {
   let todoNumber = 0;
 
-  const nextDoc = Automerge.change(doc, (d) => {
+  const changeOpts = { message: "" };
+  const nextDoc = Automerge.change(doc, changeOpts, (d) => {
     d.counter.increment(1);
     todoNumber = d.counter.value;
     const actor = resolveActor(d, opts.createdBy);
@@ -151,7 +176,7 @@ export function addTodo(
       platform: opts.platform ?? "unknown",
     });
 
-    audit(d, "todo.created", actor, `${d.prefix}-${todoNumber}`, {
+    changeOpts.message = buildMsg(d, "todo.created", actor, `${d.prefix}-${todoNumber}`, {
       title: opts.title,
       status: opts.status ?? "todo",
       priority: opts.priority ?? "none",
@@ -173,7 +198,8 @@ export function updateTodo(
   >,
   actorId?: MemberId,
 ): Doc {
-  return Automerge.change(doc, (d) => {
+  const changeOpts = { message: "" };
+  return Automerge.change(doc, changeOpts, (d) => {
     const todo = d.todos.find((t) => t.number === todoNumber);
     if (!todo) throw new Error(`Todo #${todoNumber} not found`);
 
@@ -222,13 +248,14 @@ export function updateTodo(
     }
     todo.updatedAt = Date.now();
 
-    audit(d, "todo.updated", actor, `${d.prefix}-${todoNumber}`, changed);
+    changeOpts.message = buildMsg(d, "todo.updated", actor, `${d.prefix}-${todoNumber}`, changed);
   });
 }
 
 /** Delete a todo by number (hard delete) */
 export function deleteTodo(doc: Doc, todoNumber: number, actorId?: MemberId): Doc {
-  return Automerge.change(doc, (d) => {
+  const changeOpts = { message: "" };
+  return Automerge.change(doc, changeOpts, (d) => {
     const idx = d.todos.findIndex((t) => t.number === todoNumber);
     if (idx === -1) throw new Error(`Todo #${todoNumber} not found`);
 
@@ -237,7 +264,10 @@ export function deleteTodo(doc: Doc, todoNumber: number, actorId?: MemberId): Do
     const assigneeName = todo.assignee
       ? (d.members.find((m) => m.id === todo.assignee)?.name ?? null)
       : null;
-    audit(d, "todo.deleted", actor, `${d.prefix}-${todoNumber}`, {
+
+    // Embed the deleted item's key info in the change message,
+    // since it won't exist in the document after this change.
+    changeOpts.message = buildMsg(d, "todo.deleted", actor, `${d.prefix}-${todoNumber}`, {
       title: todo.title,
       status: todo.status,
       priority: todo.priority,
@@ -251,7 +281,8 @@ export function deleteTodo(doc: Doc, todoNumber: number, actorId?: MemberId): Do
 
 /** Unassign a todo (clear its assignee) */
 export function unassignTodo(doc: Doc, todoNumber: number, actorId?: MemberId): Doc {
-  return Automerge.change(doc, (d) => {
+  const changeOpts = { message: "" };
+  return Automerge.change(doc, changeOpts, (d) => {
     const todo = d.todos.find((t) => t.number === todoNumber);
     if (!todo) throw new Error(`Todo #${todoNumber} not found`);
 
@@ -263,7 +294,7 @@ export function unassignTodo(doc: Doc, todoNumber: number, actorId?: MemberId): 
     todo.assignee = null;
     todo.updatedAt = Date.now();
 
-    audit(d, "todo.unassigned", actor, `${d.prefix}-${todoNumber}`, {
+    changeOpts.message = buildMsg(d, "todo.unassigned", actor, `${d.prefix}-${todoNumber}`, {
       from: oldAssigneeName,
     });
   });
@@ -271,7 +302,8 @@ export function unassignTodo(doc: Doc, todoNumber: number, actorId?: MemberId): 
 
 /** Add a comment to a todo */
 export function addComment(doc: Doc, todoNumber: number, text: string, actorId?: MemberId): Doc {
-  return Automerge.change(doc, (d) => {
+  const changeOpts = { message: "" };
+  return Automerge.change(doc, changeOpts, (d) => {
     const todo = d.todos.find((t) => t.number === todoNumber);
     if (!todo) throw new Error(`Todo #${todoNumber} not found`);
 
@@ -288,7 +320,7 @@ export function addComment(doc: Doc, todoNumber: number, text: string, actorId?:
     });
     todo.updatedAt = Date.now();
 
-    audit(d, "todo.commented", actor, `${d.prefix}-${todoNumber}`, {
+    changeOpts.message = buildMsg(d, "todo.commented", actor, `${d.prefix}-${todoNumber}`, {
       text: text.length > 100 ? text.slice(0, 100) + "..." : text,
     });
   });
@@ -301,7 +333,8 @@ export function setBranch(
   branchName: string,
   actorId?: MemberId,
 ): Doc {
-  return Automerge.change(doc, (d) => {
+  const changeOpts = { message: "" };
+  return Automerge.change(doc, changeOpts, (d) => {
     const todo = d.todos.find((t) => t.number === todoNumber);
     if (!todo) throw new Error(`Todo #${todoNumber} not found`);
 
@@ -309,13 +342,16 @@ export function setBranch(
     todo.branch = branchName;
     todo.updatedAt = Date.now();
 
-    audit(d, "todo.branched", actor, `${d.prefix}-${todoNumber}`, { branch: branchName });
+    changeOpts.message = buildMsg(d, "todo.branched", actor, `${d.prefix}-${todoNumber}`, {
+      branch: branchName,
+    });
   });
 }
 
 /** Clear the branch name on a todo (after worktree removal) */
 export function clearBranch(doc: Doc, todoNumber: number, actorId?: MemberId): Doc {
-  return Automerge.change(doc, (d) => {
+  const changeOpts = { message: "" };
+  return Automerge.change(doc, changeOpts, (d) => {
     const todo = d.todos.find((t) => t.number === todoNumber);
     if (!todo) throw new Error(`Todo #${todoNumber} not found`);
 
@@ -324,7 +360,9 @@ export function clearBranch(doc: Doc, todoNumber: number, actorId?: MemberId): D
     todo.branch = null;
     todo.updatedAt = Date.now();
 
-    audit(d, "todo.unbranched", actor, `${d.prefix}-${todoNumber}`, { branch: oldBranch });
+    changeOpts.message = buildMsg(d, "todo.unbranched", actor, `${d.prefix}-${todoNumber}`, {
+      branch: oldBranch,
+    });
   });
 }
 
@@ -339,7 +377,8 @@ export function addMember(
   actorId?: MemberId,
   agentOpts?: { provider?: AgentProvider; model?: string },
 ): Doc {
-  return Automerge.change(doc, (d) => {
+  const changeOpts = { message: "" };
+  return Automerge.change(doc, changeOpts, (d) => {
     const actor = resolveActor(d, actorId);
     const member: Record<string, unknown> = {
       id: crypto.randomUUID(),
@@ -352,13 +391,14 @@ export function addMember(
       if (agentOpts.model) member.agentModel = agentOpts.model;
     }
     d.members.push(member as any);
-    audit(d, "member.added", actor, name, { role });
+    changeOpts.message = buildMsg(d, "member.added", actor, name, { role });
   });
 }
 
 /** Remove a member by ID or name. Clears assignee on any todos assigned to them. */
 export function removeMember(doc: Doc, memberId: string, actorId?: MemberId): Doc {
-  return Automerge.change(doc, (d) => {
+  const changeOpts = { message: "" };
+  return Automerge.change(doc, changeOpts, (d) => {
     const idx = d.members.findIndex((m) => m.id === memberId);
     if (idx === -1) throw new Error(`Member "${memberId}" not found`);
 
@@ -374,7 +414,7 @@ export function removeMember(doc: Doc, memberId: string, actorId?: MemberId): Do
       }
     }
 
-    audit(d, "member.removed", actor, member.name, {
+    changeOpts.message = buildMsg(d, "member.removed", actor, member.name, {
       role: member.role,
       todosUnassigned,
     });
@@ -390,7 +430,8 @@ export function updateMember(
   updates: Partial<Pick<Member, "name" | "email" | "role" | "agentProvider" | "agentModel">>,
   actorId?: MemberId,
 ): Doc {
-  return Automerge.change(doc, (d) => {
+  const changeOpts = { message: "" };
+  return Automerge.change(doc, changeOpts, (d) => {
     const member = d.members.find((m) => m.id === memberId);
     if (!member) throw new Error(`Member "${memberId}" not found`);
 
@@ -418,31 +459,6 @@ export function updateMember(
       (member as any).agentModel = updates.agentModel;
     }
 
-    audit(d, "member.updated", actor, member.name, changed);
-  });
-}
-
-// ── Audit log operations ──────────────────────────────────────────
-
-/** Clear all audit log entries */
-export function clearAuditLog(doc: Doc): Doc {
-  return Automerge.change(doc, (d) => {
-    if (d.auditLog) {
-      d.auditLog.splice(0, d.auditLog.length);
-    }
-  });
-}
-
-/** Remove audit log entries older than the given date */
-export function trimAuditLog(doc: Doc, before: Date): Doc {
-  return Automerge.change(doc, (d) => {
-    if (!d.auditLog) return;
-    const cutoff = before.getTime();
-    // Iterate backwards to safely splice while iterating
-    for (let i = d.auditLog.length - 1; i >= 0; i--) {
-      if (d.auditLog[i]!.timestamp < cutoff) {
-        d.auditLog.splice(i, 1);
-      }
-    }
+    changeOpts.message = buildMsg(d, "member.updated", actor, member.name, changed);
   });
 }

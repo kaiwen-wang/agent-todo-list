@@ -99,14 +99,19 @@ export interface Comment {
   createdAt: Timestamp;
 }
 
+/**
+ * AuditEntry is now reconstructed from Automerge's change history at read time
+ * (see src/lib/history.ts). This interface defines the shape returned by
+ * getAuditLog() — it is no longer stored on the document itself.
+ */
 export interface AuditEntry {
-  id: string;
   action: string; // e.g. "todo.created", "todo.updated", "todo.deleted"
-  actor: MemberId;
-  actorName: string; // snapshot at creation time
+  actorId: MemberId;
+  actorName: string; // snapshot at creation time (embedded in change message)
   target: string; // e.g. "TODO-1" or member name
-  details: string; // JSON string describing what changed
-  timestamp: Timestamp;
+  details: Record<string, unknown>; // structured details (no longer a JSON string)
+  timestamp: Timestamp; // from Automerge change.time (seconds) * 1000
+  hash: string; // Automerge change hash — unique identifier
 }
 
 // ── Core entities ───────────────────────────────────────────────────
@@ -150,11 +155,10 @@ export interface Project extends Record<string, unknown> {
   createdAt: Timestamp;
   members: Member[];
   todos: Todo[];
-  auditLog: AuditEntry[];
 }
 
 /** Current schema version — increment when making breaking changes */
-export const CURRENT_SCHEMA_VERSION = 4;
+export const CURRENT_SCHEMA_VERSION = 5;
 
 /** Config stored in .todo/config.toml (committed to git) */
 export interface ProjectConfig {
