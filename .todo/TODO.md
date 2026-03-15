@@ -7,3 +7,5 @@ use actual icons included with this app. claude.md
 git commits with prefix number
 
 Load the session history into the app itself
+
+Consider doing git commits on automerge change automatically
