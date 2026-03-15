@@ -4,15 +4,21 @@
 use automerge::AutoCommit;
 use serde_json::{json, Value};
 
-use crate::history::get_audit_log;
 use crate::queries::{read_all_members, read_all_todos, read_project_meta};
 
 /// Serialize the project as a JSON-serializable value.
-pub fn to_json(doc: &mut AutoCommit) -> Value {
+///
+/// Set `include_audit_log` to true to include the audit log (expensive — scans
+/// entire Automerge change history). The web API skips this for performance.
+pub fn to_json(doc: &mut AutoCommit, include_audit_log: bool) -> Value {
     let (id, prefix, name, description) = read_project_meta(doc);
     let members = read_all_members(doc);
     let todos = read_all_todos(doc);
-    let audit_log = get_audit_log(doc, None, None);
+    let audit_log = if include_audit_log {
+        crate::history::get_audit_log(doc, None, None)
+    } else {
+        vec![]
+    };
 
     json!({
         "id": id,

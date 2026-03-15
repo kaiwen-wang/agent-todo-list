@@ -37,7 +37,7 @@ pub fn run(
     } else {
         let (_, prefix, _, _) = queries::read_project_meta(&doc);
         let members = queries::read_all_members(&doc);
-        output::print_todo_table(&todos, &prefix, &members);
+        output::print_todo_list(&todos, &prefix, &members);
     }
 
     Ok(())

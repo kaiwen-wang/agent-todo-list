@@ -14,7 +14,7 @@ clap = { version = "4", features = ["derive"] }
 serde_json.workspace = true
 anyhow.workspace = true
 colored = "3"
-comfy-table = "7"
+
 chrono.workspace = true
 uuid.workspace = true
 regex = "1"

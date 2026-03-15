@@ -1,135 +1,218 @@
 //! Terminal formatting helpers.
+//! Matches the original TypeScript CLI's compact line-per-todo format.
 
 use agt_lib::schema::*;
 use colored::Colorize;
-use comfy_table::{Table, presets::UTF8_FULL_CONDENSED, ContentArrangement};
 
-/// Format a status with color.
+// ── Status ──────────────────────────────────────────────────────────
+
+fn status_icon(status: &Status) -> &'static str {
+    match status {
+        Status::None => " ",
+        Status::Todo => " ",
+        Status::InProgress => "*",
+        Status::Completed => "x",
+        Status::Archived => "-",
+        Status::WontDo => "~",
+        Status::NeedsElaboration => "?",
+    }
+}
+
+fn colored_title(title: &str, status: &Status) -> String {
+    match status {
+        Status::None => title.dimmed().to_string(),
+        Status::Todo => title.white().to_string(),
+        Status::InProgress => title.cyan().to_string(),
+        Status::Completed => title.green().to_string(),
+        Status::Archived => title.dimmed().to_string(),
+        Status::WontDo => title.strikethrough().to_string(),
+        Status::NeedsElaboration => title.magenta().to_string(),
+    }
+}
+
 pub fn colored_status(status: &Status) -> String {
-    let s = status.display_name();
+    let s = status.as_str().replace('_', " ");
     match status {
         Status::None => s.dimmed().to_string(),
-        Status::Todo => s.yellow().to_string(),
-        Status::InProgress => s.blue().to_string(),
+        Status::Todo => s.white().to_string(),
+        Status::InProgress => s.cyan().to_string(),
         Status::Completed => s.green().to_string(),
         Status::Archived => s.dimmed().to_string(),
-        Status::WontDo => s.red().to_string(),
+        Status::WontDo => s.strikethrough().to_string(),
         Status::NeedsElaboration => s.magenta().to_string(),
     }
 }
 
-/// Format a priority with color.
-pub fn colored_priority(priority: &Priority) -> String {
-    let s = priority.display_name();
+// ── Priority ────────────────────────────────────────────────────────
+
+fn priority_label(priority: &Priority) -> &'static str {
     match priority {
-        Priority::None => s.dimmed().to_string(),
-        Priority::Low => s.to_string(),
-        Priority::Medium => s.yellow().to_string(),
-        Priority::High => s.red().to_string(),
-        Priority::Urgent => s.red().bold().to_string(),
+        Priority::None => "",
+        Priority::Low => "low",
+        Priority::Medium => "med",
+        Priority::High => "high",
+        Priority::Urgent => "URGENT",
     }
 }
 
-/// Print a table of todos.
-pub fn print_todo_table(todos: &[Todo], prefix: &str, members: &[Member]) {
+fn colored_priority_short(priority: &Priority) -> String {
+    let label = priority_label(priority);
+    match priority {
+        Priority::None => String::new(),
+        Priority::Low => label.dimmed().to_string(),
+        Priority::Medium => label.white().to_string(),
+        Priority::High => label.yellow().to_string(),
+        Priority::Urgent => label.red().bold().to_string(),
+    }
+}
+
+pub fn colored_priority(priority: &Priority) -> String {
+    let label = priority_label(priority);
+    match priority {
+        Priority::None => label.dimmed().to_string(),
+        Priority::Low => label.dimmed().to_string(),
+        Priority::Medium => label.white().to_string(),
+        Priority::High => label.yellow().to_string(),
+        Priority::Urgent => label.red().bold().to_string(),
+    }
+}
+
+// ── Difficulty ──────────────────────────────────────────────────────
+
+fn difficulty_label(difficulty: &Difficulty) -> &'static str {
+    match difficulty {
+        Difficulty::None => "",
+        Difficulty::Easy => "easy",
+        Difficulty::Medium => "medium",
+        Difficulty::Hard => "hard",
+    }
+}
+
+fn colored_difficulty_short(difficulty: &Difficulty) -> String {
+    let label = difficulty_label(difficulty);
+    match difficulty {
+        Difficulty::None => String::new(),
+        Difficulty::Easy => label.green().to_string(),
+        Difficulty::Medium => label.yellow().to_string(),
+        Difficulty::Hard => label.red().to_string(),
+    }
+}
+
+// ── List output ─────────────────────────────────────────────────────
+
+/// Print todos as compact one-line-per-item (matching the original TS CLI).
+pub fn print_todo_list(todos: &[Todo], prefix: &str, members: &[Member]) {
     if todos.is_empty() {
         println!("{}", "No todos found.".dimmed());
         return;
     }
 
-    let mut table = Table::new();
-    table
-        .load_preset(UTF8_FULL_CONDENSED)
-        .set_content_arrangement(ContentArrangement::Dynamic)
-        .set_header(vec!["Ref", "Title", "Status", "Priority", "Assignee"]);
-
     for todo in todos {
-        let todo_ref = format!("{}-{}", prefix, todo.number);
+        let icon = status_icon(&todo.status);
+        let todo_ref = format!("{}-{}", prefix, todo.number).bold().to_string();
+        let title = colored_title(&todo.title, &todo.status);
+
+        let priority = if todo.priority != Priority::None && todo.priority != Priority::Medium {
+            format!(" {}", colored_priority_short(&todo.priority))
+        } else {
+            String::new()
+        };
+
+        let difficulty = if todo.difficulty != Difficulty::None {
+            format!(" {}", colored_difficulty_short(&todo.difficulty))
+        } else {
+            String::new()
+        };
+
         let assignee = todo
             .assignee
             .as_ref()
             .and_then(|a| members.iter().find(|m| m.id == *a))
-            .map(|m| m.name.clone())
-            .unwrap_or_else(|| "—".dimmed().to_string());
+            .map(|m| format!(" {}", format!("@{}", m.name).dimmed()))
+            .unwrap_or_default();
 
-        table.add_row(vec![
-            todo_ref,
-            todo.title.clone(),
-            colored_status(&todo.status),
-            colored_priority(&todo.priority),
-            assignee,
-        ]);
+        println!("[{icon}] {todo_ref} {title}{priority}{difficulty}{assignee}");
     }
-
-    println!("{table}");
 }
 
 /// Print detailed view of a single todo.
 pub fn print_todo_detail(todo: &Todo, prefix: &str, members: &[Member]) {
     let todo_ref = format!("{}-{}", prefix, todo.number);
-    println!("{}", todo_ref.bold());
-    println!("  {} {}", "Title:".dimmed(), todo.title);
-    println!("  {} {}", "Status:".dimmed(), colored_status(&todo.status));
+    println!("{}", format!("{}: {}", todo_ref, todo.title).bold());
+    println!();
+    println!("  {}   {}", "Status:".dimmed(), colored_status(&todo.status));
     println!("  {} {}", "Priority:".dimmed(), colored_priority(&todo.priority));
-    println!("  {} {}", "Difficulty:".dimmed(), todo.difficulty.display_name());
+
+    if todo.difficulty != Difficulty::None {
+        println!("  {} {}", "Difficulty:".dimmed(), colored_difficulty_short(&todo.difficulty));
+    }
+
+    if let Some(assignee_id) = &todo.assignee {
+        let name = members
+            .iter()
+            .find(|m| m.id == *assignee_id)
+            .map(|m| m.name.as_str())
+            .unwrap_or(assignee_id);
+        println!("  {} {}", "Assignee:".dimmed(), name);
+    }
+
+    if let Some(branch) = &todo.branch {
+        println!("  {}   {}", "Branch:".dimmed(), branch.cyan());
+    }
 
     if !todo.labels.is_empty() {
         let labels: Vec<&str> = todo.labels.iter().map(|l| l.display_name()).collect();
-        println!("  {} {}", "Labels:".dimmed(), labels.join(", "));
+        println!("  {}   {}", "Labels:".dimmed(), labels.join(", "));
     }
 
-    let assignee = todo
-        .assignee
-        .as_ref()
-        .and_then(|a| members.iter().find(|m| m.id == *a))
-        .map(|m| m.name.as_str())
-        .unwrap_or("—");
-    println!("  {} {}", "Assignee:".dimmed(), assignee);
-
-    if let Some(branch) = &todo.branch {
-        println!("  {} {}", "Branch:".dimmed(), branch);
+    let created = format_ts(todo.created_at);
+    println!("  {}  {}", "Created:".dimmed(), created);
+    if todo.updated_at != todo.created_at {
+        println!("  {}  {}", "Updated:".dimmed(), format_ts(todo.updated_at));
     }
 
     if !todo.description.is_empty() {
-        println!("\n  {}", "Description:".dimmed());
-        for line in todo.description.lines() {
-            println!("    {line}");
-        }
+        println!();
+        println!("{}", todo.description);
     }
 
-    if !todo.comments.is_empty() {
-        println!("\n  {} ({})", "Comments:".dimmed(), todo.comments.len());
-        for comment in &todo.comments {
-            let ts = chrono::DateTime::from_timestamp_millis(comment.created_at)
-                .map(|dt: chrono::DateTime<chrono::Utc>| dt.format("%Y-%m-%d %H:%M").to_string())
-                .unwrap_or_default();
-            println!("    {} {} {}", comment.author_name.bold(), "at".dimmed(), ts.dimmed());
-            println!("    {}", comment.text);
+    let comments = &todo.comments;
+    if !comments.is_empty() {
+        println!();
+        println!("{}", format!("--- Comments ({}) ---", comments.len()).dimmed());
+        for comment in comments {
+            let ts = format_ts(comment.created_at);
+            println!("  {} {}", comment.author_name.bold(), ts.dimmed());
+            println!("  {}", comment.text);
             println!();
         }
     }
 }
 
-/// Print members table.
-pub fn print_members_table(members: &[Member]) {
+/// Print members list.
+pub fn print_members_list(members: &[Member]) {
     if members.is_empty() {
         println!("{}", "No members found.".dimmed());
         return;
     }
 
-    let mut table = Table::new();
-    table
-        .load_preset(UTF8_FULL_CONDENSED)
-        .set_content_arrangement(ContentArrangement::Dynamic)
-        .set_header(vec!["Name", "Role", "Email"]);
-
     for member in members {
-        table.add_row(vec![
-            member.name.clone(),
-            member.role.as_str().to_string(),
-            member.email.clone().unwrap_or_else(|| "—".to_string()),
-        ]);
+        let role = match member.role {
+            MemberRole::Owner => "owner".yellow().to_string(),
+            MemberRole::Member => "member".normal().to_string(),
+            MemberRole::Agent => "agent".cyan().to_string(),
+        };
+        let email = member
+            .email
+            .as_deref()
+            .map(|e| format!(" {}", e.dimmed()))
+            .unwrap_or_default();
+        println!("{} ({}){}", member.name.bold(), role, email);
     }
+}
 
-    println!("{table}");
+fn format_ts(ms: i64) -> String {
+    chrono::DateTime::from_timestamp_millis(ms)
+        .map(|dt: chrono::DateTime<chrono::Utc>| dt.format("%b %d, %Y %H:%M").to_string())
+        .unwrap_or_default()
 }

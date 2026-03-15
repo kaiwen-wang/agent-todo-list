@@ -30,10 +30,6 @@ fn json_err(msg: &str, status: u16) -> impl IntoResponse {
 // ── GET /api/project ────────────────────────────────────────────────
 
 pub async fn get_project(State(state): State<AppState>) -> impl IntoResponse {
-    if let Err(e) = state.reload().await {
-        return json_err(&format!("Reload failed: {e}"), 500).into_response();
-    }
-
     let mut doc = state.doc.lock().await;
 
     // Ensure inbox files exist
@@ -42,7 +38,7 @@ pub async fn get_project(State(state): State<AppState>) -> impl IntoResponse {
     let inbox_text = inbox::read_inbox(&state.todo_dir).unwrap_or_default();
     let inbox_processed = inbox::read_processed(&state.todo_dir).unwrap_or_default();
 
-    let mut project = to_json(&mut doc);
+    let mut project = to_json(&mut doc, false);
     if let Some(obj) = project.as_object_mut() {
         obj.insert("inboxText".into(), json!(inbox_text));
         obj.insert("inboxProcessed".into(), json!(inbox_processed));
@@ -57,10 +53,6 @@ pub async fn post_change(
     State(state): State<AppState>,
     Json(body): Json<Value>,
 ) -> impl IntoResponse {
-    if let Err(e) = state.reload().await {
-        return json_err(&format!("Reload failed: {e}"), 500).into_response();
-    }
-
     let action = body.get("action").and_then(|a| a.as_str()).unwrap_or("");
 
     let result = match action {

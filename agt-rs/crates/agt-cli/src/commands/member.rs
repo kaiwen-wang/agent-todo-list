@@ -44,7 +44,7 @@ pub fn list(json: bool) -> Result<()> {
     if json {
         println!("{}", serde_json::to_string_pretty(&members)?);
     } else {
-        output::print_members_table(&members);
+        output::print_members_list(&members);
     }
 
     Ok(())
