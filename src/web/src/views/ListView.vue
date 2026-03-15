@@ -122,8 +122,7 @@ const columns: DataTableColumns<Todo> = [
     key: "title",
     ellipsis: { tooltip: true },
     render(row) {
-      const style = row.status === "completed" ? "text-decoration: line-through; opacity: 0.6" : "";
-      return h("span", { style }, row.title);
+      return h("span", {}, row.title);
     },
   },
   {

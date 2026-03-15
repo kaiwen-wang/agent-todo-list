@@ -5,17 +5,13 @@ const router = createRouter({
   routes: [
     {
       path: "/",
-      redirect: "/board",
+      name: "board",
+      component: () => import("@/views/BoardView.vue"),
     },
     {
       path: "/inbox",
       name: "inbox",
       component: () => import("@/views/InboxView.vue"),
-    },
-    {
-      path: "/board",
-      name: "board",
-      component: () => import("@/views/BoardView.vue"),
     },
     {
       path: "/list",

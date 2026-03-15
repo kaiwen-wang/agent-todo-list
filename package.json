@@ -13,10 +13,10 @@
     "agt": "src/cli/index.ts"
   },
   "scripts": {
-    "dev": "bun --watch src/server/index.ts & cd src/web && bunx vite",
-    "build": "bun run --cwd src/web build",
-    "serve": "bun src/server/index.ts",
-    "agt": "bun src/cli/index.ts",
+    "dev": "cd agt-rs && cargo run -- serve & cd src/web && bunx vite",
+    "build": "cd agt-rs && cargo build --release && bun run --cwd src/web build-only",
+    "serve": "cd agt-rs && cargo run -- serve",
+    "agt": "cd agt-rs && cargo run --",
     "lint": "oxlint src/lib src/cli src/server --fix",
     "format": "oxfmt src/lib src/cli src/server",
     "type-check": "tsc --noEmit"

@@ -166,7 +166,6 @@ function onDragStart(e: DragEvent) {
 }
 
 .todo-card.done {
-  opacity: 0.55;
 }
 
 .card-content {
@@ -209,8 +208,6 @@ function onDragStart(e: DragEvent) {
 }
 
 .todo-card.done .card-title {
-  text-decoration: line-through;
-  opacity: 0.7;
 }
 
 .card-description {

@@ -78,6 +78,22 @@ fn build_msg(
     serde_json::to_string(&msg).unwrap_or_default()
 }
 
+/// Read a string value from an Automerge object, handling both Scalar::Str
+/// and ObjType::Text (JS Automerge stores strings as Text objects).
+fn read_str(doc: &AutoCommit, obj: &automerge::ObjId, key: &str) -> Option<String> {
+    match doc.get(obj, key) {
+        Ok(Some((automerge::Value::Scalar(s), _))) => match s.as_ref() {
+            ScalarValue::Str(s) => Some(s.to_string()),
+            ScalarValue::Null => None,
+            _ => None,
+        },
+        Ok(Some((automerge::Value::Object(automerge::ObjType::Text), id))) => {
+            doc.text(&id).ok()
+        }
+        _ => None,
+    }
+}
+
 fn resolve_actor(doc: &AutoCommit, actor_id: Option<&str>) -> String {
     if let Some(id) = actor_id {
         return id.to_string();
@@ -86,10 +102,8 @@ fn resolve_actor(doc: &AutoCommit, actor_id: Option<&str>) -> String {
         let len = doc.length(&members_id);
         if len > 0 {
             if let Ok(Some((_, member_id))) = doc.get(&members_id, 0usize) {
-                if let Ok(Some((automerge::Value::Scalar(s), _))) = doc.get(&member_id, K_ID) {
-                    if let ScalarValue::Str(id) = s.as_ref() {
-                        return id.to_string();
-                    }
+                if let Some(id) = read_str(doc, &member_id, K_ID) {
+                    return id;
                 }
             }
         }
@@ -102,15 +116,9 @@ fn find_member_name(doc: &AutoCommit, member_id: &str) -> Option<String> {
     let len = doc.length(&members_obj);
     for i in 0..len {
         let (_, m_obj) = doc.get(&members_obj, i).ok()??;
-        if let Ok(Some((automerge::Value::Scalar(s), _))) = doc.get(&m_obj, K_ID) {
-            if let ScalarValue::Str(id) = s.as_ref() {
-                if id.as_str() == member_id {
-                    if let Ok(Some((automerge::Value::Scalar(n), _))) = doc.get(&m_obj, K_NAME) {
-                        if let ScalarValue::Str(name) = n.as_ref() {
-                            return Some(name.to_string());
-                        }
-                    }
-                }
+        if let Some(id) = read_str(doc, &m_obj, K_ID) {
+            if id == member_id {
+                return read_str(doc, &m_obj, K_NAME);
             }
         }
     }
@@ -122,12 +130,7 @@ fn now_millis() -> i64 {
 }
 
 fn get_prefix(doc: &AutoCommit) -> String {
-    if let Ok(Some((automerge::Value::Scalar(s), _))) = doc.get(ROOT, K_PREFIX) {
-        if let ScalarValue::Str(prefix) = s.as_ref() {
-            return prefix.to_string();
-        }
-    }
-    "TODO".to_string()
+    read_str(doc, &ROOT.into(), K_PREFIX).unwrap_or_else(|| "TODO".to_string())
 }
 
 fn find_todo_obj(doc: &AutoCommit, todo_number: u64) -> Result<(automerge::ObjId, usize)> {
@@ -504,17 +507,11 @@ pub fn remove_member(doc: &mut AutoCommit, member_id: &str, actor_id: Option<&st
     let mut member_name = String::new();
     for i in 0..members_len {
         let (_, m_obj) = doc.get(&members_id, i)?.context("member missing")?;
-        if let Ok(Some((automerge::Value::Scalar(s), _))) = doc.get(&m_obj, K_ID) {
-            if let ScalarValue::Str(id) = s.as_ref() {
-                if id.as_str() == member_id {
-                    member_idx = Some(i);
-                    if let Ok(Some((automerge::Value::Scalar(n), _))) = doc.get(&m_obj, K_NAME) {
-                        if let ScalarValue::Str(name) = n.as_ref() {
-                            member_name = name.to_string();
-                        }
-                    }
-                    break;
-                }
+        if let Some(id) = read_str(doc, &m_obj, K_ID) {
+            if id == member_id {
+                member_idx = Some(i);
+                member_name = read_str(doc, &m_obj, K_NAME).unwrap_or_default();
+                break;
             }
         }
     }
@@ -526,11 +523,9 @@ pub fn remove_member(doc: &mut AutoCommit, member_id: &str, actor_id: Option<&st
     let todos_len = doc.length(&todos_id);
     for i in 0..todos_len {
         let (_, t_obj) = doc.get(&todos_id, i)?.context("todo missing")?;
-        if let Ok(Some((automerge::Value::Scalar(s), _))) = doc.get(&t_obj, K_ASSIGNEE) {
-            if let ScalarValue::Str(assignee) = s.as_ref() {
-                if assignee.as_str() == member_id {
-                    doc.put(&t_obj, K_ASSIGNEE, ScalarValue::Null)?;
-                }
+        if let Some(assignee) = read_str(doc, &t_obj, K_ASSIGNEE) {
+            if assignee == member_id {
+                doc.put(&t_obj, K_ASSIGNEE, ScalarValue::Null)?;
             }
         }
     }
@@ -560,17 +555,11 @@ pub fn update_member(
     let mut current_name = String::new();
     for i in 0..members_len {
         let (_, m_obj) = doc.get(&members_id, i)?.context("member missing")?;
-        if let Ok(Some((automerge::Value::Scalar(s), _))) = doc.get(&m_obj, K_ID) {
-            if let ScalarValue::Str(id) = s.as_ref() {
-                if id.as_str() == member_id {
-                    if let Ok(Some((automerge::Value::Scalar(n), _))) = doc.get(&m_obj, K_NAME) {
-                        if let ScalarValue::Str(nm) = n.as_ref() {
-                            current_name = nm.to_string();
-                        }
-                    }
-                    member_obj = Some(m_obj);
-                    break;
-                }
+        if let Some(id) = read_str(doc, &m_obj, K_ID) {
+            if id == member_id {
+                current_name = read_str(doc, &m_obj, K_NAME).unwrap_or_default();
+                member_obj = Some(m_obj);
+                break;
             }
         }
     }

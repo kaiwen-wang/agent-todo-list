@@ -65,6 +65,10 @@ fn get_str(doc: &AutoCommit, obj: &automerge::ObjId, key: &str) -> Option<String
             ScalarValue::Null => None,
             _ => None,
         },
+        // JS Automerge stores strings as Text objects (ObjType::Text)
+        Ok(Some((automerge::Value::Object(automerge::ObjType::Text), id))) => {
+            doc.text(&id).ok()
+        }
         _ => None,
     }
 }
@@ -89,6 +93,20 @@ fn get_u64(doc: &AutoCommit, obj: &automerge::ObjId, key: &str) -> Option<u64> {
 
 fn get_nullable_str(doc: &AutoCommit, obj: &automerge::ObjId, key: &str) -> Option<String> {
     get_str(doc, obj, key)
+}
+
+/// Read a string from a list by numeric index (handles both Scalar::Str and Text objects).
+fn get_list_str(doc: &AutoCommit, list_id: &automerge::ObjId, idx: usize) -> Option<String> {
+    match doc.get(list_id, idx) {
+        Ok(Some((automerge::Value::Scalar(s), _))) => match s.as_ref() {
+            ScalarValue::Str(s) => Some(s.to_string()),
+            _ => None,
+        },
+        Ok(Some((automerge::Value::Object(automerge::ObjType::Text), id))) => {
+            doc.text(&id).ok()
+        }
+        _ => None,
+    }
 }
 
 fn read_todo_at(doc: &AutoCommit, todos_id: &automerge::ObjId, idx: usize) -> Option<Todo> {
@@ -121,11 +139,9 @@ fn read_todo_at(doc: &AutoCommit, todos_id: &automerge::ObjId, idx: usize) -> Op
     if let Ok(Some((_, labels_id))) = doc.get(&todo_id, "labels") {
         let labels_len = doc.length(&labels_id);
         for j in 0..labels_len {
-            if let Ok(Some((automerge::Value::Scalar(s), _))) = doc.get(&labels_id, j as usize) {
-                if let ScalarValue::Str(label_str) = s.as_ref() {
-                    if let Ok(label) = label_str.parse::<Label>() {
-                        labels.push(label);
-                    }
+            if let Some(label_str) = get_list_str(doc, &labels_id, j) {
+                if let Ok(label) = label_str.parse::<Label>() {
+                    labels.push(label);
                 }
             }
         }

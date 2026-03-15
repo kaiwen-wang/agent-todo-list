@@ -1,11 +1,15 @@
-.PHONY: deploy undeploy
+.PHONY: deploy undeploy build web
 
-deploy: ## Build standalone `agt` binary and web assets to ~/.local
+build: web ## Build Rust binary (release) and web assets
+	cd agt-rs && cargo build --release
+
+web: ## Build Vue frontend
 	bun install
 	bun run --cwd src/web build-only
-	bun build --compile src/cli/index.ts --outfile dist/agt
+
+deploy: build ## Build and install `agt` binary + web assets to ~/.local
 	install -d ~/.local/bin
-	install dist/agt ~/.local/bin/agt
+	install agt-rs/target/release/agt ~/.local/bin/agt
 	rm -rf ~/.local/share/agt/web
 	install -d ~/.local/share/agt
 	cp -r src/web/dist ~/.local/share/agt/web
