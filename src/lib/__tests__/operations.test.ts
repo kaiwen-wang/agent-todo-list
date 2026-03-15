@@ -38,7 +38,7 @@ describe("addTodo", () => {
     expect(r1.doc.counter.value).toBe(1);
     expect(r1.doc.todos).toHaveLength(1);
     expect(r1.doc.todos[0]!.title).toBe("First task");
-    expect(r1.doc.todos[0]!.status).toBe("todo");
+    expect(r1.doc.todos[0]!.status).toBe("none");
     expect(r1.doc.todos[0]!.priority).toBe("none");
     expect(r1.doc.todos[0]!.difficulty).toBe("none");
   });

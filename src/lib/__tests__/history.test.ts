@@ -62,7 +62,7 @@ describe("getAuditLog", () => {
     expect(entry.action).toBe("todo.updated");
     expect(entry.target).toBe("TST-1");
     const details = entry.details as Record<string, any>;
-    expect(details.status).toEqual({ from: "todo", to: "in_progress" });
+    expect(details.status).toEqual({ from: "none", to: "in_progress" });
     expect(details.priority).toEqual({ from: "none", to: "high" });
   });
 

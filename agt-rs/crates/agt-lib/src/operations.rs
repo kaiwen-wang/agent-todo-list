@@ -4,8 +4,11 @@
 //! Audit metadata is embedded in each Automerge change's `message` field
 //! as a JSON string. This leverages Automerge's built-in history tracking.
 
-use anyhow::{Context, Result, bail};
-use automerge::{AutoCommit, ObjType, ReadDoc, ScalarValue, ROOT, transaction::Transactable, transaction::CommitOptions};
+use anyhow::{bail, Context, Result};
+use automerge::{
+    transaction::CommitOptions, transaction::Transactable, AutoCommit, ObjType, ReadDoc,
+    ScalarValue, ROOT,
+};
 use serde_json::json;
 use uuid::Uuid;
 
@@ -66,8 +69,7 @@ fn build_msg(
     target: &str,
     details: Option<serde_json::Value>,
 ) -> String {
-    let actor_name = find_member_name(doc, actor_id)
-        .unwrap_or_else(|| actor_id.to_string());
+    let actor_name = find_member_name(doc, actor_id).unwrap_or_else(|| actor_id.to_string());
     let msg = ChangeMessage {
         action: action.to_string(),
         target: target.to_string(),
@@ -87,9 +89,7 @@ fn read_str(doc: &AutoCommit, obj: &automerge::ObjId, key: &str) -> Option<Strin
             ScalarValue::Null => None,
             _ => None,
         },
-        Ok(Some((automerge::Value::Object(automerge::ObjType::Text), id))) => {
-            doc.text(&id).ok()
-        }
+        Ok(Some((automerge::Value::Object(automerge::ObjType::Text), id))) => doc.text(&id).ok(),
         _ => None,
     }
 }
@@ -134,14 +134,10 @@ fn get_prefix(doc: &AutoCommit) -> String {
 }
 
 fn find_todo_obj(doc: &AutoCommit, todo_number: u64) -> Result<(automerge::ObjId, usize)> {
-    let (_, todos_id) = doc
-        .get(ROOT, K_TODOS)?
-        .context("todos list not found")?;
+    let (_, todos_id) = doc.get(ROOT, K_TODOS)?.context("todos list not found")?;
     let len = doc.length(&todos_id);
     for i in 0..len {
-        let (_, todo_id) = doc
-            .get(&todos_id, i)?
-            .context("todo entry missing")?;
+        let (_, todo_id) = doc.get(&todos_id, i)?.context("todo entry missing")?;
         if let Ok(Some((automerge::Value::Scalar(s), _))) = doc.get(&todo_id, K_NUMBER) {
             let num = match s.as_ref() {
                 ScalarValue::Uint(n) => *n,
@@ -221,7 +217,13 @@ pub fn update_project(
     }
 
     let proj_name = get_prefix(doc);
-    let msg = build_msg(doc, "project.updated", &actor, &proj_name, Some(json!(changed)));
+    let msg = build_msg(
+        doc,
+        "project.updated",
+        &actor,
+        &proj_name,
+        Some(json!(changed)),
+    );
     commit_msg(doc, msg);
     Ok(())
 }
@@ -245,7 +247,7 @@ pub fn add_todo(doc: &mut AutoCommit, opts: AddTodoOpts<'_>) -> Result<u64> {
     let actor = resolve_actor(doc, opts.created_by);
     let now = now_millis();
     let todo_id_str = Uuid::new_v4().to_string();
-    let status = opts.status.unwrap_or(Status::Todo);
+    let status = opts.status.unwrap_or(Status::None);
     let priority = opts.priority.unwrap_or(Priority::None);
     let difficulty = opts.difficulty.unwrap_or(Difficulty::None);
     let platform = opts.platform.unwrap_or(Platform::Unknown);
@@ -261,9 +263,7 @@ pub fn add_todo(doc: &mut AutoCommit, opts: AddTodoOpts<'_>) -> Result<u64> {
     };
     let todo_number = counter_val as u64;
 
-    let (_, todos_id) = doc
-        .get(ROOT, K_TODOS)?
-        .context("todos list not found")?;
+    let (_, todos_id) = doc.get(ROOT, K_TODOS)?.context("todos list not found")?;
     let len = doc.length(&todos_id);
 
     let todo_obj = doc.insert_object(&todos_id, len, ObjType::Map)?;
@@ -356,7 +356,10 @@ pub fn update_todo(
         for (i, label) in labels.iter().enumerate() {
             doc.insert(&labels_obj, i, label.as_str())?;
         }
-        changed.insert("labels".into(), json!(labels.iter().map(|l| l.as_str()).collect::<Vec<_>>()));
+        changed.insert(
+            "labels".into(),
+            json!(labels.iter().map(|l| l.as_str()).collect::<Vec<_>>()),
+        );
     }
     if let Some(assignee_opt) = updates.assignee {
         if let Some(assignee) = assignee_opt {
@@ -371,7 +374,13 @@ pub fn update_todo(
     doc.put(&todo_obj, K_UPDATED_AT, now_millis())?;
 
     let prefix = get_prefix(doc);
-    let msg = build_msg(doc, "todo.updated", &actor, &format!("{prefix}-{todo_number}"), Some(json!(changed)));
+    let msg = build_msg(
+        doc,
+        "todo.updated",
+        &actor,
+        &format!("{prefix}-{todo_number}"),
+        Some(json!(changed)),
+    );
     commit_msg(doc, msg);
     Ok(())
 }
@@ -381,7 +390,13 @@ pub fn delete_todo(doc: &mut AutoCommit, todo_number: u64, actor_id: Option<&str
     let (_, idx) = find_todo_obj(doc, todo_number)?;
 
     let prefix = get_prefix(doc);
-    let msg = build_msg(doc, "todo.deleted", &actor, &format!("{prefix}-{todo_number}"), None);
+    let msg = build_msg(
+        doc,
+        "todo.deleted",
+        &actor,
+        &format!("{prefix}-{todo_number}"),
+        None,
+    );
 
     let (_, todos_id) = doc.get(ROOT, K_TODOS)?.context("todos list not found")?;
     doc.delete(&todos_id, idx)?;
@@ -398,12 +413,23 @@ pub fn unassign_todo(doc: &mut AutoCommit, todo_number: u64, actor_id: Option<&s
     doc.put(&todo_obj, K_UPDATED_AT, now_millis())?;
 
     let prefix = get_prefix(doc);
-    let msg = build_msg(doc, "todo.unassigned", &actor, &format!("{prefix}-{todo_number}"), None);
+    let msg = build_msg(
+        doc,
+        "todo.unassigned",
+        &actor,
+        &format!("{prefix}-{todo_number}"),
+        None,
+    );
     commit_msg(doc, msg);
     Ok(())
 }
 
-pub fn add_comment(doc: &mut AutoCommit, todo_number: u64, text: &str, actor_id: Option<&str>) -> Result<()> {
+pub fn add_comment(
+    doc: &mut AutoCommit,
+    todo_number: u64,
+    text: &str,
+    actor_id: Option<&str>,
+) -> Result<()> {
     let actor = resolve_actor(doc, actor_id);
     let (todo_obj, _) = find_todo_obj(doc, todo_number)?;
 
@@ -425,13 +451,28 @@ pub fn add_comment(doc: &mut AutoCommit, todo_number: u64, text: &str, actor_id:
     doc.put(&todo_obj, K_UPDATED_AT, now_millis())?;
 
     let prefix = get_prefix(doc);
-    let truncated = if text.len() > 100 { format!("{}...", &text[..100]) } else { text.to_string() };
-    let msg = build_msg(doc, "todo.commented", &actor, &format!("{prefix}-{todo_number}"), Some(json!({ "text": truncated })));
+    let truncated = if text.len() > 100 {
+        format!("{}...", &text[..100])
+    } else {
+        text.to_string()
+    };
+    let msg = build_msg(
+        doc,
+        "todo.commented",
+        &actor,
+        &format!("{prefix}-{todo_number}"),
+        Some(json!({ "text": truncated })),
+    );
     commit_msg(doc, msg);
     Ok(())
 }
 
-pub fn set_branch(doc: &mut AutoCommit, todo_number: u64, branch_name: &str, actor_id: Option<&str>) -> Result<()> {
+pub fn set_branch(
+    doc: &mut AutoCommit,
+    todo_number: u64,
+    branch_name: &str,
+    actor_id: Option<&str>,
+) -> Result<()> {
     let actor = resolve_actor(doc, actor_id);
     let (todo_obj, _) = find_todo_obj(doc, todo_number)?;
 
@@ -439,7 +480,13 @@ pub fn set_branch(doc: &mut AutoCommit, todo_number: u64, branch_name: &str, act
     doc.put(&todo_obj, K_UPDATED_AT, now_millis())?;
 
     let prefix = get_prefix(doc);
-    let msg = build_msg(doc, "todo.branched", &actor, &format!("{prefix}-{todo_number}"), Some(json!({ "branch": branch_name })));
+    let msg = build_msg(
+        doc,
+        "todo.branched",
+        &actor,
+        &format!("{prefix}-{todo_number}"),
+        Some(json!({ "branch": branch_name })),
+    );
     commit_msg(doc, msg);
     Ok(())
 }
@@ -452,7 +499,13 @@ pub fn clear_branch(doc: &mut AutoCommit, todo_number: u64, actor_id: Option<&st
     doc.put(&todo_obj, K_UPDATED_AT, now_millis())?;
 
     let prefix = get_prefix(doc);
-    let msg = build_msg(doc, "todo.unbranched", &actor, &format!("{prefix}-{todo_number}"), None);
+    let msg = build_msg(
+        doc,
+        "todo.unbranched",
+        &actor,
+        &format!("{prefix}-{todo_number}"),
+        None,
+    );
     commit_msg(doc, msg);
     Ok(())
 }
@@ -470,7 +523,9 @@ pub fn add_member(
 ) -> Result<()> {
     let actor = resolve_actor(doc, actor_id);
 
-    let (_, members_id) = doc.get(ROOT, K_MEMBERS)?.context("members list not found")?;
+    let (_, members_id) = doc
+        .get(ROOT, K_MEMBERS)?
+        .context("members list not found")?;
     let len = doc.length(&members_id);
 
     let member_obj = doc.insert_object(&members_id, len, ObjType::Map)?;
@@ -492,7 +547,13 @@ pub fn add_member(
         }
     }
 
-    let msg = build_msg(doc, "member.added", &actor, name, Some(json!({ "role": role.as_str() })));
+    let msg = build_msg(
+        doc,
+        "member.added",
+        &actor,
+        name,
+        Some(json!({ "role": role.as_str() })),
+    );
     commit_msg(doc, msg);
     Ok(())
 }
@@ -500,7 +561,9 @@ pub fn add_member(
 pub fn remove_member(doc: &mut AutoCommit, member_id: &str, actor_id: Option<&str>) -> Result<()> {
     let actor = resolve_actor(doc, actor_id);
 
-    let (_, members_id) = doc.get(ROOT, K_MEMBERS)?.context("members list not found")?;
+    let (_, members_id) = doc
+        .get(ROOT, K_MEMBERS)?
+        .context("members list not found")?;
     let members_len = doc.length(&members_id);
 
     let mut member_idx = None;
@@ -548,7 +611,9 @@ pub fn update_member(
 ) -> Result<()> {
     let actor = resolve_actor(doc, actor_id);
 
-    let (_, members_id) = doc.get(ROOT, K_MEMBERS)?.context("members list not found")?;
+    let (_, members_id) = doc
+        .get(ROOT, K_MEMBERS)?
+        .context("members list not found")?;
     let members_len = doc.length(&members_id);
 
     let mut member_obj = None;

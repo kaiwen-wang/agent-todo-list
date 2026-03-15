@@ -36,7 +36,7 @@ You are operating inside a project managed by \`agt\` (agent-todo). Use these co
 \`\`\`
 agt add <title> [options]
   -d, --description <text>    Description (markdown)
-  -s, --status <status>       Initial status (default: "todo")
+  -s, --status <status>       Initial status (default: "none")
   -p, --priority <priority>   Priority level (default: "none")
   -a, --assignee <name>       Assignee name (must be an existing member)
   -l, --labels <labels>       Comma-separated labels

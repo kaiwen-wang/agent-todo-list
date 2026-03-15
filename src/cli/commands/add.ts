@@ -17,7 +17,7 @@ export function registerAdd(program: Command): void {
     .description("Add a new todo")
     .argument("<title>", "Todo title")
     .option("-d, --description <text>", "Description (markdown)")
-    .option("-s, --status <status>", "Initial status", "todo")
+    .option("-s, --status <status>", "Initial status", "none")
     .option("-p, --priority <priority>", "Priority level", "none")
     .option("--difficulty <difficulty>", "Difficulty (easy, medium, hard)", "none")
     .option("-a, --assignee <name>", "Assignee name")

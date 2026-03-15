@@ -163,7 +163,7 @@ export function addTodo(
       number: todoNumber,
       title: opts.title,
       description: opts.description ?? "",
-      status: opts.status ?? "todo",
+      status: opts.status ?? "none",
       priority: opts.priority ?? "none",
       difficulty: opts.difficulty ?? "none",
       labels: opts.labels ?? [],
@@ -178,7 +178,7 @@ export function addTodo(
 
     changeOpts.message = buildMsg(d, "todo.created", actor, `${d.prefix}-${todoNumber}`, {
       title: opts.title,
-      status: opts.status ?? "todo",
+      status: opts.status ?? "none",
       priority: opts.priority ?? "none",
     });
   });

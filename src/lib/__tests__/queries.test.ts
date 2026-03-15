@@ -54,7 +54,7 @@ describe("queryTodos", () => {
 
   test("filters by multiple statuses", () => {
     const doc = makeProject();
-    const todos = queryTodos(doc, { status: ["todo", "in_progress"] });
+    const todos = queryTodos(doc, { status: ["none", "in_progress"] });
     expect(todos).toHaveLength(2);
   });
 
@@ -167,11 +167,11 @@ describe("countByStatus", () => {
     const doc = makeProject();
     const counts = countByStatus(doc);
 
-    expect(counts.todo).toBe(1);
+    expect(counts.todo).toBe(0);
     expect(counts.in_progress).toBe(1);
     expect(counts.completed).toBe(1);
     expect(counts.archived).toBe(1);
-    expect(counts.none).toBe(0);
+    expect(counts.none).toBe(1);
     expect(counts.wont_do).toBe(0);
   });
 });

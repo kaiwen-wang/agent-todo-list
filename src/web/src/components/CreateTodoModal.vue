@@ -58,7 +58,7 @@ const message = useMessage();
 
 const title = ref("");
 const description = ref("");
-const status = ref<Status>(props.defaultStatus ?? "todo");
+const status = ref<Status>(props.defaultStatus ?? "none");
 const priority = ref<Priority>("none");
 const difficulty = ref<Difficulty>("none");
 const labels = ref<Label[]>([]);
@@ -116,7 +116,7 @@ watch(
     if (isOpen) {
       title.value = "";
       description.value = "";
-      status.value = props.defaultStatus ?? "todo";
+      status.value = props.defaultStatus ?? "none";
       priority.value = "none";
       difficulty.value = "none";
       labels.value = [];
