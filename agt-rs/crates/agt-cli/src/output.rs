@@ -56,7 +56,7 @@ fn priority_label(priority: &Priority) -> &'static str {
 }
 
 fn colored_priority_short(priority: &Priority) -> String {
-    let label = format!("!{}", priority_label(priority));
+    let label = format!("P:{}", priority_label(priority).to_uppercase());
     match priority {
         Priority::None => String::new(),
         Priority::Low => label.dimmed().to_string(),
@@ -89,7 +89,7 @@ fn difficulty_label(difficulty: &Difficulty) -> &'static str {
 }
 
 fn colored_difficulty_short(difficulty: &Difficulty) -> String {
-    let label = format!("^{}", difficulty_label(difficulty));
+    let label = format!("D:{}", difficulty_label(difficulty).to_uppercase());
     match difficulty {
         Difficulty::None => String::new(),
         Difficulty::Easy => label.green().to_string(),

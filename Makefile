@@ -1,9 +1,12 @@
 .PHONY: dev build web deploy undeploy test lint
 
 dev: ## Start Rust API server + Vite dev server
-	agt-rs/target/debug/agt serve & \
-	until curl -s http://localhost:3000/api/project > /dev/null 2>&1; do sleep 0.2; done && \
-	cd src/web && bunx vite
+	@bash -c '\
+		trap "kill 0" EXIT; \
+		agt-rs/target/debug/agt serve & \
+		until curl -s http://localhost:3000/api/project > /dev/null 2>&1; do sleep 0.2; done; \
+		cd src/web && bunx vite \
+	'
 
 build: web ## Build Rust binary (release) and web assets
 	cd agt-rs && cargo build --release
@@ -22,6 +25,7 @@ lint: ## Run oxlint + oxfmt
 deploy: build ## Build and install `agt` binary + web assets to ~/.local
 	install -d ~/.local/bin
 	install agt-rs/target/release/agt ~/.local/bin/agt
+	-xattr -d com.apple.quarantine ~/.local/bin/agt 2>/dev/null
 	rm -rf ~/.local/share/agt/web
 	install -d ~/.local/share/agt
 	cp -r src/web/dist ~/.local/share/agt/web
