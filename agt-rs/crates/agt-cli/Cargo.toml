@@ -1,0 +1,22 @@
+[package]
+name = "agt-cli"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "agt"
+path = "src/main.rs"
+
+[dependencies]
+agt-lib.workspace = true
+automerge.workspace = true
+clap = { version = "4", features = ["derive"] }
+serde_json.workspace = true
+anyhow.workspace = true
+colored = "3"
+comfy-table = "7"
+chrono.workspace = true
+uuid.workspace = true
+regex = "1"
+agt-server = { path = "../agt-server" }
+tokio = { version = "1", features = ["full"] }

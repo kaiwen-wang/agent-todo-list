@@ -1,0 +1,18 @@
+[package]
+name = "agt-server"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+agt-lib.workspace = true
+axum = { version = "0.8", features = ["ws"] }
+tokio = { version = "1", features = ["full"] }
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+tower-http = { version = "0.6", features = ["fs", "cors"] }
+notify = "7"
+automerge.workspace = true
+uuid.workspace = true
+tracing = "0.1"
+tracing-subscriber = "0.3"
