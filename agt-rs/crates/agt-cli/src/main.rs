@@ -171,6 +171,9 @@ enum Commands {
         /// Port to listen on
         #[arg(long, default_value = "3000")]
         port: u16,
+        /// Open the dashboard in the default browser
+        #[arg(long)]
+        open: bool,
     },
     /// Manage the freeform inbox
     Inbox {
@@ -307,7 +310,7 @@ fn main() -> Result<()> {
             MemberAction::Remove { name } => commands::member::remove(name),
         },
         Commands::Config => commands::config::run(),
-        Commands::Serve { port } => commands::serve::run(port),
+        Commands::Serve { port, open } => commands::serve::run(port, open),
         Commands::Inbox { action, text } => commands::inbox::run(action, text),
         Commands::Log { limit, json } => commands::log::run(limit, json),
         Commands::MergeDriver { base, ours, theirs } => {
