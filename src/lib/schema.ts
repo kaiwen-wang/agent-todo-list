@@ -18,6 +18,7 @@ export type Timestamp = number;
 export type Status =
   | "none"
   | "todo"
+  | "queued"
   | "in_progress"
   | "completed"
   | "archived"
@@ -46,6 +47,7 @@ export const STATUSES: readonly Status[] = [
   "none",
   "todo",
   "needs_elaboration",
+  "queued",
   "in_progress",
   "completed",
   "archived",
@@ -67,6 +69,7 @@ export const LABEL_DISPLAY: Record<Label, string> = {
 export const STATUS_DISPLAY: Record<Status, string> = {
   none: "None",
   todo: "To Do",
+  queued: "Queued",
   in_progress: "In Progress",
   completed: "Completed",
   archived: "Archived",
@@ -158,7 +161,7 @@ export interface Project extends Record<string, unknown> {
 }
 
 /** Current schema version — increment when making breaking changes */
-export const CURRENT_SCHEMA_VERSION = 5;
+export const CURRENT_SCHEMA_VERSION = 6;
 
 /** Config stored in .todo/config.toml (committed to git) */
 export interface ProjectConfig {

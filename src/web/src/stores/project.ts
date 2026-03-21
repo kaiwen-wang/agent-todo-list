@@ -29,6 +29,7 @@ export const useProjectStore = defineStore("project", () => {
     const grouped: Record<Status, Todo[]> = {
       none: [],
       todo: [],
+      queued: [],
       in_progress: [],
       completed: [],
       archived: [],
@@ -62,6 +63,7 @@ export const useProjectStore = defineStore("project", () => {
     const counts: Record<Status, number> = {
       none: 0,
       todo: 0,
+      queued: 0,
       in_progress: 0,
       completed: 0,
       archived: 0,

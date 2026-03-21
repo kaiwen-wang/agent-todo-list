@@ -1,7 +1,10 @@
 //! Schema migration logic.
 
 use anyhow::Result;
-use automerge::{AutoCommit, ObjType, ReadDoc, ScalarValue, ROOT, transaction::Transactable, transaction::CommitOptions};
+use automerge::{
+    transaction::CommitOptions, transaction::Transactable, AutoCommit, ObjType, ReadDoc,
+    ScalarValue, ROOT,
+};
 
 use crate::schema::CURRENT_SCHEMA_VERSION;
 
@@ -19,11 +22,14 @@ pub fn migrate_doc(doc: &mut AutoCommit) -> Result<()> {
             2 => migrate_v2_to_v3(doc)?,
             3 => migrate_v3_to_v4(doc)?,
             4 => migrate_v4_to_v5(doc)?,
+            5 => migrate_v5_to_v6(doc)?,
             _ => {
                 doc.put(ROOT, "_version", (version + 1) as i64)?;
-                doc.commit_with(CommitOptions::default().with_message(
-                    format!("schema migration v{} -> v{}", version, version + 1),
-                ));
+                doc.commit_with(CommitOptions::default().with_message(format!(
+                    "schema migration v{} -> v{}",
+                    version,
+                    version + 1
+                )));
             }
         }
         version += 1;
@@ -106,5 +112,13 @@ fn migrate_v4_to_v5(doc: &mut AutoCommit) -> Result<()> {
     }
     doc.put(ROOT, "_version", 5i64)?;
     doc.commit_with(CommitOptions::default().with_message("schema migration v4 -> v5"));
+    Ok(())
+}
+
+fn migrate_v5_to_v6(doc: &mut AutoCommit) -> Result<()> {
+    // No-op data migration — just adds the "queued" status variant.
+    // Existing docs don't have queued todos, so nothing to transform.
+    doc.put(ROOT, "_version", 6i64)?;
+    doc.commit_with(CommitOptions::default().with_message("schema migration v5 -> v6"));
     Ok(())
 }

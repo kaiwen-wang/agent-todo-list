@@ -10,6 +10,7 @@ import { LABEL_DISPLAY } from "../lib/schema.js";
 const STATUS_COLORS: Record<Status, (s: string) => string> = {
   none: chalk.gray,
   todo: chalk.white,
+  queued: chalk.blue,
   in_progress: chalk.cyan,
   completed: chalk.green,
   archived: chalk.dim,
@@ -28,6 +29,7 @@ const PRIORITY_COLORS: Record<Priority, (s: string) => string> = {
 const STATUS_ICONS: Record<Status, string> = {
   none: " ",
   todo: " ",
+  queued: ">",
   in_progress: "*",
   completed: "x",
   archived: "-",

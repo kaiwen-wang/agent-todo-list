@@ -29,7 +29,7 @@ enum Commands {
         /// Priority (none, low, medium, high, urgent)
         #[arg(long)]
         priority: Option<String>,
-        /// Status (none, todo, in_progress, completed, archived, wont_do, needs_elaboration)
+        /// Status (none, todo, queued, in_progress, completed, archived, wont_do, needs_elaboration)
         #[arg(long)]
         status: Option<String>,
         /// Difficulty (none, easy, medium, hard)
@@ -118,10 +118,46 @@ enum Commands {
         /// Comment text
         text: String,
     },
-    /// Create/manage a git branch for a todo
+    /// Create a git worktree + branch for a todo
     Branch {
         /// Todo reference
         reference: String,
+    },
+    /// Remove a git worktree + branch for a todo
+    Unbranch {
+        /// Todo reference
+        reference: String,
+        /// Keep the git branch (only remove worktree)
+        #[arg(long)]
+        keep_branch: bool,
+    },
+    /// Run a coding agent against a single todo
+    Run {
+        /// Todo reference (e.g. "ATL-1" or "1")
+        reference: String,
+        /// Max budget in USD for the agent
+        #[arg(long)]
+        budget: Option<f64>,
+        /// Print rendered prompt and exit without running
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Poll for queued todos and dispatch agents (cron-compatible)
+    Poll {
+        /// Print what would be dispatched without doing it
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Set todo status to queued (ready for agent dispatch)
+    Queue {
+        /// Todo references (e.g. "ATL-1" "ATL-2")
+        references: Vec<String>,
+    },
+    /// List active agent runs
+    Runs {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
     },
     /// Manage project members
     Member {
@@ -208,7 +244,15 @@ fn main() -> Result<()> {
             assignee,
             description,
             json,
-        } => commands::add::run(title, priority, status, difficulty, assignee, description, json),
+        } => commands::add::run(
+            title,
+            priority,
+            status,
+            difficulty,
+            assignee,
+            description,
+            json,
+        ),
         Commands::List {
             status,
             assignee,
@@ -225,12 +269,32 @@ fn main() -> Result<()> {
             difficulty,
             description,
             json,
-        } => commands::update::run(reference, title, status, priority, difficulty, description, json),
+        } => commands::update::run(
+            reference,
+            title,
+            status,
+            priority,
+            difficulty,
+            description,
+            json,
+        ),
         Commands::Delete { reference } => commands::delete::run(reference),
         Commands::Assign { reference, member } => commands::assign::run(reference, member),
         Commands::Unassign { reference } => commands::unassign::run(reference),
         Commands::Comment { reference, text } => commands::comment::run(reference, text),
         Commands::Branch { reference } => commands::branch::run(reference),
+        Commands::Unbranch {
+            reference,
+            keep_branch,
+        } => commands::unbranch::run(reference, keep_branch),
+        Commands::Run {
+            reference,
+            budget,
+            dry_run,
+        } => commands::run::run(reference, budget, dry_run),
+        Commands::Poll { dry_run } => commands::poll::run(dry_run),
+        Commands::Queue { references } => commands::queue::run(references),
+        Commands::Runs { json } => commands::runs::run(json),
         Commands::Member { action } => match action {
             MemberAction::Add {
                 name,
@@ -246,10 +310,8 @@ fn main() -> Result<()> {
         Commands::Serve { port } => commands::serve::run(port),
         Commands::Inbox { action, text } => commands::inbox::run(action, text),
         Commands::Log { limit, json } => commands::log::run(limit, json),
-        Commands::MergeDriver {
-            base,
-            ours,
-            theirs,
-        } => commands::merge_driver::run(base, ours, theirs),
+        Commands::MergeDriver { base, ours, theirs } => {
+            commands::merge_driver::run(base, ours, theirs)
+        }
     }
 }

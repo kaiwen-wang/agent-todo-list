@@ -15,16 +15,8 @@ pub fn run(
     let (_paths, doc) = load_project()?;
 
     let filter = TodoFilter {
-        status: status.map(|s| {
-            s.split(',')
-                .filter_map(|v| v.trim().parse().ok())
-                .collect()
-        }),
-        priority: priority.map(|p| {
-            p.split(',')
-                .filter_map(|v| v.trim().parse().ok())
-                .collect()
-        }),
+        status: status.map(|s| s.split(',').filter_map(|v| v.trim().parse().ok()).collect()),
+        priority: priority.map(|p| p.split(',').filter_map(|v| v.trim().parse().ok()).collect()),
         assignee,
         search,
         ..Default::default()

@@ -12,6 +12,7 @@ pub enum Status {
     #[default]
     None,
     Todo,
+    Queued,
     InProgress,
     Completed,
     Archived,
@@ -24,6 +25,7 @@ impl Status {
         Status::None,
         Status::Todo,
         Status::NeedsElaboration,
+        Status::Queued,
         Status::InProgress,
         Status::Completed,
         Status::Archived,
@@ -34,6 +36,7 @@ impl Status {
         match self {
             Status::None => "None",
             Status::Todo => "To Do",
+            Status::Queued => "Queued",
             Status::InProgress => "In Progress",
             Status::Completed => "Completed",
             Status::Archived => "Archived",
@@ -46,6 +49,7 @@ impl Status {
         match self {
             Status::None => "none",
             Status::Todo => "todo",
+            Status::Queued => "queued",
             Status::InProgress => "in_progress",
             Status::Completed => "completed",
             Status::Archived => "archived",
@@ -67,6 +71,7 @@ impl std::str::FromStr for Status {
         match s {
             "none" => Ok(Status::None),
             "todo" => Ok(Status::Todo),
+            "queued" => Ok(Status::Queued),
             "in_progress" => Ok(Status::InProgress),
             "completed" | "done" => Ok(Status::Completed),
             "archived" => Ok(Status::Archived),
@@ -424,7 +429,7 @@ pub struct Member {
 }
 
 /// Current schema version — increment when making breaking changes.
-pub const CURRENT_SCHEMA_VERSION: u64 = 5;
+pub const CURRENT_SCHEMA_VERSION: u64 = 6;
 
 /// Config stored in .todo/config.toml (committed to git).
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -3,6 +3,7 @@
 export type Status =
   | "none"
   | "todo"
+  | "queued"
   | "in_progress"
   | "completed"
   | "archived"
@@ -98,6 +99,7 @@ export const STATUSES: Status[] = [
   "none",
   "todo",
   "needs_elaboration",
+  "queued",
   "in_progress",
   "completed",
   "archived",
@@ -109,6 +111,7 @@ export const BOARD_STATUSES: Status[] = [
   "none",
   "todo",
   "needs_elaboration",
+  "queued",
   "in_progress",
   "completed",
   "archived",
@@ -136,6 +139,7 @@ export const LABEL_COLORS: Record<Label, string> = {
 export const STATUS_DISPLAY: Record<Status, string> = {
   none: "None",
   todo: "To Do",
+  queued: "Queued",
   in_progress: "In Progress",
   completed: "Completed",
   archived: "Archived",
@@ -176,6 +180,7 @@ export const DIFFICULTY_COLORS: Record<Difficulty, string> = {
 export const STATUS_COLORS: Record<Status, string> = {
   none: "#9ca3af",
   todo: "#3b82f6",
+  queued: "#0ea5e9",
   in_progress: "#f59e0b",
   completed: "#10b981",
   archived: "#6b7280",

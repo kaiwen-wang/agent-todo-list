@@ -1,33 +1,37 @@
-pub mod init;
 pub mod add;
-pub mod list;
-pub mod show;
-pub mod update;
-pub mod delete;
 pub mod assign;
-pub mod unassign;
-pub mod comment;
 pub mod branch;
-pub mod member;
+pub mod comment;
 pub mod config;
-pub mod serve;
+pub mod delete;
 pub mod inbox;
+pub mod init;
+pub mod list;
 pub mod log;
+pub mod member;
 pub mod merge_driver;
+pub mod poll;
+pub mod queue;
+pub mod run;
+pub mod runs;
+pub mod serve;
+pub mod show;
+pub mod unassign;
+pub mod unbranch;
+pub mod update;
+pub mod workflow;
 
-use agt_lib::project::{TodoPaths, find_project};
-use agt_lib::storage;
 use agt_lib::migrate;
+use agt_lib::project::{find_project, TodoPaths};
+use agt_lib::storage;
 use anyhow::{Context, Result};
 use std::env;
 
 /// Load the project: find .todo/, load the automerge doc, run migrations if needed.
 fn load_project() -> Result<(TodoPaths, automerge::AutoCommit)> {
     let cwd = env::current_dir()?;
-    let paths = find_project(&cwd)
-        .context("No .todo/ directory found. Run `agt init` first.")?;
-    let mut doc = storage::load_doc(&paths.data_path)?
-        .context("Failed to load data.automerge")?;
+    let paths = find_project(&cwd).context("No .todo/ directory found. Run `agt init` first.")?;
+    let mut doc = storage::load_doc(&paths.data_path)?.context("Failed to load data.automerge")?;
 
     if migrate::needs_migration(&doc) {
         migrate::migrate_doc(&mut doc)?;

@@ -44,7 +44,7 @@ agt add <title> [options]
 \`\`\`
 
 ### Valid values
-- **status**: none, todo, needs_elaboration, in_progress, completed, archived, wont_do
+- **status**: none, todo, queued, needs_elaboration, in_progress, completed, archived, wont_do
 - **priority**: none, low, medium, high, urgent
 - **labels**: bug, new_feature, feature_plus
 

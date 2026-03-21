@@ -1,4 +1,4 @@
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use std::env;
 use uuid::Uuid;
 
@@ -36,12 +36,7 @@ pub fn run(name: Option<String>, prefix: Option<String>) -> Result<()> {
     let paths = project::init_project(&cwd, &config)?;
 
     // Create automerge document
-    let mut doc = operations::create_project(
-        &prefix,
-        &name,
-        &owner_name,
-        owner_email.as_deref(),
-    )?;
+    let mut doc = operations::create_project(&prefix, &name, &owner_name, owner_email.as_deref())?;
 
     // Save
     storage::save_doc(&paths.data_path, &mut doc)?;

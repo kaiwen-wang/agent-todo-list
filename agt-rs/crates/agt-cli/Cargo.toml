@@ -18,5 +18,9 @@ colored = "3"
 chrono.workspace = true
 uuid.workspace = true
 regex = "1"
+serde.workspace = true
+serde_yaml = "0.9"
+minijinja = "2"
+libc = "0.2"
 agt-server = { path = "../agt-server" }
 tokio = { version = "1", features = ["full"] }

@@ -10,6 +10,7 @@ fn status_icon(status: &Status) -> &'static str {
     match status {
         Status::None => " ",
         Status::Todo => " ",
+        Status::Queued => ">",
         Status::InProgress => "*",
         Status::Completed => "x",
         Status::Archived => "-",
@@ -22,6 +23,7 @@ fn colored_title(title: &str, status: &Status) -> String {
     match status {
         Status::None => title.dimmed().to_string(),
         Status::Todo => title.white().to_string(),
+        Status::Queued => title.blue().to_string(),
         Status::InProgress => title.cyan().to_string(),
         Status::Completed => title.green().to_string(),
         Status::Archived => title.dimmed().to_string(),
@@ -35,6 +37,7 @@ pub fn colored_status(status: &Status) -> String {
     match status {
         Status::None => s.dimmed().to_string(),
         Status::Todo => s.white().to_string(),
+        Status::Queued => s.blue().to_string(),
         Status::InProgress => s.cyan().to_string(),
         Status::Completed => s.green().to_string(),
         Status::Archived => s.dimmed().to_string(),
@@ -140,11 +143,23 @@ pub fn print_todo_detail(todo: &Todo, prefix: &str, members: &[Member]) {
     let todo_ref = format!("{}-{}", prefix, todo.number);
     println!("{}", format!("{}: {}", todo_ref, todo.title).bold());
     println!();
-    println!("  {}   {}", "Status:".dimmed(), colored_status(&todo.status));
-    println!("  {} {}", "Priority:".dimmed(), colored_priority(&todo.priority));
+    println!(
+        "  {}   {}",
+        "Status:".dimmed(),
+        colored_status(&todo.status)
+    );
+    println!(
+        "  {} {}",
+        "Priority:".dimmed(),
+        colored_priority(&todo.priority)
+    );
 
     if todo.difficulty != Difficulty::None {
-        println!("  {} {}", "Difficulty:".dimmed(), colored_difficulty_short(&todo.difficulty));
+        println!(
+            "  {} {}",
+            "Difficulty:".dimmed(),
+            colored_difficulty_short(&todo.difficulty)
+        );
     }
 
     if let Some(assignee_id) = &todo.assignee {
@@ -179,7 +194,10 @@ pub fn print_todo_detail(todo: &Todo, prefix: &str, members: &[Member]) {
     let comments = &todo.comments;
     if !comments.is_empty() {
         println!();
-        println!("{}", format!("--- Comments ({}) ---", comments.len()).dimmed());
+        println!(
+            "{}",
+            format!("--- Comments ({}) ---", comments.len()).dimmed()
+        );
         for comment in comments {
             let ts = format_ts(comment.created_at);
             println!("  {} {}", comment.author_name.bold(), ts.dimmed());
