@@ -2,7 +2,7 @@ mod commands;
 mod output;
 
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(name = "agt", about = "Agent-native todo/project management", version)]
@@ -306,7 +306,34 @@ enum MemberAction {
     },
 }
 
+fn print_full_help() {
+    let mut cmd = Cli::command()
+        .arg(clap::Arg::new("all").long("all").help("Print help for all subcommands").action(clap::ArgAction::SetTrue));
+    cmd.print_help().ok();
+    println!("\n");
+    for sub in cmd.get_subcommands_mut() {
+        if sub.get_name() == "help" {
+            continue;
+        }
+        println!("{}", "─".repeat(60));
+        sub.print_help().ok();
+        println!("\n");
+    }
+}
+
 fn main() -> Result<()> {
+    // `agt --all` or `agt help --all` prints help for every subcommand.
+    // Only trigger when --all appears before any subcommand (i.e. args[1])
+    // or after "help", to avoid conflicting with `agt list --all`.
+    let args: Vec<String> = std::env::args().collect();
+    let has_all = args.iter().any(|a| a == "--all");
+    let first_non_flag = args.iter().skip(1).find(|a| !a.starts_with('-'));
+    let is_help_context = first_non_flag.is_none() || first_non_flag.map(|s| s.as_str()) == Some("help");
+    if has_all && is_help_context {
+        print_full_help();
+        std::process::exit(0);
+    }
+
     let cli = Cli::parse();
 
     match cli.command {

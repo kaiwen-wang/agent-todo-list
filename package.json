@@ -15,8 +15,7 @@
     "serve": "cd src/rust && cargo run -- serve",
     "agt": "cd src/rust && cargo run --",
     "lint": "oxlint src/web/src --fix",
-    "format": "oxfmt src/web/src",
-    "type-check": "tsc --noEmit"
+    "format": "oxfmt src/web/src"
   },
   "dependencies": {
     "@automerge/automerge": "^3.2.4"
