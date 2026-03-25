@@ -182,6 +182,15 @@ enum Commands {
         /// Text to append (when action is "append")
         text: Option<String>,
     },
+    /// Commit .todo/ changes and optionally push
+    Commit {
+        /// Push to remote after committing
+        #[arg(long)]
+        push: bool,
+        /// Custom commit message
+        #[arg(long, short = 'm')]
+        message: Option<String>,
+    },
     /// Show audit log
     Log {
         /// Maximum number of entries
@@ -309,6 +318,7 @@ fn main() -> Result<()> {
             MemberAction::List { json } => commands::member::list(json),
             MemberAction::Remove { name } => commands::member::remove(name),
         },
+        Commands::Commit { push, message } => commands::commit::run(push, message),
         Commands::Config => commands::config::run(),
         Commands::Serve { port, open } => commands::serve::run(port, open),
         Commands::Inbox { action, text } => commands::inbox::run(action, text),

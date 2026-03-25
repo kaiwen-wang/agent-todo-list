@@ -29,7 +29,7 @@ Default to using Bun instead of Node.js.
 
 ### Testing
 
-Use `bun test` for lib/ and cli/ tests:
+Use `bun test` for lib/ tests:
 
 ```ts
 import { test, expect } from "bun:test";
@@ -41,11 +41,12 @@ test("hello world", () => {
 
 Use Vitest for `src/web/` tests only. Vue Single File Components (`.vue` files) require
 Vite's plugin pipeline to compile, so Vitest is needed there. Do not use Vitest for
-lib/ or cli/ code.
+lib/ code. Use `cargo test` for Rust CLI tests.
 
 ### CLI
 
-The CLI command is `agt` (short for agent-todo). Run via `bun run agt` during development.
+The CLI is a Rust binary (`src/cli/`). Run via `cargo run --` during development, or
+`agt` after `make deploy`.
 
 ### Frontend
 
@@ -77,12 +78,12 @@ the dev/build pipeline.
 | Runtime     | Bun                                     |
 | Language    | TypeScript                              |
 | CRDT        | Automerge (`@automerge/automerge`)      |
-| CLI         | `commander`                             |
+| CLI         | Rust + `clap` (`src/cli/`)               |
 | Server      | `Bun.serve()` (native HTTP)             |
 | Frontend    | Vue 3 + Vite + Pinia                    |
 | Linting     | oxlint                                  |
 | Formatting  | oxfmt                                   |
-| Testing     | `bun test` (lib/cli) + Vitest (web)     |
+| Testing     | `bun test` (lib) + `cargo test` (cli) + Vitest (web) |
 
 ### Data Model
 
@@ -149,28 +150,6 @@ agent-todo-list/
       git-identity.ts     # Reads git config user.name/email for member resolution
       __tests__/          # bun test
 
-    cli/                  # CLI application
-      index.ts            # Entry point, command router (commander)
-      output.ts           # Terminal formatting (tables, colors)
-      commands/
-        init.ts           # `agt init` -- create .todo/ in current repo
-        add.ts            # `agt add "title"`
-        list.ts           # `agt list`
-        show.ts           # `agt show PREFIX-N`
-        update.ts         # `agt update PREFIX-N --status done`
-        delete.ts         # `agt delete PREFIX-N`
-        assign.ts         # `agt assign PREFIX-N member`
-        unassign.ts       # `agt unassign PREFIX-N`
-        comment.ts        # `agt comment PREFIX-N "text"`
-        branch.ts         # `agt branch PREFIX-N`
-        member.ts         # `agt member add/list/remove`
-        config.ts         # `agt config`
-        browser.ts        # `agt serve` -- start web dashboard
-        inbox.ts          # `agt inbox` -- manage freeform inbox
-        brain.ts          # `agt brain` -- AI processes inbox into tasks
-        log.ts            # `agt log` -- audit log
-      __tests__/
-
     server/               # Bun.serve() -- local web dashboard server
       index.ts            # Serves Vue app + REST API
       __tests__/
@@ -201,9 +180,12 @@ agent-todo-list/
       package.json
 ```
 
-All source code lives under `src/`. `lib/` is NOT a workspace package -- it's a shared
-directory imported via TypeScript path aliases. Bun workspaces are used for `src/web`
-(it needs Vue/Vite dependencies).
+The CLI is implemented in Rust under `src/cli/`. TypeScript `src/lib/` is shared by the
+server and used at build time. `src/web/` is the Vue frontend. A previous TypeScript CLI
+implementation is archived in `archive/cli-ts/` for reference but is not used.
+
+`lib/` is NOT a workspace package -- it's a shared directory imported via TypeScript path
+aliases. Bun workspaces are used for `src/web` (it needs Vue/Vite dependencies).
 
 ### CLI Commands
 
@@ -229,6 +211,7 @@ agt serve [--port 3000]
 agt inbox [show|append|clear]
 agt brain [--auto]
 agt log
+agt commit [--push] [-m "message"]
 ```
 
 ### Brain / Inbox System

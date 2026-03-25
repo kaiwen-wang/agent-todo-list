@@ -9,22 +9,17 @@
     "url": "https://github.com/kaiwen-wang/agent-todo-list.git"
   },
   "workspaces": ["src/web"],
-  "bin": {
-    "agt": "src/cli/index.ts"
-  },
   "scripts": {
-    "dev": "bash -c 'trap \"kill 0\" EXIT; agt-rs/target/debug/agt serve & until curl -s http://localhost:3000/api/project > /dev/null 2>&1; do sleep 0.2; done; cd src/web && bunx vite'",
-    "build": "cd agt-rs && cargo build --release && bun run --cwd src/web build-only",
-    "serve": "cd agt-rs && cargo run -- serve",
-    "agt": "cd agt-rs && cargo run --",
-    "lint": "oxlint src/lib src/cli src/server --fix",
-    "format": "oxfmt src/lib src/cli src/server",
+    "dev": "bash -c 'trap \"kill 0\" EXIT; src/cli/target/debug/agt serve & until curl -s http://localhost:3000/api/project > /dev/null 2>&1; do sleep 0.2; done; cd src/web && bunx vite'",
+    "build": "cd src/cli && cargo build --release && bun run --cwd src/web build-only",
+    "serve": "cd src/cli && cargo run -- serve",
+    "agt": "cd src/cli && cargo run --",
+    "lint": "oxlint src/lib src/server --fix",
+    "format": "oxfmt src/lib src/server",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@automerge/automerge": "^3.2.4",
-    "commander": "^14.0.0",
-    "chalk": "^5.4.0"
+    "@automerge/automerge": "^3.2.4"
   },
   "devDependencies": {
     "@types/bun": "latest",

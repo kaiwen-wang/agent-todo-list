@@ -2,6 +2,7 @@ pub mod add;
 pub mod assign;
 pub mod branch;
 pub mod comment;
+pub mod commit;
 pub mod config;
 pub mod delete;
 pub mod inbox;

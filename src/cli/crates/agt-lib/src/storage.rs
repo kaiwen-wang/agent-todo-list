@@ -4,11 +4,19 @@ use anyhow::{Context, Result};
 use automerge::AutoCommit;
 use std::path::Path;
 
-/// Save an Automerge document to a file.
+/// Save an Automerge document to a file, then git-add it.
 pub fn save_doc(path: &Path, doc: &mut AutoCommit) -> Result<()> {
     let binary = doc.save();
     std::fs::write(path, binary)
         .with_context(|| format!("failed to write {}", path.display()))?;
+
+    // Auto-stage so the file is included in the next commit
+    let _ = std::process::Command::new("git")
+        .args(["add", &path.to_string_lossy()])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status();
+
     Ok(())
 }
 
