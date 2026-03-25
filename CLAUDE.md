@@ -45,7 +45,7 @@ lib/ code. Use `cargo test` for Rust CLI tests.
 
 ### CLI
 
-The CLI is a Rust binary (`src/cli/`). Run via `cargo run --` during development, or
+The CLI is a Rust binary (`src/rust/`). Run via `cargo run --` during development, or
 `agt` after `make deploy`.
 
 ### Frontend
@@ -78,7 +78,7 @@ the dev/build pipeline.
 | Runtime     | Bun                                     |
 | Language    | TypeScript                              |
 | CRDT        | Automerge (`@automerge/automerge`)      |
-| CLI         | Rust + `clap` (`src/cli/`)               |
+| CLI         | Rust + `clap` (`src/rust/`)               |
 | Server      | `Bun.serve()` (native HTTP)             |
 | Frontend    | Vue 3 + Vite + Pinia                    |
 | Linting     | oxlint                                  |
@@ -88,7 +88,7 @@ the dev/build pipeline.
 ### Data Model
 
 Every project is a single Automerge document containing all todos, members, audit log,
-and metadata. See `src/lib/schema.ts` for the full type definitions.
+and metadata. See `src/rust/crates/agt-lib/src/schema.rs` for the full type definitions.
 
 Key types:
 
@@ -106,7 +106,7 @@ todo numbers when multiple agents add todos simultaneously.
 Timestamps are Unix milliseconds (`Date.now()`), not ISO strings.
 
 Schema version is tracked via `_version` (currently 4). Migrations run at load time
-in `src/lib/migrate.ts`.
+in `src/rust/crates/agt-lib/src/migrate.rs`.
 
 ### On-Disk Layout
 
@@ -130,62 +130,33 @@ merge driver handles binary conflicts using `Automerge.merge()` (configured in
 ```
 agent-todo-list/
   package.json
-  tsconfig.json
-  .oxlintrc.json
-  lefthook.toml
   Makefile                # `make deploy` builds standalone binary
+  lefthook.toml
 
   src/
-    lib/                  # Shared library (not a separate package)
-      schema.ts           # TypeScript types (Project, Todo, Member, etc.)
-      operations.ts       # Automerge mutation functions
-      queries.ts          # Read/filter functions
-      storage.ts          # Load/save .automerge files
-      project.ts          # .todo/ directory management, config I/O
-      merge-driver.ts     # Git merge driver for .automerge files
-      migrate.ts          # Schema migration logic
-      export.ts           # JSON serialization helpers
-      brain.ts            # AI agent: processes inbox notes into structured tasks
-      inbox.ts            # Manages .todo/TODO.md and TODO-PROCESSED.md
-      git-identity.ts     # Reads git config user.name/email for member resolution
-      __tests__/          # bun test
-
-    server/               # Bun.serve() -- local web dashboard server
-      index.ts            # Serves Vue app + REST API
-      __tests__/
+    rust/                 # Rust workspace (cargo)
+      crates/
+        agt-cli/          # CLI binary (clap)
+        agt-lib/          # Shared library (automerge, schema, operations)
+        agt-server/       # Web dashboard server (axum)
 
     web/                  # Vue 3 + Vite frontend
       src/
-        App.vue
-        main.ts
+        views/            # BoardView, ListView, TodoDetailView, InboxView, MembersView
+        components/       # TodoCard, StatusColumn, CreateTodoModal, etc.
+        stores/           # Pinia store wrapping project data
         api.ts            # REST API client
-        types.ts          # Frontend type definitions
         router/index.ts
-        stores/
-          project.ts      # Pinia store wrapping project data
-        views/
-          BoardView.vue   # Kanban board (default at /board)
-          ListView.vue    # Table/list view (/list)
-          TodoDetailView.vue  # Single todo detail (/todo/:number)
-          InboxView.vue   # Freeform inbox (/inbox)
-          MembersView.vue # Team members management (/members)
-        components/
-          TodoCard.vue
-          StatusColumn.vue
-          CreateTodoModal.vue
-          TodoDetailModal.vue
-          BatchActionBar.vue
-          SettingsModal.vue
-      vite.config.ts
-      package.json
+
+  .archive/                # Previous TypeScript implementations (reference only)
+    cli-ts/
+    server-ts/
+    lib-ts/
 ```
 
-The CLI is implemented in Rust under `src/cli/`. TypeScript `src/lib/` is shared by the
-server and used at build time. `src/web/` is the Vue frontend. A previous TypeScript CLI
-implementation is archived in `archive/cli-ts/` for reference but is not used.
-
-`lib/` is NOT a workspace package -- it's a shared directory imported via TypeScript path
-aliases. Bun workspaces are used for `src/web` (it needs Vue/Vite dependencies).
+The backend (CLI + server + lib) is implemented in Rust under `src/rust/`. `src/web/` is
+the Vue frontend. Previous TypeScript implementations are archived in `.archive/` for
+reference but are not used.
 
 ### CLI Commands
 

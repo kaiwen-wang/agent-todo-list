@@ -10,12 +10,12 @@
   },
   "workspaces": ["src/web"],
   "scripts": {
-    "dev": "bash -c 'trap \"kill 0\" EXIT; src/cli/target/debug/agt serve & until curl -s http://localhost:3000/api/project > /dev/null 2>&1; do sleep 0.2; done; cd src/web && bunx vite'",
-    "build": "cd src/cli && cargo build --release && bun run --cwd src/web build-only",
-    "serve": "cd src/cli && cargo run -- serve",
-    "agt": "cd src/cli && cargo run --",
-    "lint": "oxlint src/lib --fix",
-    "format": "oxfmt src/lib",
+    "dev": "bash -c 'trap \"kill 0\" EXIT; src/rust/target/debug/agt serve & until curl -s http://localhost:3000/api/project > /dev/null 2>&1; do sleep 0.2; done; cd src/web && bunx vite'",
+    "build": "cd src/rust && cargo build --release && bun run --cwd src/web build-only",
+    "serve": "cd src/rust && cargo run -- serve",
+    "agt": "cd src/rust && cargo run --",
+    "lint": "oxlint src/web/src --fix",
+    "format": "oxfmt src/web/src",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
