@@ -21,6 +21,7 @@ import { registerServe } from "./commands/browser.js";
 import { registerInbox } from "./commands/inbox.js";
 import { registerBrain } from "./commands/brain.js";
 import { registerLog } from "./commands/log.js";
+import { registerCommit } from "./commands/commit.js";
 
 const VERSION = "0.9.0";
 const program = new Command();
@@ -47,6 +48,7 @@ registerServe(program);
 registerInbox(program);
 registerBrain(program);
 registerLog(program);
+registerCommit(program);
 
 // -h -f / --help --full / -hf: print help for every subcommand
 const args = process.argv.slice(2);
