@@ -169,7 +169,7 @@ Run `agt --all` to see full help with every flag for every command. Key commands
 agt add "title" [--priority --status --difficulty --labels --assignee]
 agt list [--status --assignee --priority --difficulty --search --all --archived]
 agt show PREFIX-N
-agt update PREFIX-N [--title --status --priority --difficulty --labels --description]
+agt edit PREFIX-N [--title --status --priority --difficulty --labels --description]
 agt delete PREFIX-N
 agt assign PREFIX-N member-name
 agt comment PREFIX-N "text"

@@ -89,8 +89,9 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
-    /// Update a todo
-    Update {
+    /// Edit a todo
+    #[command(alias = "update")]
+    Edit {
         /// Todo reference (e.g. "ATL-1" or "1")
         reference: String,
         /// New title
@@ -374,7 +375,7 @@ fn main() -> Result<()> {
             json,
         } => commands::list::run(status, assignee, priority, difficulty, search, all, archived, json),
         Commands::Show { reference, json } => commands::show::run(reference, json),
-        Commands::Update {
+        Commands::Edit {
             reference,
             title,
             status,
