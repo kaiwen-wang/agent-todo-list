@@ -11,6 +11,7 @@ pub mod list;
 pub mod log;
 pub mod member;
 pub mod merge_driver;
+pub mod plan;
 pub mod poll;
 pub mod queue;
 pub mod run;

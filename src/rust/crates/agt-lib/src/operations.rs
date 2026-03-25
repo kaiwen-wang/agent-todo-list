@@ -44,6 +44,7 @@ const K_AGENT_MODEL: &str = "agentModel";
 const K_AUTHOR: &str = "author";
 const K_AUTHOR_NAME: &str = "authorName";
 const K_TEXT: &str = "text";
+const K_PLAN_PATH: &str = "planPath";
 
 // ── Change message helper ───────────────────────────────────────────
 
@@ -293,6 +294,7 @@ pub fn add_todo(doc: &mut AutoCommit, opts: AddTodoOpts<'_>) -> Result<u64> {
     doc.put(&todo_obj, K_UPDATED_AT, now)?;
     doc.put(&todo_obj, K_CREATED_BY, actor.as_str())?;
     doc.put(&todo_obj, K_PLATFORM, platform.as_str())?;
+    doc.put(&todo_obj, K_PLAN_PATH, ScalarValue::Null)?;
 
     let prefix = get_prefix(doc);
     let msg = build_msg(
@@ -319,6 +321,7 @@ pub struct UpdateTodoFields<'a> {
     pub difficulty: Option<Difficulty>,
     pub labels: Option<Vec<Label>>,
     pub assignee: Option<Option<&'a str>>,
+    pub plan_path: Option<Option<&'a str>>,
 }
 
 pub fn update_todo(
@@ -368,6 +371,15 @@ pub fn update_todo(
         } else {
             doc.put(&todo_obj, K_ASSIGNEE, ScalarValue::Null)?;
             changed.insert("assignee".into(), json!(null));
+        }
+    }
+    if let Some(plan_path_opt) = updates.plan_path {
+        if let Some(plan_path) = plan_path_opt {
+            doc.put(&todo_obj, K_PLAN_PATH, plan_path)?;
+            changed.insert("planPath".into(), json!(plan_path));
+        } else {
+            doc.put(&todo_obj, K_PLAN_PATH, ScalarValue::Null)?;
+            changed.insert("planPath".into(), json!(null));
         }
     }
 

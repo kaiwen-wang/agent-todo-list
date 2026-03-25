@@ -196,6 +196,11 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Manage plan/research files for todos
+    Plan {
+        #[command(subcommand)]
+        action: PlanAction,
+    },
     /// Manage project members
     Member {
         #[command(subcommand)]
@@ -252,6 +257,32 @@ enum Commands {
         ours: String,
         /// Theirs file path
         theirs: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum PlanAction {
+    /// Show a todo's plan
+    Show {
+        /// Todo reference (e.g. "AGT-58" or "58")
+        reference: String,
+    },
+    /// Create a plan file for a todo
+    Init {
+        /// Todo reference (e.g. "AGT-58" or "58")
+        reference: String,
+    },
+    /// Append an answer to a todo's plan questions
+    Answer {
+        /// Todo reference (e.g. "AGT-58" or "58")
+        reference: String,
+        /// Answer text
+        text: String,
+    },
+    /// Print the plan file path (for scripting)
+    Path {
+        /// Todo reference (e.g. "AGT-58" or "58")
+        reference: String,
     },
 }
 
@@ -419,6 +450,12 @@ fn main() -> Result<()> {
         Commands::Poll { dry_run } => commands::poll::run(dry_run),
         Commands::Queue { references } => commands::queue::run(references),
         Commands::Runs { json } => commands::runs::run(json),
+        Commands::Plan { action } => match action {
+            PlanAction::Show { reference } => commands::plan::show(reference),
+            PlanAction::Init { reference } => commands::plan::init(reference),
+            PlanAction::Answer { reference, text } => commands::plan::answer(reference, text),
+            PlanAction::Path { reference } => commands::plan::path(reference),
+        },
         Commands::Member { action } => match action {
             MemberAction::Add {
                 name,

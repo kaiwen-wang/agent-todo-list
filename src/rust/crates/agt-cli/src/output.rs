@@ -175,6 +175,10 @@ pub fn print_todo_detail(todo: &Todo, prefix: &str, members: &[Member]) {
         println!("  {}   {}", "Branch:".dimmed(), branch.cyan());
     }
 
+    if let Some(plan_path) = &todo.plan_path {
+        println!("  {}     {}", "Plan:".dimmed(), plan_path.cyan());
+    }
+
     if !todo.labels.is_empty() {
         let labels: Vec<&str> = todo.labels.iter().map(|l| l.display_name()).collect();
         println!("  {}   {}", "Labels:".dimmed(), labels.join(", "));

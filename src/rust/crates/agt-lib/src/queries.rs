@@ -130,6 +130,7 @@ fn read_todo_at(doc: &AutoCommit, todos_id: &automerge::ObjId, idx: usize) -> Op
         .unwrap_or_default();
     let assignee = get_nullable_str(doc, &todo_id, "assignee");
     let branch = get_nullable_str(doc, &todo_id, "branch");
+    let plan_path = get_nullable_str(doc, &todo_id, "planPath");
     let created_at = get_i64(doc, &todo_id, "createdAt").unwrap_or(0);
     let updated_at = get_i64(doc, &todo_id, "updatedAt").unwrap_or(0);
     let created_by = get_str(doc, &todo_id, "createdBy").unwrap_or_default();
@@ -181,6 +182,7 @@ fn read_todo_at(doc: &AutoCommit, todos_id: &automerge::ObjId, idx: usize) -> Op
         updated_at,
         created_by,
         platform,
+        plan_path,
     })
 }
 

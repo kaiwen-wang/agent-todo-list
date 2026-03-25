@@ -420,6 +420,7 @@ fn parse_update_fields(updates: &Value) -> UpdateTodoFields<'_> {
                 .collect()
         }),
         assignee: updates.get("assignee").map(|a| a.as_str()),
+        plan_path: updates.get("planPath").map(|p| p.as_str()),
     }
 }
 

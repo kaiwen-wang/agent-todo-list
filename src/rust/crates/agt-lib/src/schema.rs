@@ -413,6 +413,7 @@ pub struct Todo {
     pub updated_at: i64,
     pub created_by: String,
     pub platform: Platform,
+    pub plan_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
