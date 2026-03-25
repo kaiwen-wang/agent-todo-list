@@ -5,7 +5,13 @@ use anyhow::Result;
 use clap::{CommandFactory, Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "agt", about = "Agent-native todo/project management", version)]
+#[command(
+    name = "agt",
+    about = "Agent-native todo/project management",
+    version,
+    subcommand_help_heading = "Commands",
+    override_usage = "agt <COMMAND>  [--all for full help]"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -326,7 +332,7 @@ fn main() -> Result<()> {
     // Only trigger when --all appears before any subcommand (i.e. args[1])
     // or after "help", to avoid conflicting with `agt list --all`.
     let args: Vec<String> = std::env::args().collect();
-    let has_all = args.iter().any(|a| a == "--all");
+    let has_all = args.iter().any(|a| a == "--all" || a == "-a");
     let first_non_flag = args.iter().skip(1).find(|a| !a.starts_with('-'));
     let is_help_context = first_non_flag.is_none() || first_non_flag.map(|s| s.as_str()) == Some("help");
     if has_all && is_help_context {

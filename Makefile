@@ -1,4 +1,4 @@
-.PHONY: dev build web deploy undeploy test lint
+.PHONY: dev build web deploy undeploy test lint install
 
 dev: ## Start Rust API server + Vite dev server
 	@bash -c '\
@@ -22,7 +22,11 @@ lint: ## Run oxlint + oxfmt
 	bunx oxlint src/web/src --fix
 	bunx oxfmt src/web/src
 
-deploy: build ## Build and install `agt` binary + web assets to ~/.local
+install: ## Quick release build + install (no web assets)
+	cd src/rust && cargo build --release
+	cp src/rust/target/release/agt ~/.local/bin/agt
+
+deploy: build ## Full release build + install with web assets
 	install -d ~/.local/bin
 	install src/rust/target/release/agt ~/.local/bin/agt
 	-xattr -d com.apple.quarantine ~/.local/bin/agt 2>/dev/null

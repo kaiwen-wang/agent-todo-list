@@ -163,26 +163,23 @@ reference but are not used.
 All commands support `--json` for structured output. No interactive prompts -- all
 parameters are flags/arguments. Exit codes: 0 = success, 1 = error.
 
+Run `agt --all` to see full help with every flag for every command. Key commands:
+
 ```bash
-agt init --name "My Project" --prefix ABC
-agt add "Fix auth bug" --priority high --status todo
-agt list [--status in_progress] [--assignee name] [--json]
+agt add "title" [--priority --status --difficulty --labels --assignee]
+agt list [--status --assignee --priority --difficulty --search --all --archived]
 agt show PREFIX-N
-agt update PREFIX-N --status done --priority urgent --title "New title"
+agt update PREFIX-N [--title --status --priority --difficulty --labels --description]
 agt delete PREFIX-N
 agt assign PREFIX-N member-name
-agt unassign PREFIX-N
-agt comment PREFIX-N "This is a comment"
+agt comment PREFIX-N "text"
 agt branch PREFIX-N
-agt member add "Name" --role member
-agt member list
-agt member remove "Name"
-agt config
+agt member add|list|remove|update
+agt config [--name --prefix]
+agt commit [--push] [-m "message"]
 agt serve [--port 3000]
 agt inbox [show|append|clear]
-agt brain [--auto]
-agt log
-agt commit [--push] [-m "message"]
+agt log [-n limit]
 ```
 
 ### Brain / Inbox System
