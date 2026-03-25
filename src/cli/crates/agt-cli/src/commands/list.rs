@@ -1,6 +1,7 @@
 use anyhow::Result;
 
 use agt_lib::queries::{self, TodoFilter};
+use agt_lib::schema::Status;
 
 use super::load_project;
 use crate::output;
@@ -9,17 +10,30 @@ pub fn run(
     status: Option<String>,
     assignee: Option<String>,
     priority: Option<String>,
+    difficulty: Option<String>,
     search: Option<String>,
+    all: bool,
+    archived: bool,
     json: bool,
 ) -> Result<()> {
     let (_paths, doc) = load_project()?;
 
+    let status_filter = if let Some(s) = status {
+        Some(s.split(',').filter_map(|v| v.trim().parse().ok()).collect())
+    } else if archived {
+        Some(vec![Status::Archived])
+    } else if all {
+        Some(Status::ALL.to_vec())
+    } else {
+        None
+    };
+
     let filter = TodoFilter {
-        status: status.map(|s| s.split(',').filter_map(|v| v.trim().parse().ok()).collect()),
+        status: status_filter,
         priority: priority.map(|p| p.split(',').filter_map(|v| v.trim().parse().ok()).collect()),
+        difficulty: difficulty.map(|d| d.split(',').filter_map(|v| v.trim().parse().ok()).collect()),
         assignee,
         search,
-        ..Default::default()
     };
 
     let todos = queries::query_todos(&doc, &filter);

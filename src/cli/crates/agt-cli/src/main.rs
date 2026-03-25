@@ -41,6 +41,9 @@ enum Commands {
         /// Description
         #[arg(long)]
         description: Option<String>,
+        /// Labels (comma-separated: bug, new_feature, feature_plus)
+        #[arg(long)]
+        labels: Option<String>,
         /// Output as JSON
         #[arg(long)]
         json: bool,
@@ -56,9 +59,18 @@ enum Commands {
         /// Filter by priority
         #[arg(long)]
         priority: Option<String>,
+        /// Filter by difficulty (easy, medium, hard)
+        #[arg(long)]
+        difficulty: Option<String>,
         /// Search title and description
         #[arg(long)]
         search: Option<String>,
+        /// Include all todos (archived + won't do)
+        #[arg(long)]
+        all: bool,
+        /// Show only archived todos
+        #[arg(long)]
+        archived: bool,
         /// Output as JSON
         #[arg(long)]
         json: bool,
@@ -90,6 +102,9 @@ enum Commands {
         /// New description
         #[arg(long)]
         description: Option<String>,
+        /// Labels (comma-separated: bug, new_feature, feature_plus)
+        #[arg(long)]
+        labels: Option<String>,
         /// Output as JSON
         #[arg(long)]
         json: bool,
@@ -98,6 +113,9 @@ enum Commands {
     Delete {
         /// Todo reference
         reference: String,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
     },
     /// Assign a todo to a member
     Assign {
@@ -105,11 +123,17 @@ enum Commands {
         reference: String,
         /// Member name or ID
         member: String,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
     },
     /// Unassign a todo
     Unassign {
         /// Todo reference
         reference: String,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
     },
     /// Add a comment to a todo
     Comment {
@@ -117,11 +141,17 @@ enum Commands {
         reference: String,
         /// Comment text
         text: String,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
     },
     /// Create a git worktree + branch for a todo
     Branch {
         /// Todo reference
         reference: String,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
     },
     /// Remove a git worktree + branch for a todo
     Unbranch {
@@ -164,8 +194,15 @@ enum Commands {
         #[command(subcommand)]
         action: MemberAction,
     },
-    /// Show project config
-    Config,
+    /// Show or update project config
+    Config {
+        /// Set project name
+        #[arg(long)]
+        name: Option<String>,
+        /// Set issue prefix (e.g. ABC)
+        #[arg(long)]
+        prefix: Option<String>,
+    },
     /// Start the web dashboard server
     Serve {
         /// Port to listen on
@@ -229,6 +266,9 @@ enum MemberAction {
         /// Agent model identifier
         #[arg(long)]
         model: Option<String>,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
     },
     /// List all members
     List {
@@ -240,6 +280,29 @@ enum MemberAction {
     Remove {
         /// Member name or ID
         name: String,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Update a member
+    Update {
+        /// Member name or ID
+        name: String,
+        /// New name (rename)
+        #[arg(long = "name", value_name = "NEW_NAME")]
+        new_name: Option<String>,
+        /// New role (owner, member, agent)
+        #[arg(long)]
+        role: Option<String>,
+        /// New email address
+        #[arg(long)]
+        email: Option<String>,
+        /// Agent provider (claude-code, opencode, custom)
+        #[arg(long)]
+        provider: Option<String>,
+        /// Agent model identifier
+        #[arg(long)]
+        model: Option<String>,
     },
 }
 
@@ -255,6 +318,7 @@ fn main() -> Result<()> {
             difficulty,
             assignee,
             description,
+            labels,
             json,
         } => commands::add::run(
             title,
@@ -263,15 +327,19 @@ fn main() -> Result<()> {
             difficulty,
             assignee,
             description,
+            labels,
             json,
         ),
         Commands::List {
             status,
             assignee,
             priority,
+            difficulty,
             search,
+            all,
+            archived,
             json,
-        } => commands::list::run(status, assignee, priority, search, json),
+        } => commands::list::run(status, assignee, priority, difficulty, search, all, archived, json),
         Commands::Show { reference, json } => commands::show::run(reference, json),
         Commands::Update {
             reference,
@@ -280,6 +348,7 @@ fn main() -> Result<()> {
             priority,
             difficulty,
             description,
+            labels,
             json,
         } => commands::update::run(
             reference,
@@ -288,13 +357,22 @@ fn main() -> Result<()> {
             priority,
             difficulty,
             description,
+            labels,
             json,
         ),
-        Commands::Delete { reference } => commands::delete::run(reference),
-        Commands::Assign { reference, member } => commands::assign::run(reference, member),
-        Commands::Unassign { reference } => commands::unassign::run(reference),
-        Commands::Comment { reference, text } => commands::comment::run(reference, text),
-        Commands::Branch { reference } => commands::branch::run(reference),
+        Commands::Delete { reference, json } => commands::delete::run(reference, json),
+        Commands::Assign {
+            reference,
+            member,
+            json,
+        } => commands::assign::run(reference, member, json),
+        Commands::Unassign { reference, json } => commands::unassign::run(reference, json),
+        Commands::Comment {
+            reference,
+            text,
+            json,
+        } => commands::comment::run(reference, text, json),
+        Commands::Branch { reference, json } => commands::branch::run(reference, json),
         Commands::Unbranch {
             reference,
             keep_branch,
@@ -314,12 +392,21 @@ fn main() -> Result<()> {
                 email,
                 provider,
                 model,
-            } => commands::member::add(name, role, email, provider, model),
+                json,
+            } => commands::member::add(name, role, email, provider, model, json),
             MemberAction::List { json } => commands::member::list(json),
-            MemberAction::Remove { name } => commands::member::remove(name),
+            MemberAction::Remove { name, json } => commands::member::remove(name, json),
+            MemberAction::Update {
+                name,
+                new_name,
+                role,
+                email,
+                provider,
+                model,
+            } => commands::member::update(name, new_name, role, email, provider, model),
         },
         Commands::Commit { push, message } => commands::commit::run(push, message),
-        Commands::Config => commands::config::run(),
+        Commands::Config { name, prefix } => commands::config::run(name, prefix),
         Commands::Serve { port, open } => commands::serve::run(port, open),
         Commands::Inbox { action, text } => commands::inbox::run(action, text),
         Commands::Log { limit, json } => commands::log::run(limit, json),

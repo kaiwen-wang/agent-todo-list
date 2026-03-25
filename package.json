@@ -14,8 +14,8 @@
     "build": "cd src/cli && cargo build --release && bun run --cwd src/web build-only",
     "serve": "cd src/cli && cargo run -- serve",
     "agt": "cd src/cli && cargo run --",
-    "lint": "oxlint src/lib src/server --fix",
-    "format": "oxfmt src/lib src/server",
+    "lint": "oxlint src/lib --fix",
+    "format": "oxfmt src/lib",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

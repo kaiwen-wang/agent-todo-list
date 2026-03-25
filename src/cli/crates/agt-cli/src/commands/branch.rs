@@ -116,7 +116,7 @@ pub fn ensure_worktree(root: &Path, prefix: &str, todo: &Todo) -> Result<(String
 }
 
 /// `agt branch <ref>` — create worktree + branch, record on todo.
-pub fn run(reference: String) -> Result<()> {
+pub fn run(reference: String, json: bool) -> Result<()> {
     let (paths, mut doc) = load_project()?;
     let (_, prefix, _, _) = queries::read_project_meta(&doc);
     let num = parse_ref(&reference, &prefix)?;
@@ -125,7 +125,20 @@ pub fn run(reference: String) -> Result<()> {
         .ok_or_else(|| anyhow::anyhow!("Todo {}-{} not found", prefix, num))?;
 
     if let Some(ref branch) = todo.branch {
-        println!("Todo {}-{} already has branch: {}", prefix, num, branch);
+        let worktree_path = paths.root.join(".worktrees").join(branch);
+        if json {
+            println!(
+                "{}",
+                serde_json::json!({
+                    "ok": true,
+                    "reference": format!("{}-{}", prefix, num),
+                    "branch": branch,
+                    "worktree": worktree_path.display().to_string(),
+                })
+            );
+        } else {
+            println!("Todo {}-{} already has branch: {}", prefix, num, branch);
+        }
         return Ok(());
     }
 
@@ -135,7 +148,19 @@ pub fn run(reference: String) -> Result<()> {
     operations::set_branch(&mut doc, num, &branch_name, None)?;
     save_project(&paths, &mut doc)?;
 
-    println!("Created branch: {}", branch_name);
-    println!("  Worktree: {}", worktree_path.display());
+    if json {
+        println!(
+            "{}",
+            serde_json::json!({
+                "ok": true,
+                "reference": format!("{}-{}", prefix, num),
+                "branch": branch_name,
+                "worktree": worktree_path.display().to_string(),
+            })
+        );
+    } else {
+        println!("Created branch: {}", branch_name);
+        println!("  Worktree: {}", worktree_path.display());
+    }
     Ok(())
 }

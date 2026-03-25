@@ -13,6 +13,7 @@ pub fn run(
     difficulty: Option<String>,
     assignee: Option<String>,
     description: Option<String>,
+    labels: Option<String>,
     json: bool,
 ) -> Result<()> {
     let (paths, mut doc) = load_project()?;
@@ -27,6 +28,14 @@ pub fn run(
         .map_err(|e: String| anyhow::anyhow!(e))?;
     let difficulty: Option<Difficulty> = difficulty
         .map(|d| d.parse())
+        .transpose()
+        .map_err(|e: String| anyhow::anyhow!(e))?;
+    let labels: Option<Vec<Label>> = labels
+        .map(|l| {
+            l.split(',')
+                .map(|s| s.trim().parse::<Label>())
+                .collect::<Result<Vec<_>, _>>()
+        })
         .transpose()
         .map_err(|e: String| anyhow::anyhow!(e))?;
 
@@ -47,7 +56,7 @@ pub fn run(
             status,
             priority,
             difficulty,
-            labels: None,
+            labels,
             assignee: assignee_id.as_deref(),
             created_by: None,
             platform: Some(Platform::Cli),

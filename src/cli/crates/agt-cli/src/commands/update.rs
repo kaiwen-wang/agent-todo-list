@@ -13,6 +13,7 @@ pub fn run(
     priority: Option<String>,
     difficulty: Option<String>,
     description: Option<String>,
+    labels: Option<String>,
     json: bool,
 ) -> Result<()> {
     let (paths, mut doc) = load_project()?;
@@ -31,6 +32,14 @@ pub fn run(
         .map(|d| d.parse())
         .transpose()
         .map_err(|e: String| anyhow::anyhow!(e))?;
+    let labels: Option<Vec<Label>> = labels
+        .map(|l| {
+            l.split(',')
+                .map(|s| s.trim().parse::<Label>())
+                .collect::<Result<Vec<_>, _>>()
+        })
+        .transpose()
+        .map_err(|e: String| anyhow::anyhow!(e))?;
 
     operations::update_todo(
         &mut doc,
@@ -41,6 +50,7 @@ pub fn run(
             status,
             priority,
             difficulty,
+            labels,
             ..Default::default()
         },
         None,
