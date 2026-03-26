@@ -249,15 +249,22 @@ pub fn find_todo_by_number(doc: &AutoCommit, num: u64) -> Option<Todo> {
 }
 
 /// Parse a todo reference like "ABC-1" into the number part.
+/// Also handles shell completion badges like "ABC-1[*]".
 pub fn parse_todo_ref(reference: &str, prefix: &str) -> Option<u64> {
-    let upper = reference.to_uppercase();
+    // Strip trailing status badge from shell completions (e.g. "AGT-18[*]" → "AGT-18")
+    let clean = if let Some(bracket) = reference.find('[') {
+        &reference[..bracket]
+    } else {
+        reference
+    };
+    let upper = clean.to_uppercase();
     let expected_prefix = format!("{}-", prefix.to_uppercase());
 
     if upper.starts_with(&expected_prefix) {
         return upper[expected_prefix.len()..].parse().ok();
     }
 
-    reference.parse().ok()
+    clean.parse().ok()
 }
 
 /// Find a member by name (case-insensitive), ID, or "me" (git identity).

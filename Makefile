@@ -1,6 +1,6 @@
-.PHONY: default dev build web deploy undeploy dist test lint
+.PHONY: default dev build web deploy undeploy dist test lint completions
 
-default: ## Quick release build + install CLI (no web assets)
+default: completions ## Quick release build + install CLI (no web assets)
 	cd src/rust && cargo build --release
 	install src/rust/target/release/agt ~/.local/bin/agt
 	-xattr -cr ~/.local/bin/agt 2>/dev/null
@@ -27,7 +27,7 @@ lint: ## Run oxlint + oxfmt
 	bunx oxlint src/web/src --fix
 	bunx oxfmt src/web/src
 
-deploy: build ## Full release build + install with web assets
+deploy: build completions ## Full release build + install with web assets
 	install -d ~/.local/bin
 	install src/rust/target/release/agt ~/.local/bin/agt
 	-xattr -d com.apple.quarantine ~/.local/bin/agt 2>/dev/null
@@ -38,6 +38,15 @@ deploy: build ## Full release build + install with web assets
 undeploy: ## Remove `agt` binary and data
 	rm -f ~/.local/bin/agt
 	rm -rf ~/.local/share/agt
+
+completions: ## Install shell completions (fish, bash, zsh)
+	install -d ~/.config/fish/completions
+	install -m 644 completions/agt.fish ~/.config/fish/completions/agt.fish
+	install -d ~/.local/share/bash-completion/completions
+	install -m 644 completions/agt.bash ~/.local/share/bash-completion/completions/agt
+	install -d ~/.zsh/completions
+	install -m 644 completions/_agt ~/.zsh/completions/_agt
+	@echo "Shell completions installed (fish, bash, zsh)"
 
 dist: build ## Build distributable tarball for current platform
 	$(eval TARGET := $(shell rustc -vV | grep host | cut -d' ' -f2))

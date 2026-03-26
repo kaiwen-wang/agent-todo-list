@@ -1,0 +1,296 @@
+#compdef agt
+# Zsh completions for agt — agent-native todo/project management
+#
+# Install: copy to a directory in your $fpath (e.g. ~/.zsh/completions/)
+#          and run `autoload -Uz compinit && compinit`
+# Or:      make completions
+
+_agt_todo_refs() {
+    local prefix json
+    prefix=$(agt config 2>/dev/null | sed -n 's/.*Prefix:[[:space:]]*//p')
+    json=$(agt list --all --json 2>/dev/null)
+    [ -z "$json" ] && return
+    local -a refs
+    refs=(${(f)"$(echo "$json" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+prefix = '$prefix'
+icons = {
+    'none': '[ ]', 'todo': '[ ]', 'queued': '[~]',
+    'in_progress': '[*]', 'completed': '[x]', 'archived': '[-]',
+    'wont_do': '[-]', 'needs_elaboration': '[?]',
+}
+pri_short = {'low': 'LOW', 'medium': 'MED', 'high': 'HIGH', 'urgent': 'URGENT'}
+dif_short = {'easy': 'EASY', 'medium': 'MEDIUM', 'hard': 'HARD'}
+for t in data:
+    ref = f'{prefix}-{t[\"number\"]}' if prefix else str(t['number'])
+    icon = icons.get(t.get('status', 'none'), '[ ]')
+    title = t.get('title', '')[:50].replace(':', ' ')
+    tags = ''
+    p = pri_short.get(t.get('priority', ''), '')
+    d = dif_short.get(t.get('difficulty', ''), '')
+    if p: tags += f' P\:{p}'
+    if d: tags += f' D\:{d}'
+    print(f'{ref}{icon}:{icon} {title}{tags}')
+" 2>/dev/null)"})
+    _describe 'todo reference' refs
+}
+
+_agt_members() {
+    local -a members
+    members=(${(f)"$(agt member list --json 2>/dev/null | python3 -c "
+import sys, json
+for m in json.load(sys.stdin):
+    name = m.get('name', '')
+    role = m.get('role', '')
+    print(f'{name}:{role}')
+" 2>/dev/null)"})
+    _describe 'member' members
+}
+
+_agt_statuses=(none todo queued in_progress completed archived wont_do needs_elaboration)
+_agt_priorities=(none low medium high urgent)
+_agt_difficulties=(none easy medium hard)
+_agt_labels=(bug new_feature feature_plus)
+_agt_roles=(owner member agent)
+_agt_providers=(claude-code opencode custom)
+
+_agt() {
+    local -a commands
+    commands=(
+        'init:Initialize a new project'
+        'add:Add a new todo'
+        'list:List todos'
+        'show:Show a single todo'
+        'edit:Edit a todo'
+        'delete:Delete a todo'
+        'assign:Assign a todo to a member'
+        'unassign:Unassign a todo'
+        'comment:Add a comment to a todo'
+        'branch:Create worktree + branch for a todo'
+        'unbranch:Remove worktree + branch for a todo'
+        'run:Run a coding agent on a todo'
+        'poll:Poll for queued todos and dispatch'
+        'queue:Set todo status to queued'
+        'runs:List active agent runs'
+        'plan:Manage plan/research files'
+        'member:Manage project members'
+        'config:Show or update project config'
+        'serve:Start the web dashboard server'
+        'inbox:Manage the freeform inbox'
+        'commit:Commit .todo/ changes'
+        'log:Show audit log'
+    )
+
+    _arguments -C \
+        '1:command:->command' \
+        '*::arg:->args'
+
+    case "$state" in
+        command)
+            _describe 'agt command' commands
+            ;;
+        args)
+            case "${words[1]}" in
+                show)
+                    _arguments \
+                        '1:todo reference:_agt_todo_refs' \
+                        '--json[Output as JSON]'
+                    ;;
+                edit)
+                    _arguments \
+                        '1:todo reference:_agt_todo_refs' \
+                        '--title[New title]:title' \
+                        '--status[New status]:status:($_agt_statuses)' \
+                        '--priority[New priority]:priority:($_agt_priorities)' \
+                        '--difficulty[New difficulty]:difficulty:($_agt_difficulties)' \
+                        '--description[New description]:description' \
+                        '--labels[Labels]:labels:($_agt_labels)' \
+                        '--json[Output as JSON]'
+                    ;;
+                delete)
+                    _arguments \
+                        '1:todo reference:_agt_todo_refs' \
+                        '--json[Output as JSON]'
+                    ;;
+                assign)
+                    _arguments \
+                        '1:todo reference:_agt_todo_refs' \
+                        '2:member:_agt_members' \
+                        '--json[Output as JSON]'
+                    ;;
+                unassign)
+                    _arguments \
+                        '1:todo reference:_agt_todo_refs' \
+                        '--json[Output as JSON]'
+                    ;;
+                comment)
+                    _arguments \
+                        '1:todo reference:_agt_todo_refs' \
+                        '2:comment text' \
+                        '--json[Output as JSON]'
+                    ;;
+                branch)
+                    _arguments \
+                        '1:todo reference:_agt_todo_refs' \
+                        '--json[Output as JSON]'
+                    ;;
+                unbranch)
+                    _arguments \
+                        '1:todo reference:_agt_todo_refs' \
+                        '--keep-branch[Keep the git branch]'
+                    ;;
+                run)
+                    _arguments \
+                        '1:todo reference:_agt_todo_refs' \
+                        '--budget[Max budget in USD]:budget' \
+                        '--dry-run[Print prompt and exit]'
+                    ;;
+                queue)
+                    _arguments \
+                        '*:todo reference:_agt_todo_refs'
+                    ;;
+                add)
+                    _arguments \
+                        '1:title' \
+                        '--priority[Priority]:priority:($_agt_priorities)' \
+                        '--status[Status]:status:($_agt_statuses)' \
+                        '--difficulty[Difficulty]:difficulty:($_agt_difficulties)' \
+                        '--assignee[Assignee]:assignee:_agt_members' \
+                        '--description[Description]:description' \
+                        '--labels[Labels]:labels:($_agt_labels)' \
+                        '--json[Output as JSON]'
+                    ;;
+                list)
+                    _arguments \
+                        '--status[Filter by status]:status:($_agt_statuses)' \
+                        '--assignee[Filter by assignee]:assignee:_agt_members' \
+                        '--priority[Filter by priority]:priority:($_agt_priorities)' \
+                        '--difficulty[Filter by difficulty]:difficulty:($_agt_difficulties)' \
+                        '--search[Search title and description]:search' \
+                        '--all[Include all todos]' \
+                        '--archived[Show only archived todos]' \
+                        '--rank[Sort by actionability]' \
+                        '--json[Output as JSON]'
+                    ;;
+                plan)
+                    local -a plan_commands
+                    plan_commands=(
+                        'list:List all plan files'
+                        'show:Show a todo'\''s plan'
+                        'init:Create a plan file'
+                        'answer:Append an answer to plan questions'
+                        'path:Print plan file path'
+                        'research:Research and flesh out a plan'
+                        'trash:Delete a plan file'
+                    )
+                    _arguments -C \
+                        '1:plan command:->plancmd' \
+                        '*::arg:->planargs'
+                    case "$state" in
+                        plancmd)
+                            _describe 'plan command' plan_commands ;;
+                        planargs)
+                            case "${words[1]}" in
+                                show)
+                                    _arguments \
+                                        '1:todo reference:_agt_todo_refs' \
+                                        '(-a --answer)'{-a,--answer}'[Prompt to answer questions]'
+                                    ;;
+                                init|answer|path|trash)
+                                    _arguments '1:todo reference:_agt_todo_refs' ;;
+                                research)
+                                    _arguments \
+                                        '*:todo reference:_agt_todo_refs' \
+                                        '--all[Research all unplanned todos]' \
+                                        '--force[Overwrite existing plans]' \
+                                        '--dry-run[Print prompt without running]'
+                                    ;;
+                            esac
+                            ;;
+                    esac
+                    ;;
+                member)
+                    local -a member_commands
+                    member_commands=(
+                        'add:Add a new member'
+                        'list:List all members'
+                        'remove:Remove a member'
+                        'update:Update a member'
+                    )
+                    _arguments -C \
+                        '1:member command:->membercmd' \
+                        '*::arg:->memberargs'
+                    case "$state" in
+                        membercmd)
+                            _describe 'member command' member_commands ;;
+                        memberargs)
+                            case "${words[1]}" in
+                                add)
+                                    _arguments \
+                                        '1:name' \
+                                        '--role[Role]:role:($_agt_roles)' \
+                                        '--email[Email]:email' \
+                                        '--provider[Agent provider]:provider:($_agt_providers)' \
+                                        '--model[Agent model]:model' \
+                                        '--json[Output as JSON]'
+                                    ;;
+                                list)
+                                    _arguments '--json[Output as JSON]' ;;
+                                remove)
+                                    _arguments \
+                                        '1:member:_agt_members' \
+                                        '--json[Output as JSON]'
+                                    ;;
+                                update)
+                                    _arguments \
+                                        '1:member:_agt_members' \
+                                        '--name[New name]:name' \
+                                        '--role[New role]:role:($_agt_roles)' \
+                                        '--email[New email]:email' \
+                                        '--provider[Agent provider]:provider:($_agt_providers)' \
+                                        '--model[Agent model]:model'
+                                    ;;
+                            esac
+                            ;;
+                    esac
+                    ;;
+                config)
+                    _arguments \
+                        '--name[Set project name]:name' \
+                        '--prefix[Set issue prefix]:prefix' \
+                        '--json[Output as JSON]'
+                    ;;
+                serve)
+                    _arguments \
+                        '--port[Port to listen on]:port' \
+                        '--open[Open in browser]'
+                    ;;
+                inbox)
+                    _arguments '1:action:(show append clear)'
+                    ;;
+                commit)
+                    _arguments \
+                        '--push[Push to remote after committing]' \
+                        '(-m --message)'{-m,--message}'[Custom commit message]:message'
+                    ;;
+                log)
+                    _arguments \
+                        '(-n --limit)'{-n,--limit}'[Max entries]:limit' \
+                        '--json[Output as JSON]'
+                    ;;
+                init)
+                    _arguments \
+                        '--name[Project name]:name' \
+                        '--prefix[Project prefix]:prefix'
+                    ;;
+                poll)
+                    _arguments '--dry-run[Print what would be dispatched]' ;;
+                runs)
+                    _arguments '--json[Output as JSON]' ;;
+            esac
+            ;;
+    esac
+}
+
+_agt
