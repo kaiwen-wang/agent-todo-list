@@ -419,27 +419,38 @@ fn print_grouped_help() {
     println!("  \x1b[1m-V, --version\x1b[0m  Print version");
 }
 
-fn print_full_help() {
-    let mut cmd = Cli::command().arg(
-        clap::Arg::new("all")
-            .long("all")
-            .help("Print help for all subcommands")
-            .action(clap::ArgAction::SetTrue),
-    );
+fn print_subcommands(cmd: &mut clap::Command, prefix: &str, depth: usize, max_depth: usize) {
+    if depth > max_depth {
+        return;
+    }
+    for sub in cmd.get_subcommands_mut() {
+        if sub.get_name() == "help" || sub.get_name() == "merge-driver" {
+            continue;
+        }
+        let full_name = if prefix.is_empty() {
+            sub.get_name().to_string()
+        } else {
+            format!("{} {}", prefix, sub.get_name())
+        };
+        println!("{}", "─".repeat(60));
+        sub.print_help().ok();
+        println!();
 
+        // Recurse into nested subcommands
+        if sub.has_subcommands() && depth < max_depth {
+            print_subcommands(sub, &full_name, depth + 1, max_depth);
+        }
+    }
+}
+
+fn print_full_help(max_depth: usize) {
     // Print the grouped overview first instead of clap's flat list
     print_grouped_help();
     println!("\n{}\n", "━".repeat(60));
     println!("Detailed help for all commands:\n");
 
-    for sub in cmd.get_subcommands_mut() {
-        if sub.get_name() == "help" || sub.get_name() == "merge-driver" {
-            continue;
-        }
-        println!("{}", "─".repeat(60));
-        sub.print_help().ok();
-        println!("\n");
-    }
+    let mut cmd = Cli::command();
+    print_subcommands(&mut cmd, "", 1, max_depth);
 }
 
 fn main() -> Result<()> {
@@ -449,10 +460,17 @@ fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
     let has_all = args.iter().any(|a| a == "--all" || a == "-a");
     let has_help = args.iter().any(|a| a == "--help" || a == "-h");
+    // Parse --depth N flag (defaults to max depth when omitted)
+    let max_depth: usize = args
+        .iter()
+        .position(|a| a == "--depth")
+        .and_then(|i| args.get(i + 1))
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(usize::MAX);
     let non_flags: Vec<&String> = args
         .iter()
         .skip(1)
-        .filter(|a| !a.starts_with('-'))
+        .filter(|a| !a.starts_with('-') && a.parse::<usize>().is_err())
         .collect();
     let first_non_flag = non_flags.first().map(|s| s.as_str());
     let is_help_context = first_non_flag.is_none() || first_non_flag == Some("help");
@@ -461,7 +479,7 @@ fn main() -> Result<()> {
 
     if is_help_context && !is_help_for_specific {
         if has_all {
-            print_full_help();
+            print_full_help(max_depth);
         } else if has_help || first_non_flag.is_none() || first_non_flag == Some("help") {
             print_grouped_help();
         }
