@@ -1,22 +1,23 @@
 [pre-commit]
 parallel = true
 
+# Rust
 [[pre-commit.jobs]]
-name = "oxlint"
-glob = "src/{lib,cli,server}/**/*.ts"
-run = "bunx oxlint {staged_files} --fix"
+name = "cargo-fmt"
+glob = "src/rust/**/*.rs"
+run = "cd src/rust && cargo fmt"
 stage_fixed = true
 
+[[pre-commit.jobs]]
+name = "cargo-clippy"
+glob = "src/rust/**/*.rs"
+run = "cd src/rust && cargo clippy -- -D warnings"
+
+# Web
 [[pre-commit.jobs]]
 name = "oxlint-web"
 glob = "src/web/**/*.{ts,vue}"
 run = "bunx oxlint --config src/web/.oxlintrc.json {staged_files} --fix"
-stage_fixed = true
-
-[[pre-commit.jobs]]
-name = "oxfmt"
-glob = "src/{lib,cli,server}/**/*.ts"
-run = "bunx oxfmt {staged_files}"
 stage_fixed = true
 
 [[pre-commit.jobs]]

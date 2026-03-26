@@ -37,10 +37,6 @@ jobs:
         run: cargo check
         working-directory: src/rust
 
-      - name: Format check (Rust)
-        run: cargo fmt --check
-        working-directory: src/rust
-
       - name: Clippy (Rust)
         run: cargo clippy -- -D warnings
         working-directory: src/rust
@@ -52,9 +48,6 @@ jobs:
       # Web (Vue 3 + Vite)
       - name: Lint (web)
         run: bun run --cwd src/web lint
-
-      - name: Format check (web)
-        run: bunx oxfmt --check src/web/src
 
       - name: Type check (web)
         run: bun run --cwd src/web type-check
