@@ -2,7 +2,8 @@
 
 default: ## Quick release build + install CLI (no web assets)
 	cd src/rust && cargo build --release
-	cp src/rust/target/release/agt ~/.local/bin/agt
+	install src/rust/target/release/agt ~/.local/bin/agt
+	-xattr -cr ~/.local/bin/agt 2>/dev/null
 
 dev: ## Start Rust API server + Vite dev server
 	@bash -c '\
