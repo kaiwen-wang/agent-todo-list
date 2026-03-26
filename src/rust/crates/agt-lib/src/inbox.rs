@@ -61,6 +61,33 @@ pub fn append_processed(todo_dir: &Path, entries: &[ProcessedEntry]) -> Result<(
     Ok(std::fs::write(path, content)?)
 }
 
+/// Parse inbox text into individual items.
+///
+/// Splits on blank lines (one or more consecutive empty lines).
+/// Strips leading `- ` or `* ` list markers from each line within an item.
+/// Returns non-empty items as trimmed strings.
+pub fn parse_inbox_items(text: &str) -> Vec<String> {
+    text.split("\n\n")
+        .map(|chunk| {
+            chunk
+                .lines()
+                .map(|line| {
+                    let trimmed = line.trim();
+                    trimmed
+                        .strip_prefix("- ")
+                        .or_else(|| trimmed.strip_prefix("* "))
+                        .unwrap_or(trimmed)
+                        .trim()
+                })
+                .filter(|l| !l.is_empty())
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
 /// Create empty inbox files if they don't exist yet.
 pub fn ensure_inbox_files(todo_dir: &Path) -> Result<()> {
     let inbox = todo_dir.join("TODO.md");
