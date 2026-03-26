@@ -292,6 +292,64 @@ pub fn path(reference: String) -> Result<()> {
     Ok(())
 }
 
+/// `agt plan trash <ref>` — Move plan file to macOS Trash and clear planPath.
+pub fn trash(reference: String) -> Result<()> {
+    let (paths, mut doc) = load_project()?;
+    let (_, prefix, _, _) = queries::read_project_meta(&doc);
+    let num = parse_ref(&reference, &prefix)?;
+    let todo_ref = format!("{}-{}", prefix, num);
+
+    let todo = queries::find_todo_by_number(&doc, num)
+        .ok_or_else(|| anyhow::anyhow!("Todo {} not found", todo_ref))?;
+
+    let plan_file = if let Some(plan_path) = &todo.plan_path {
+        paths.todo_dir.join(plan_path)
+    } else {
+        let (_, abs) = plan_paths(&paths.todo_dir, &prefix, num);
+        abs
+    };
+
+    if !plan_file.exists() {
+        bail!("No plan file for {}", todo_ref);
+    }
+
+    // Move to macOS Trash via /usr/bin/trash
+    let status = Command::new("/usr/bin/trash")
+        .arg(&plan_file)
+        .status()
+        .context("Failed to run /usr/bin/trash")?;
+
+    if !status.success() {
+        bail!("trash command failed with exit code {}", status.code().unwrap_or(-1));
+    }
+
+    // Unstage from git if tracked
+    let _ = Command::new("git")
+        .arg("rm")
+        .arg("--cached")
+        .arg("--quiet")
+        .arg(&plan_file)
+        .current_dir(&paths.todo_dir)
+        .status();
+
+    // Clear planPath on the todo
+    if todo.plan_path.is_some() {
+        operations::update_todo(
+            &mut doc,
+            num,
+            UpdateTodoFields {
+                plan_path: Some(None),
+                ..Default::default()
+            },
+            None,
+        )?;
+        save_project(&paths, &mut doc)?;
+    }
+
+    println!("Trashed plan for {}", todo_ref);
+    Ok(())
+}
+
 /// `agt plan research <ref>` — Spawn an agent to research and flesh out the plan.
 pub fn research(reference: String, dry_run: bool) -> Result<()> {
     let (paths, mut doc) = load_project()?;
@@ -304,9 +362,38 @@ pub fn research(reference: String, dry_run: bool) -> Result<()> {
 
     let (relative, absolute) = plan_paths(&paths.todo_dir, &prefix, num);
 
-    // Ensure plans dir + file exist
+    // Ensure plans dir exists
     let plans_dir = paths.todo_dir.join("plans");
     fs::create_dir_all(&plans_dir)?;
+
+    // If plan file already exists, warn and prompt for confirmation
+    if absolute.exists() && !dry_run {
+        let existing = fs::read_to_string(&absolute)?;
+        let line_count = existing.trim().lines().count();
+        if line_count > 1 {
+            if std::io::stdin().is_terminal() {
+                eprintln!(
+                    "{} Plan file already exists ({} lines): {}",
+                    "⚠".yellow().bold(),
+                    line_count,
+                    absolute.display()
+                );
+                eprint!("Overwrite with new research? [y/N] ");
+                let mut input = String::new();
+                std::io::stdin().read_line(&mut input)?;
+                if !input.trim().eq_ignore_ascii_case("y") {
+                    eprintln!("Aborted.");
+                    return Ok(());
+                }
+            } else {
+                bail!(
+                    "Plan file already exists for {} ({} lines). Use --dry-run to preview, or delete the file first.",
+                    todo_ref,
+                    line_count
+                );
+            }
+        }
+    }
 
     if !absolute.exists() {
         let content = format!("# {}: {}\n\n", todo_ref, todo.title);
