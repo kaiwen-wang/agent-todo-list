@@ -60,7 +60,11 @@ pub struct ChangeMessage {
 }
 
 fn commit_msg(doc: &mut AutoCommit, msg: String) {
-    doc.commit_with(CommitOptions::default().with_message(msg));
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+    doc.commit_with(CommitOptions::default().with_message(msg).with_time(now));
 }
 
 fn build_msg(
