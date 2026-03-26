@@ -69,6 +69,7 @@ pub async fn post_change(
         "removeMember" => handle_remove_member(&state, &body).await,
         "updateMember" => handle_update_member(&state, &body).await,
         "updateInbox" => handle_update_inbox(&state, &body).await,
+        "processInbox" => handle_process_inbox(&state).await,
         "initPlan" => handle_init_plan(&state, &body).await,
         "researchPlan" => handle_research_plan(&state, &body).await,
         "answerPlan" => handle_answer_plan(&state, &body).await,
@@ -396,6 +397,59 @@ async fn handle_update_inbox(state: &AppState, body: &Value) -> Result<Value, St
     let text = body.get("text").and_then(|t| t.as_str()).unwrap_or("");
     inbox::write_inbox(&state.todo_dir, text).map_err(|e| e.to_string())?;
     Ok(json!({ "ok": true }))
+}
+
+async fn handle_process_inbox(state: &AppState) -> Result<Value, String> {
+    let _ = inbox::ensure_inbox_files(&state.todo_dir);
+    let content = inbox::read_inbox(&state.todo_dir).map_err(|e| e.to_string())?;
+    let items = inbox::parse_inbox_items(&content);
+
+    if items.is_empty() {
+        return Ok(json!({ "ok": true, "processed": 0, "tasks": [] }));
+    }
+
+    let mut doc = state.doc.lock().await;
+    let (_, prefix, _, _) = queries::read_project_meta(&doc);
+    let mut tasks = Vec::new();
+
+    for item in &items {
+        let number = operations::add_todo(
+            &mut doc,
+            AddTodoOpts {
+                title: item,
+                description: None,
+                status: None,
+                priority: None,
+                difficulty: None,
+                labels: None,
+                assignee: None,
+                created_by: None,
+                platform: Some(Platform::Cli),
+            },
+        )
+        .map_err(|e| e.to_string())?;
+
+        let reference = format!("{}-{}", prefix, number);
+        tasks.push(json!({ "ref": reference, "title": item }));
+    }
+
+    drop(doc);
+    state.save().await.map_err(|e| e.to_string())?;
+
+    // Archive to TODO-PROCESSED.md and clear inbox
+    let entries: Vec<inbox::ProcessedEntry> = tasks
+        .iter()
+        .map(|t| inbox::ProcessedEntry {
+            original: t["title"].as_str().unwrap_or("").to_string(),
+            reference: t["ref"].as_str().unwrap_or("").to_string(),
+            title: t["title"].as_str().unwrap_or("").to_string(),
+        })
+        .collect();
+    inbox::append_processed(&state.todo_dir, &entries).map_err(|e| e.to_string())?;
+    inbox::write_inbox(&state.todo_dir, "").map_err(|e| e.to_string())?;
+
+    let count = tasks.len();
+    Ok(json!({ "ok": true, "processed": count, "tasks": tasks }))
 }
 
 async fn handle_bulk(state: &AppState, body: &Value) -> Result<Value, String> {

@@ -88,14 +88,6 @@ export interface Project {
   inboxProcessed?: string;
 }
 
-// ── Brain event types (received over WebSocket) ──
-
-export type BrainEvent =
-  | { type: "brain:log"; message: string }
-  | { type: "brain:task"; ref: string; title: string; original: string }
-  | { type: "brain:error"; message: string }
-  | { type: "brain:done"; processed: number; tasks: Array<{ ref: string; title: string }> };
-
 export const STATUSES: Status[] = [
   "none",
   "todo",

@@ -2,7 +2,7 @@
 
 import { ref, computed } from "vue";
 import { defineStore } from "pinia";
-import type { Project, Todo, Status, BrainEvent } from "@/types";
+import type { Project, Todo, Status } from "@/types";
 import * as api from "@/api";
 
 export const useProjectStore = defineStore("project", () => {
@@ -23,9 +23,12 @@ export const useProjectStore = defineStore("project", () => {
   // ── Plan state ──
   const planEvents = ref<Array<{ type: string; [key: string]: unknown }>>([]);
 
-  // ── Brain state ──
-  const brainProcessing = ref(false);
-  const brainLogs = ref<BrainEvent[]>([]);
+  // ── Inbox processing state ──
+  const inboxProcessing = ref(false);
+  const inboxResult = ref<{
+    processed: number;
+    tasks: Array<{ ref: string; title: string }>;
+  } | null>(null);
 
   /** Todos grouped by status for the board view */
   const todosByStatus = computed(() => {
@@ -264,22 +267,25 @@ export const useProjectStore = defineStore("project", () => {
     }
   }
 
-  async function startBrainProcess() {
+  async function processInboxItems() {
     error.value = null;
-    brainProcessing.value = true;
-    brainLogs.value = [];
+    inboxProcessing.value = true;
+    inboxResult.value = null;
     try {
-      await api.triggerBrainProcess();
-      // Brain events will arrive via WebSocket — the API just kicks it off
+      const result = await api.processInbox();
+      inboxResult.value = { processed: result.processed, tasks: result.tasks };
+      // Reload project to pick up new todos and updated inbox/processed text
+      await load();
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : String(e);
-      brainProcessing.value = false;
       throw e;
+    } finally {
+      inboxProcessing.value = false;
     }
   }
 
-  function clearBrainLogs() {
-    brainLogs.value = [];
+  function clearInboxResult() {
+    inboxResult.value = null;
   }
 
   // ── Member actions ──
@@ -352,19 +358,6 @@ export const useProjectStore = defineStore("project", () => {
           case "plan:error":
             // Plan events are handled by the component via the planEvents ref
             planEvents.value.push(msg);
-            break;
-          case "brain:log":
-          case "brain:task":
-            brainLogs.value.push(msg);
-            break;
-          case "brain:error":
-            brainLogs.value.push(msg);
-            brainProcessing.value = false;
-            break;
-          case "brain:done":
-            brainLogs.value.push(msg);
-            brainProcessing.value = false;
-            load(); // Refresh to see newly created tasks + cleared inbox
             break;
         }
       } catch {
@@ -545,8 +538,8 @@ export const useProjectStore = defineStore("project", () => {
     inboxText,
     inboxProcessed,
     planEvents,
-    brainProcessing,
-    brainLogs,
+    inboxProcessing,
+    inboxResult,
     selectedTodoNumber,
     load,
     addTodo,
@@ -562,8 +555,8 @@ export const useProjectStore = defineStore("project", () => {
     researchPlan,
     answerPlan,
     updateInbox,
-    startBrainProcess,
-    clearBrainLogs,
+    processInboxItems,
+    clearInboxResult,
     addMember,
     removeMember,
     updateMember,

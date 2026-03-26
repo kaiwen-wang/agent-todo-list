@@ -283,7 +283,11 @@ export async function updateInbox(text: string): Promise<{ ok: boolean }> {
   return res.json();
 }
 
-export async function triggerBrainProcess(): Promise<{ ok: boolean }> {
+export async function processInbox(): Promise<{
+  ok: boolean;
+  processed: number;
+  tasks: Array<{ ref: string; title: string }>;
+}> {
   const res = await fetch(`${BASE}/api/change`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -291,7 +295,7 @@ export async function triggerBrainProcess(): Promise<{ ok: boolean }> {
   });
   if (!res.ok) {
     const data = await res.json();
-    throw new Error(data.error || "Failed to start brain processing");
+    throw new Error(data.error || "Failed to process inbox");
   }
   return res.json();
 }
