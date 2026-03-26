@@ -183,6 +183,17 @@ async function handleArchive() {
   }
 }
 
+async function handleDelete() {
+  if (!todo.value) return;
+  try {
+    await store.deleteTodo(todo.value.number);
+    message.success("Todo permanently deleted");
+    close();
+  } catch {
+    message.error("Failed to delete todo");
+  }
+}
+
 function formatDate(ts: number | string): string {
   return new Date(ts).toLocaleString();
 }
@@ -414,6 +425,19 @@ async function submitComment() {
             <template #icon>
               <NIcon :size="14"><Trash /></NIcon>
             </template>
+          </NButton>
+          <NButton
+            v-else
+            size="tiny"
+            quaternary
+            type="error"
+            style="flex-shrink: 0"
+            @click="handleDelete"
+          >
+            <template #icon>
+              <NIcon :size="14"><Trash /></NIcon>
+            </template>
+            Delete
           </NButton>
         </div>
 
