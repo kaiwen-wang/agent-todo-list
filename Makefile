@@ -1,4 +1,4 @@
-.PHONY: default dev build web deploy undeploy test lint
+.PHONY: default dev build web deploy undeploy dist test lint
 
 default: ## Quick release build + install CLI (no web assets)
 	cd src/rust && cargo build --release
@@ -37,3 +37,12 @@ deploy: build ## Full release build + install with web assets
 undeploy: ## Remove `agt` binary and data
 	rm -f ~/.local/bin/agt
 	rm -rf ~/.local/share/agt
+
+dist: build ## Build distributable tarball for current platform
+	$(eval TARGET := $(shell rustc -vV | grep host | cut -d' ' -f2))
+	mkdir -p dist/agt-$(TARGET)
+	cp src/rust/target/release/agt dist/agt-$(TARGET)/agt
+	cp -r src/web/dist dist/agt-$(TARGET)/web
+	cd dist/agt-$(TARGET) && tar -czf ../agt-$(TARGET).tar.gz .
+	rm -rf dist/agt-$(TARGET)
+	@echo "Built dist/agt-$(TARGET).tar.gz"
