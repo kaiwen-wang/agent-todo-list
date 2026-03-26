@@ -12,6 +12,7 @@ use std::process::{Command, Stdio};
 
 use agt_lib::operations::{self, UpdateTodoFields};
 use agt_lib::queries;
+use agt_lib::schema::{Status, Todo};
 use agt_lib::storage;
 
 use super::{load_project, parse_ref, save_project};
@@ -404,72 +405,23 @@ pub fn trash(reference: String) -> Result<()> {
     Ok(())
 }
 
-/// `agt plan research <ref>` — Spawn an agent to research and flesh out the plan.
-pub fn research(reference: String, dry_run: bool) -> Result<()> {
-    let (paths, mut doc) = load_project()?;
-    let (_, prefix, project_name, _) = queries::read_project_meta(&doc);
-    let num = parse_ref(&reference, &prefix)?;
-    let todo_ref = format!("{}-{}", prefix, num);
+/// Info needed to spawn a research agent for one todo.
+struct ResearchTarget {
+    num: u64,
+    todo_ref: String,
+    title: String,
+    prompt: String,
+    plan_relative: String,
+    plan_absolute: PathBuf,
+}
 
-    let todo = queries::find_todo_by_number(&doc, num)
-        .ok_or_else(|| anyhow::anyhow!("Todo {} not found", todo_ref))?;
-
-    let (relative, absolute) = plan_paths(&paths.todo_dir, &prefix, num);
-
-    // Ensure plans dir exists
-    let plans_dir = paths.todo_dir.join("plans");
-    fs::create_dir_all(&plans_dir)?;
-
-    // If plan file already exists, warn and prompt for confirmation
-    if absolute.exists() && !dry_run {
-        let existing = fs::read_to_string(&absolute)?;
-        let line_count = existing.trim().lines().count();
-        if line_count > 1 {
-            if std::io::stdin().is_terminal() {
-                eprintln!(
-                    "{} Plan file already exists ({} lines): {}",
-                    "⚠".yellow().bold(),
-                    line_count,
-                    absolute.display()
-                );
-                eprint!("Overwrite with new research? [y/N] ");
-                let mut input = String::new();
-                std::io::stdin().read_line(&mut input)?;
-                if !input.trim().eq_ignore_ascii_case("y") {
-                    eprintln!("Aborted.");
-                    return Ok(());
-                }
-            } else {
-                bail!(
-                    "Plan file already exists for {} ({} lines). Use --dry-run to preview, or delete the file first.",
-                    todo_ref,
-                    line_count
-                );
-            }
-        }
-    }
-
-    if !absolute.exists() {
-        let content = format!("# {}: {}\n\n", todo_ref, todo.title);
-        fs::write(&absolute, &content)?;
-        storage::git_stage(&absolute);
-    }
-
-    // Set planPath if not already set
-    if todo.plan_path.is_none() {
-        operations::update_todo(
-            &mut doc,
-            num,
-            UpdateTodoFields {
-                plan_path: Some(Some(&relative)),
-                ..Default::default()
-            },
-            None,
-        )?;
-        save_project(&paths, &mut doc)?;
-    }
-
-    // Build prompt (matches server's handle_research_plan)
+/// Build the research prompt for a single todo.
+fn build_research_prompt(
+    project_name: &str,
+    todo: &Todo,
+    todo_ref: &str,
+    plan_absolute: &std::path::Path,
+) -> String {
     let description_section = if todo.description.is_empty() {
         String::new()
     } else {
@@ -487,8 +439,7 @@ pub fn research(reference: String, dry_run: bool) -> Result<()> {
         format!("\n## Comments\n{}\n", comments.join("\n"))
     };
 
-    // Read existing plan content to include as context
-    let existing_content = fs::read_to_string(&absolute).unwrap_or_default();
+    let existing_content = fs::read_to_string(plan_absolute).unwrap_or_default();
     let existing_section = if existing_content.trim().lines().count() > 1 {
         format!(
             "\n## Existing Plan Content\n```markdown\n{}\n```\n\nBuild on this existing content. Keep what's useful, replace what needs updating.\n",
@@ -498,7 +449,7 @@ pub fn research(reference: String, dry_run: bool) -> Result<()> {
         String::new()
     };
 
-    let prompt = format!(
+    format!(
         r#"You are researching a task for the project "{project_name}".
 
 ## Task: {todo_ref} — {title}
@@ -525,22 +476,36 @@ Output ONLY the markdown plan content. Do not use any write tools."#,
         description_section = description_section,
         comments_section = comments_section,
         existing_section = existing_section,
-    );
+    )
+}
 
-    if dry_run {
-        println!("{}", "Prompt:".bold());
-        println!("{}", prompt);
-        return Ok(());
-    }
+/// Spawn a claude research agent for one todo. Returns (todo_ref, Ok(result_text) | Err).
+fn spawn_research_agent(
+    todo_dir: PathBuf,
+    todo_ref: String,
+    title: String,
+    prompt: String,
+    plan_absolute: PathBuf,
+    is_parallel: bool,
+) -> (String, Result<String>) {
+    let ref_tag = if is_parallel {
+        format!("[{}] ", todo_ref)
+    } else {
+        String::new()
+    };
 
     eprintln!(
-        "{} Researching {} — {}",
+        "{} {}Researching {} — {}",
         "▶".green().bold(),
+        ref_tag,
         todo_ref.bold(),
-        todo.title
+        title
     );
-    eprintln!("  Plan: {}", absolute.display().to_string().dimmed());
-    eprintln!();
+    eprintln!(
+        "  {}Plan: {}",
+        ref_tag,
+        plan_absolute.display().to_string().dimmed()
+    );
 
     let mut cmd = Command::new("claude");
     cmd.arg("-p")
@@ -552,18 +517,27 @@ Output ONLY the markdown plan content. Do not use any write tools."#,
         .arg("Read Glob Grep")
         .arg("--permission-mode")
         .arg("bypassPermissions")
-        .current_dir(&paths.todo_dir)
+        .current_dir(&todo_dir)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
-    let mut child = cmd
-        .spawn()
-        .context("Failed to spawn `claude`. Is Claude Code installed?")?;
+    let mut child = match cmd.spawn() {
+        Ok(c) => c,
+        Err(e) => {
+            return (
+                todo_ref,
+                Err(anyhow::anyhow!(
+                    "Failed to spawn `claude`: {}. Is Claude Code installed?",
+                    e
+                )),
+            );
+        }
+    };
 
     let stdout = child.stdout.take().unwrap();
     let stderr = child.stderr.take().unwrap();
 
-    // Drain stderr in a background thread so it doesn't block
+    // Drain stderr in a background thread
     let stderr_handle = std::thread::spawn(move || {
         let reader = BufReader::new(stderr);
         let mut buf = String::new();
@@ -598,12 +572,17 @@ Output ONLY the markdown plan content. Do not use any write tools."#,
                                 block.get("type").and_then(|v| v.as_str()).unwrap_or("");
                             if block_type == "text" {
                                 if let Some(text) = block.get("text").and_then(|v| v.as_str()) {
-                                    eprintln!("  {}", text.dimmed());
+                                    eprintln!("  {}{}", ref_tag, text.dimmed());
                                 }
                             } else if block_type == "tool_use" {
                                 let tool_name =
                                     block.get("name").and_then(|v| v.as_str()).unwrap_or("");
-                                eprintln!("  {} {}", "→".dimmed(), tool_name.dimmed());
+                                eprintln!(
+                                    "  {}{} {}",
+                                    ref_tag,
+                                    "→".dimmed(),
+                                    tool_name.dimmed()
+                                );
                             }
                         }
                     }
@@ -624,25 +603,20 @@ Output ONLY the markdown plan content. Do not use any write tools."#,
         }
     }
 
-    let status = child.wait()?;
+    let status = match child.wait() {
+        Ok(s) => s,
+        Err(e) => return (todo_ref, Err(anyhow::anyhow!("Failed to wait on claude: {}", e))),
+    };
     let stderr_output = stderr_handle.join().unwrap_or_default();
 
     if status.success() && !is_error {
         if result_text.is_empty() {
-            bail!("Research agent returned empty result");
+            return (
+                todo_ref,
+                Err(anyhow::anyhow!("Research agent returned empty result")),
+            );
         }
-        // Write the agent's output to the plan file
-        fs::write(&absolute, &result_text)
-            .with_context(|| format!("Failed to write plan to {}", absolute.display()))?;
-        storage::git_stage(&absolute);
-        eprintln!();
-        eprintln!(
-            "{} Plan written to {}",
-            "✓".green().bold(),
-            absolute.display()
-        );
-        println!("{}", result_text);
-        Ok(())
+        (todo_ref, Ok(result_text))
     } else {
         let detail = if !result_text.is_empty() {
             result_text
@@ -651,6 +625,223 @@ Output ONLY the markdown plan content. Do not use any write tools."#,
         } else {
             format!("exit code {}", status.code().unwrap_or(-1))
         };
-        bail!("Research agent failed: {}", detail);
+        (
+            todo_ref,
+            Err(anyhow::anyhow!("Research agent failed: {}", detail)),
+        )
     }
+}
+
+/// `agt plan research [refs...] [--all] [--force] [--dry-run]`
+pub fn research(references: Vec<String>, all: bool, force: bool, dry_run: bool) -> Result<()> {
+    if references.is_empty() && !all {
+        bail!("Provide todo references or use --all to research all eligible todos");
+    }
+
+    let (paths, mut doc) = load_project()?;
+    let (_, prefix, project_name, _) = queries::read_project_meta(&doc);
+
+    // Resolve which todos to research
+    let todos = queries::read_all_todos(&doc);
+    let mut targets: Vec<ResearchTarget> = Vec::new();
+
+    if all {
+        for todo in &todos {
+            if !matches!(todo.status, Status::None | Status::Todo) {
+                continue;
+            }
+            let (relative, absolute) = plan_paths(&paths.todo_dir, &prefix, todo.number);
+
+            // Skip if plan already exists (unless --force)
+            if !force && absolute.exists() {
+                let content = fs::read_to_string(&absolute).unwrap_or_default();
+                if content.trim().lines().count() > 1 {
+                    continue;
+                }
+            }
+
+            let todo_ref = format!("{}-{}", prefix, todo.number);
+            let prompt =
+                build_research_prompt(&project_name, todo, &todo_ref, &absolute);
+            targets.push(ResearchTarget {
+                num: todo.number,
+                todo_ref,
+                title: todo.title.clone(),
+                prompt,
+                plan_relative: relative,
+                plan_absolute: absolute,
+            });
+        }
+
+        if targets.is_empty() {
+            println!(
+                "{}",
+                "No eligible todos found (status none/todo without existing plans).".dimmed()
+            );
+            return Ok(());
+        }
+    } else {
+        for reference in &references {
+            let num = parse_ref(reference, &prefix)?;
+            let todo = queries::find_todo_by_number(&doc, num)
+                .ok_or_else(|| anyhow::anyhow!("Todo {}-{} not found", prefix, num))?;
+
+            let (relative, absolute) = plan_paths(&paths.todo_dir, &prefix, num);
+            let todo_ref = format!("{}-{}", prefix, num);
+
+            // Skip if plan already exists (unless --force)
+            if !force && absolute.exists() {
+                let content = fs::read_to_string(&absolute).unwrap_or_default();
+                if content.trim().lines().count() > 1 {
+                    eprintln!(
+                        "{} {} already has a plan ({} lines), skipping (use --force to overwrite)",
+                        "⚠".yellow().bold(),
+                        todo_ref,
+                        content.trim().lines().count()
+                    );
+                    continue;
+                }
+            }
+
+            let prompt =
+                build_research_prompt(&project_name, &todo, &todo_ref, &absolute);
+            targets.push(ResearchTarget {
+                num,
+                todo_ref,
+                title: todo.title.clone(),
+                prompt,
+                plan_relative: relative,
+                plan_absolute: absolute,
+            });
+        }
+    }
+
+    if targets.is_empty() {
+        println!("{}", "Nothing to research.".dimmed());
+        return Ok(());
+    }
+
+    // Ensure plans directory exists
+    let plans_dir = paths.todo_dir.join("plans");
+    fs::create_dir_all(&plans_dir)?;
+
+    // Create stub plan files and set planPath for all targets
+    for target in &targets {
+        if !target.plan_absolute.exists() {
+            let content = format!("# {}: {}\n\n", target.todo_ref, target.title);
+            fs::write(&target.plan_absolute, &content)?;
+            storage::git_stage(&target.plan_absolute);
+        }
+
+        let todo = queries::find_todo_by_number(&doc, target.num);
+        if let Some(todo) = todo {
+            if todo.plan_path.is_none() {
+                operations::update_todo(
+                    &mut doc,
+                    target.num,
+                    UpdateTodoFields {
+                        plan_path: Some(Some(&target.plan_relative)),
+                        ..Default::default()
+                    },
+                    None,
+                )?;
+            }
+        }
+    }
+    save_project(&paths, &mut doc)?;
+
+    if dry_run {
+        eprintln!(
+            "{} Would research {} todo(s):\n",
+            "▶".green().bold(),
+            targets.len()
+        );
+        for target in &targets {
+            println!("{} — {}", target.todo_ref.bold(), target.title);
+        }
+        println!();
+        if targets.len() == 1 {
+            println!("{}", "Prompt:".bold());
+            println!("{}", targets[0].prompt);
+        }
+        return Ok(());
+    }
+
+    let is_parallel = targets.len() > 1;
+
+    if is_parallel {
+        eprintln!(
+            "{} Spawning {} research agents in parallel\n",
+            "▶".green().bold(),
+            targets.len()
+        );
+    }
+
+    // Spawn all agents (in parallel if multiple)
+    let todo_dir = paths.todo_dir.clone();
+    let handles: Vec<_> = targets
+        .into_iter()
+        .map(|target| {
+            let todo_dir = todo_dir.clone();
+            let plan_absolute = target.plan_absolute.clone();
+            let todo_ref = target.todo_ref.clone();
+            let title = target.title.clone();
+            let prompt = target.prompt.clone();
+            std::thread::spawn(move || {
+                spawn_research_agent(todo_dir, todo_ref, title, prompt, plan_absolute, is_parallel)
+            })
+        })
+        .collect();
+
+    // Collect results
+    let mut successes = 0u32;
+    let mut failures = 0u32;
+
+    for handle in handles {
+        let (todo_ref, result) = handle.join().unwrap_or_else(|_| {
+            ("???".to_string(), Err(anyhow::anyhow!("Thread panicked")))
+        });
+
+        match result {
+            Ok(result_text) => {
+                // Find the plan path for this ref
+                let num = queries::parse_todo_ref(&todo_ref, &prefix).unwrap_or(0);
+                let (_, absolute) = plan_paths(&paths.todo_dir, &prefix, num);
+                if let Err(e) = fs::write(&absolute, &result_text) {
+                    eprintln!("{} {} failed to write plan: {}", "✗".red().bold(), todo_ref, e);
+                    failures += 1;
+                } else {
+                    storage::git_stage(&absolute);
+                    eprintln!("{} {} done", "✓".green().bold(), todo_ref.bold());
+                    if !is_parallel {
+                        println!("{}", result_text);
+                    }
+                    successes += 1;
+                }
+            }
+            Err(e) => {
+                eprintln!("{} {} failed: {}", "✗".red().bold(), todo_ref, e);
+                failures += 1;
+            }
+        }
+    }
+
+    if is_parallel {
+        eprintln!();
+        eprintln!(
+            "Research complete: {} succeeded, {} failed",
+            successes.to_string().green().bold(),
+            if failures > 0 {
+                failures.to_string().red().bold()
+            } else {
+                failures.to_string().dimmed()
+            }
+        );
+    }
+
+    if failures > 0 && successes == 0 {
+        bail!("All research agents failed");
+    }
+
+    Ok(())
 }

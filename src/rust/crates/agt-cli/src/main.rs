@@ -298,8 +298,14 @@ enum PlanAction {
     },
     /// Spawn an agent to research and flesh out the plan
     Research {
-        /// Todo reference (e.g. "AGT-58" or "58")
-        reference: String,
+        /// Todo references (e.g. "AGT-58" or "58"); omit for --all
+        references: Vec<String>,
+        /// Research all todos with status none/todo that lack plans
+        #[arg(long)]
+        all: bool,
+        /// Overwrite existing plan files
+        #[arg(long)]
+        force: bool,
         /// Print the prompt without running the agent
         #[arg(long)]
         dry_run: bool,
@@ -568,9 +574,12 @@ fn main() -> Result<()> {
             PlanAction::Init { reference } => commands::plan::init(reference),
             PlanAction::Answer { reference, text } => commands::plan::answer(reference, text),
             PlanAction::Path { reference } => commands::plan::path(reference),
-            PlanAction::Research { reference, dry_run } => {
-                commands::plan::research(reference, dry_run)
-            }
+            PlanAction::Research {
+                references,
+                all,
+                force,
+                dry_run,
+            } => commands::plan::research(references, all, force, dry_run),
             PlanAction::Trash { reference } => commands::plan::trash(reference),
         },
         Commands::Member { action } => match action {
