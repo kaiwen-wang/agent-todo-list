@@ -24,7 +24,7 @@ fn plan_paths(todo_dir: &std::path::Path, prefix: &str, num: u64) -> (String, Pa
 }
 
 /// `agt plan show <ref>`
-pub fn show(reference: String) -> Result<()> {
+pub fn show(reference: String, answer: bool) -> Result<()> {
     let (paths, doc) = load_project()?;
     let (_, prefix, _, _) = queries::read_project_meta(&doc);
     let num = parse_ref(&reference, &prefix)?;
@@ -49,8 +49,32 @@ pub fn show(reference: String) -> Result<()> {
     let content = fs::read_to_string(&plan_file)
         .with_context(|| format!("Failed to read {}", plan_file.display()))?;
 
-    // If stdout is a terminal, use a pager for scrollable viewing
+    // If stdout is a terminal, render markdown and show in a pager
     if std::io::stdout().is_terminal() {
+        // Get terminal width for word wrapping
+        let term_width = terminal_size::terminal_size()
+            .map(|(w, _)| w.0 as u16)
+            .unwrap_or(80);
+
+        // Render markdown with termimad (colors, wrapping, formatting)
+        let mut skin = termimad::MadSkin::default();
+
+        // Code blocks: bold cyan text, no background highlight
+        use termimad::crossterm::style::{Attribute, Color};
+        let orange = Color::Rgb { r: 255, g: 170, b: 60 };
+        skin.code_block.compound_style.set_fg(orange);
+        skin.code_block.compound_style.add_attr(Attribute::Bold);
+        skin.code_block.compound_style.set_bg(Color::Reset);
+        skin.code_block.left_margin = 2;
+
+        // Inline code: bold orange, no background
+        skin.inline_code.set_fg(orange);
+        skin.inline_code.add_attr(Attribute::Bold);
+        skin.inline_code.set_bg(Color::Reset);
+
+        let text = termimad::FmtText::from(&skin, &content, Some(term_width as usize));
+        let rendered_str = format!("{}", text);
+
         let pager = std::env::var("PAGER").unwrap_or_else(|_| "less".to_string());
         let mut child = Command::new(&pager)
             .arg("-R") // interpret ANSI color codes
@@ -61,20 +85,73 @@ pub fn show(reference: String) -> Result<()> {
             Ok(proc) => {
                 use std::io::Write;
                 if let Some(stdin) = proc.stdin.as_mut() {
-                    let _ = stdin.write_all(content.as_bytes());
+                    let _ = stdin.write_all(rendered_str.as_bytes());
                 }
                 drop(proc.stdin.take());
                 let _ = proc.wait();
             }
             Err(_) => {
                 // Pager not available, fall back to printing
-                println!("{}", content);
+                println!("{}", rendered_str);
             }
         }
+        // After pager closes, if -a flag and there's a Questions section, prompt for an answer
+        if answer {
+        if let Some(questions_start) = content.find("\n## Questions") {
+            let questions_section = &content[questions_start..];
+            // Find where the next section starts (or end of file)
+            let section_end = questions_section[1..]
+                .find("\n## ")
+                .map(|i| i + 1)
+                .unwrap_or(questions_section.len());
+            let questions_text = &questions_section[..section_end].trim();
+
+            println!();
+            println!("{}", colored::Colorize::bold("Questions from the plan:"));
+            // Print just the bullet points, skip the heading
+            for line in questions_text.lines().skip(1) {
+                if !line.trim().is_empty() {
+                    println!("  {}", line.trim());
+                }
+            }
+            println!();
+            eprint!(
+                "{}",
+                colored::Colorize::dimmed("Add an answer (enter to skip): ")
+            );
+
+            let mut input = String::new();
+            if std::io::stdin().read_line(&mut input).is_ok() {
+                let input = input.trim();
+                if !input.is_empty() {
+                    append_answer_to_file(&plan_file, input)?;
+                    println!(
+                        "{}",
+                        "Answer added to plan.".green()
+                    );
+                }
+            }
+        }
+        }
     } else {
-        // Piped output — just print raw
+        // Piped output — just print raw markdown
         println!("{}", content);
     }
+    Ok(())
+}
+
+/// Append an answer directly to a plan file's Answers section.
+fn append_answer_to_file(plan_file: &std::path::Path, text: &str) -> Result<()> {
+    let mut content = fs::read_to_string(plan_file)?;
+
+    if content.contains("\n## Answers\n") || content.contains("\n## Answers\r\n") {
+        content.push_str(&format!("\n> {}\n", text));
+    } else {
+        content.push_str(&format!("\n## Answers\n\n> {}\n", text));
+    }
+
+    fs::write(plan_file, &content)?;
+    storage::git_stage(plan_file);
     Ok(())
 }
 
@@ -296,6 +373,7 @@ Structure it with these sections:
 - **## Approach Options** — Numbered options with pros/cons
 - **## Recommendation** — Your suggested approach
 - **## Questions** — Bullet-pointed questions for the user (if any)
+- **## Answers** — Include this empty section if you have questions, so the user can fill it in
 
 Output ONLY the markdown plan content. Do not use any write tools."#,
         project_name = project_name,

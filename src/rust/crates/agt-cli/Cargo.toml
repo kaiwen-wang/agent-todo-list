@@ -23,4 +23,6 @@ serde_yaml = "0.9"
 minijinja = "2"
 libc = "0.2"
 agt-server = { path = "../agt-server" }
+termimad = "0.31"
+terminal_size = "0.4"
 tokio = { version = "1", features = ["full"] }

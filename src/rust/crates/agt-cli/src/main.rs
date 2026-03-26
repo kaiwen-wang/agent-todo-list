@@ -276,6 +276,9 @@ enum PlanAction {
     Show {
         /// Todo reference (e.g. "AGT-58" or "58")
         reference: String,
+        /// Prompt to answer questions after viewing
+        #[arg(short = 'a', long = "answer")]
+        answer: bool,
     },
     /// Create a plan file for a todo
     Init {
@@ -529,7 +532,7 @@ fn main() -> Result<()> {
         Commands::Queue { references } => commands::queue::run(references),
         Commands::Runs { json } => commands::runs::run(json),
         Commands::Plan { action: Some(action), .. } => match action {
-            PlanAction::Show { reference } => commands::plan::show(reference),
+            PlanAction::Show { reference, answer } => commands::plan::show(reference, answer),
             PlanAction::Init { reference } => commands::plan::init(reference),
             PlanAction::Answer { reference, text } => commands::plan::answer(reference, text),
             PlanAction::Path { reference } => commands::plan::path(reference),
