@@ -1,7 +1,7 @@
 mod commands;
 mod output;
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use clap::{CommandFactory, Parser, Subcommand};
 
 #[derive(Parser)]
@@ -197,18 +197,10 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
-    /// Manage plan/research files for todos (defaults to research)
-    #[command(args_conflicts_with_subcommands = true)]
+    /// Manage plan/research files for todos
     Plan {
-        /// Todo reference — runs research by default
-        reference: Option<String>,
-
-        /// Print the prompt without running the agent
-        #[arg(long)]
-        dry_run: bool,
-
         #[command(subcommand)]
-        action: Option<PlanAction>,
+        action: PlanAction,
     },
     /// Manage project members
     Member {
@@ -304,6 +296,11 @@ enum PlanAction {
         /// Print the prompt without running the agent
         #[arg(long)]
         dry_run: bool,
+    },
+    /// Delete a todo's plan file (moves to Trash)
+    Trash {
+        /// Todo reference (e.g. "AGT-58" or "58")
+        reference: String,
     },
 }
 
@@ -453,7 +450,23 @@ fn main() -> Result<()> {
         }
     }
 
-    let cli = Cli::parse();
+    let cli = match Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(e) => {
+            use std::io::Write;
+            let msg = e.render().to_string();
+            let msg = msg.replace(
+                "For more information, try '--help'.",
+                "For more information, try '--help' or '-h'.",
+            );
+            if e.use_stderr() {
+                let _ = write!(std::io::stderr(), "{msg}");
+            } else {
+                let _ = write!(std::io::stdout(), "{msg}");
+            }
+            std::process::exit(e.exit_code());
+        }
+    };
 
     match cli.command {
         Commands::Init { name, prefix } => commands::init::run(name, prefix),
@@ -531,7 +544,7 @@ fn main() -> Result<()> {
         Commands::Poll { dry_run } => commands::poll::run(dry_run),
         Commands::Queue { references } => commands::queue::run(references),
         Commands::Runs { json } => commands::runs::run(json),
-        Commands::Plan { action: Some(action), .. } => match action {
+        Commands::Plan { action } => match action {
             PlanAction::Show { reference, answer } => commands::plan::show(reference, answer),
             PlanAction::Init { reference } => commands::plan::init(reference),
             PlanAction::Answer { reference, text } => commands::plan::answer(reference, text),
@@ -539,12 +552,7 @@ fn main() -> Result<()> {
             PlanAction::Research { reference, dry_run } => {
                 commands::plan::research(reference, dry_run)
             }
-        },
-        Commands::Plan { action: None, reference: Some(reference), dry_run, .. } => {
-            commands::plan::research(reference, dry_run)
-        },
-        Commands::Plan { action: None, reference: None, .. } => {
-            bail!("Usage: agt plan <REFERENCE> or agt plan <subcommand>")
+            PlanAction::Trash { reference } => commands::plan::trash(reference),
         },
         Commands::Member { action } => match action {
             MemberAction::Add {
