@@ -23,6 +23,58 @@ fn plan_paths(todo_dir: &std::path::Path, prefix: &str, num: u64) -> (String, Pa
     (relative, absolute)
 }
 
+/// `agt plan list` — List all existing plan files with their todo info.
+pub fn list() -> Result<()> {
+    let (paths, doc) = load_project()?;
+    let (_, prefix, _, _) = queries::read_project_meta(&doc);
+    let plans_dir = paths.todo_dir.join("plans");
+
+    if !plans_dir.exists() {
+        println!("{}", "No plans directory.".dimmed());
+        return Ok(());
+    }
+
+    let todos = queries::read_all_todos(&doc);
+    let mut entries: Vec<(u64, String, String, u64)> = Vec::new(); // (num, ref, title, lines)
+
+    for entry in fs::read_dir(&plans_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.extension().is_some_and(|e| e == "md") {
+            let stem = path.file_stem().unwrap().to_string_lossy().to_string();
+            // Parse PREFIX-NUM from filename
+            if let Some(num) = queries::parse_todo_ref(&stem, &prefix) {
+                let title = todos
+                    .iter()
+                    .find(|t| t.number == num)
+                    .map(|t| t.title.clone())
+                    .unwrap_or_else(|| "(deleted todo)".into());
+                let content = fs::read_to_string(&path).unwrap_or_default();
+                let lines = content.lines().count() as u64;
+                entries.push((num, format!("{}-{}", prefix, num), title, lines));
+            }
+        }
+    }
+
+    if entries.is_empty() {
+        println!("{}", "No plan files found.".dimmed());
+        return Ok(());
+    }
+
+    entries.sort_by_key(|(num, _, _, _)| *num);
+
+    for (_, todo_ref, title, lines) in &entries {
+        println!(
+            "  {} {} {}",
+            todo_ref.bold(),
+            title,
+            format!("({} lines)", lines).dimmed()
+        );
+    }
+
+    Ok(())
+}
+
 /// `agt plan show <ref>`
 pub fn show(reference: String, answer: bool) -> Result<()> {
     let (paths, doc) = load_project()?;

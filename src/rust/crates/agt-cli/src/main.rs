@@ -264,6 +264,8 @@ enum Commands {
 
 #[derive(Subcommand)]
 enum PlanAction {
+    /// List all existing plan files
+    List,
     /// Show a todo's plan
     Show {
         /// Todo reference (e.g. "AGT-58" or "58")
@@ -545,6 +547,7 @@ fn main() -> Result<()> {
         Commands::Queue { references } => commands::queue::run(references),
         Commands::Runs { json } => commands::runs::run(json),
         Commands::Plan { action } => match action {
+            PlanAction::List => commands::plan::list(),
             PlanAction::Show { reference, answer } => commands::plan::show(reference, answer),
             PlanAction::Init { reference } => commands::plan::init(reference),
             PlanAction::Answer { reference, text } => commands::plan::answer(reference, text),
