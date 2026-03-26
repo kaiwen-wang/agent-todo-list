@@ -250,6 +250,7 @@ enum Commands {
         json: bool,
     },
     /// Git merge driver for .automerge files (called by git)
+    #[command(hide = true)]
     MergeDriver {
         /// Base file path
         base: String,
@@ -344,13 +345,59 @@ enum MemberAction {
     },
 }
 
+fn print_grouped_help() {
+    let cmd = Cli::command();
+    let version = cmd.get_version().unwrap_or("unknown");
+
+    println!("agt {version} — Agent-native todo/project management\n");
+    println!("Usage: agt <COMMAND>  [--all for full help]\n");
+
+    let groups: &[(&str, &[&str])] = &[
+        ("Todo Management", &["add", "list", "show", "edit", "delete"]),
+        (
+            "Workflow",
+            &["assign", "unassign", "comment", "branch", "unbranch", "plan"],
+        ),
+        ("Agent Dispatch", &["run", "poll", "queue", "runs"]),
+        (
+            "Project",
+            &["init", "member", "config", "serve", "inbox", "commit", "log"],
+        ),
+    ];
+
+    for (heading, names) in groups {
+        println!("\x1b[1;4m{heading}:\x1b[0m");
+        for name in *names {
+            if let Some(sub) = cmd.find_subcommand(name) {
+                let about = sub.get_about().map(|s| s.to_string()).unwrap_or_default();
+                println!("  \x1b[1m{name:<14}\x1b[0m {about}");
+            }
+        }
+        println!();
+    }
+
+    println!("\x1b[1;4mOptions:\x1b[0m");
+    println!("  \x1b[1m-a, --all\x1b[0m      Print help for all subcommands");
+    println!("  \x1b[1m-h, --help\x1b[0m     Print help");
+    println!("  \x1b[1m-V, --version\x1b[0m  Print version");
+}
+
 fn print_full_help() {
     let mut cmd = Cli::command()
-        .arg(clap::Arg::new("all").long("all").help("Print help for all subcommands").action(clap::ArgAction::SetTrue));
-    cmd.print_help().ok();
-    println!("\n");
+        .arg(
+            clap::Arg::new("all")
+                .long("all")
+                .help("Print help for all subcommands")
+                .action(clap::ArgAction::SetTrue),
+        );
+
+    // Print the grouped overview first instead of clap's flat list
+    print_grouped_help();
+    println!("\n{}\n", "━".repeat(60));
+    println!("Detailed help for all commands:\n");
+
     for sub in cmd.get_subcommands_mut() {
-        if sub.get_name() == "help" {
+        if sub.get_name() == "help" || sub.get_name() == "merge-driver" {
             continue;
         }
         println!("{}", "─".repeat(60));
@@ -365,11 +412,25 @@ fn main() -> Result<()> {
     // or after "help", to avoid conflicting with `agt list --all`.
     let args: Vec<String> = std::env::args().collect();
     let has_all = args.iter().any(|a| a == "--all" || a == "-a");
-    let first_non_flag = args.iter().skip(1).find(|a| !a.starts_with('-'));
-    let is_help_context = first_non_flag.is_none() || first_non_flag.map(|s| s.as_str()) == Some("help");
-    if has_all && is_help_context {
-        print_full_help();
-        std::process::exit(0);
+    let has_help = args.iter().any(|a| a == "--help" || a == "-h");
+    let non_flags: Vec<&String> = args.iter().skip(1).filter(|a| !a.starts_with('-')).collect();
+    let first_non_flag = non_flags.first().map(|s| s.as_str());
+    let is_help_context =
+        first_non_flag.is_none() || first_non_flag == Some("help");
+    // `agt help <command>` should fall through to clap's per-command help
+    let is_help_for_specific =
+        first_non_flag == Some("help") && non_flags.len() > 1;
+
+    if is_help_context && !is_help_for_specific {
+        if has_all {
+            print_full_help();
+        } else if has_help || first_non_flag.is_none() || first_non_flag == Some("help") {
+            print_grouped_help();
+        }
+        // If we matched any of the above, exit. Otherwise fall through to clap.
+        if has_all || has_help || first_non_flag.is_none() || first_non_flag == Some("help") {
+            std::process::exit(0);
+        }
     }
 
     let cli = Cli::parse();
