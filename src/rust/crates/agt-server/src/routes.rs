@@ -1,11 +1,13 @@
 //! API route handlers.
 
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
-use axum::extract::State;
+use axum::extract::{Path, State};
 use axum::response::IntoResponse;
 use axum::Json;
 use serde_json::{json, Value};
-use std::process::Command;
+use std::fs;
+use std::io::{BufRead, BufReader};
+use std::process::{Command, Stdio};
 
 use agt_lib::export::to_json;
 use agt_lib::inbox;
@@ -67,6 +69,9 @@ pub async fn post_change(
         "removeMember" => handle_remove_member(&state, &body).await,
         "updateMember" => handle_update_member(&state, &body).await,
         "updateInbox" => handle_update_inbox(&state, &body).await,
+        "initPlan" => handle_init_plan(&state, &body).await,
+        "researchPlan" => handle_research_plan(&state, &body).await,
+        "answerPlan" => handle_answer_plan(&state, &body).await,
         "bulk" => handle_bulk(&state, &body).await,
         _ => Err(format!("Unknown action: {action}")),
     };
@@ -368,6 +373,315 @@ async fn handle_bulk(state: &AppState, body: &Value) -> Result<Value, String> {
     drop(doc);
     state.save().await.map_err(|e| e.to_string())?;
     Ok(json!({ "ok": true, "count": ops.len() }))
+}
+
+// ── Plan handlers ───────────────────────────────────────────────────
+
+/// GET /api/plan/:number — read the plan markdown content
+pub async fn get_plan(
+    State(state): State<AppState>,
+    Path(number): Path<u64>,
+) -> impl IntoResponse {
+    let doc = state.doc.lock().await;
+    let (_, prefix, _, _) = queries::read_project_meta(&doc);
+    let todo = queries::find_todo_by_number(&doc, number);
+    drop(doc);
+
+    let Some(todo) = todo else {
+        return json_err("Todo not found", 404).into_response();
+    };
+
+    let plan_file = if let Some(plan_path) = &todo.plan_path {
+        state.todo_dir.join(plan_path)
+    } else {
+        state.todo_dir.join(format!("plans/{}-{}.md", prefix, number))
+    };
+
+    if !plan_file.exists() {
+        return Json(json!({ "content": null, "exists": false })).into_response();
+    }
+
+    match fs::read_to_string(&plan_file) {
+        Ok(content) => Json(json!({ "content": content, "exists": true })).into_response(),
+        Err(e) => json_err(&format!("Failed to read plan: {e}"), 500).into_response(),
+    }
+}
+
+async fn handle_init_plan(state: &AppState, body: &Value) -> Result<Value, String> {
+    let mut doc = state.doc.lock().await;
+    let number = body.get("number").and_then(|n| n.as_u64()).ok_or("missing number")?;
+    let (_, prefix, _, _) = queries::read_project_meta(&doc);
+
+    let todo = queries::find_todo_by_number(&doc, number)
+        .ok_or_else(|| format!("Todo #{number} not found"))?;
+
+    let relative = format!("plans/{}-{}.md", prefix, number);
+    let absolute = state.todo_dir.join(&relative);
+
+    // Create plans directory
+    let plans_dir = state.todo_dir.join("plans");
+    fs::create_dir_all(&plans_dir).map_err(|e| e.to_string())?;
+
+    if !absolute.exists() {
+        let todo_ref = format!("{}-{}", prefix, number);
+        let content = format!("# {}: {}\n\n", todo_ref, todo.title);
+        fs::write(&absolute, &content).map_err(|e| e.to_string())?;
+    }
+
+    // Set planPath on the todo
+    if todo.plan_path.is_none() {
+        operations::update_todo(
+            &mut doc,
+            number,
+            UpdateTodoFields {
+                plan_path: Some(Some(&relative)),
+                ..Default::default()
+            },
+            None,
+        ).map_err(|e| e.to_string())?;
+    }
+
+    drop(doc);
+    state.save().await.map_err(|e| e.to_string())?;
+
+    let content = fs::read_to_string(&absolute).map_err(|e| e.to_string())?;
+    Ok(json!({ "ok": true, "planPath": relative, "content": content }))
+}
+
+async fn handle_answer_plan(state: &AppState, body: &Value) -> Result<Value, String> {
+    let doc = state.doc.lock().await;
+    let number = body.get("number").and_then(|n| n.as_u64()).ok_or("missing number")?;
+    let text = body.get("text").and_then(|t| t.as_str()).unwrap_or("");
+    let (_, prefix, _, _) = queries::read_project_meta(&doc);
+
+    let todo = queries::find_todo_by_number(&doc, number)
+        .ok_or_else(|| format!("Todo #{number} not found"))?;
+    drop(doc);
+
+    let plan_file = if let Some(plan_path) = &todo.plan_path {
+        state.todo_dir.join(plan_path)
+    } else {
+        state.todo_dir.join(format!("plans/{}-{}.md", prefix, number))
+    };
+
+    if !plan_file.exists() {
+        return Err(format!("No plan file for {}-{}. Init the plan first.", prefix, number));
+    }
+
+    let mut content = fs::read_to_string(&plan_file).map_err(|e| e.to_string())?;
+
+    if content.contains("\n## Answers\n") || content.contains("\n## Answers\r\n") {
+        content.push_str(&format!("\n> {}\n", text));
+    } else {
+        content.push_str(&format!("\n## Answers\n\n> {}\n", text));
+    }
+
+    fs::write(&plan_file, &content).map_err(|e| e.to_string())?;
+
+    Ok(json!({ "ok": true }))
+}
+
+async fn handle_research_plan(state: &AppState, body: &Value) -> Result<Value, String> {
+    let mut doc = state.doc.lock().await;
+    let number = body.get("number").and_then(|n| n.as_u64()).ok_or("missing number")?;
+    let (_, prefix, project_name, _) = queries::read_project_meta(&doc);
+
+    let todo = queries::find_todo_by_number(&doc, number)
+        .ok_or_else(|| format!("Todo #{number} not found"))?;
+
+    let todo_ref = format!("{}-{}", prefix, number);
+    let relative = format!("plans/{}.md", todo_ref);
+    let absolute = state.todo_dir.join(&relative);
+
+    // Create plans dir + file if needed
+    let plans_dir = state.todo_dir.join("plans");
+    fs::create_dir_all(&plans_dir).map_err(|e| e.to_string())?;
+
+    if !absolute.exists() {
+        let content = format!("# {}: {}\n\n", todo_ref, todo.title);
+        fs::write(&absolute, &content).map_err(|e| e.to_string())?;
+    }
+
+    // Set planPath
+    if todo.plan_path.is_none() {
+        operations::update_todo(
+            &mut doc,
+            number,
+            UpdateTodoFields {
+                plan_path: Some(Some(&relative)),
+                ..Default::default()
+            },
+            None,
+        ).map_err(|e| e.to_string())?;
+    }
+
+    drop(doc);
+    state.save().await.map_err(|e| e.to_string())?;
+
+    // Build the research prompt
+    let description_section = if todo.description.is_empty() {
+        String::new()
+    } else {
+        format!("\n## Description\n{}\n", todo.description)
+    };
+
+    let comments_section = if todo.comments.is_empty() {
+        String::new()
+    } else {
+        let comments: Vec<String> = todo.comments.iter()
+            .map(|c| format!("**{}**: {}", c.author_name, c.text))
+            .collect();
+        format!("\n## Comments\n{}\n", comments.join("\n"))
+    };
+
+    // Read existing plan content to include as context
+    let existing_content = fs::read_to_string(&absolute).unwrap_or_default();
+    let existing_section = if existing_content.trim().lines().count() > 1 {
+        format!(
+            "\n## Existing Plan Content\n```markdown\n{}\n```\n\nBuild on this existing content. Keep what's useful, replace what needs updating.\n",
+            existing_content.trim()
+        )
+    } else {
+        String::new()
+    };
+
+    let prompt = format!(
+        r#"You are researching a task for the project "{project_name}".
+
+## Task: {todo_ref} — {title}
+Priority: {priority}
+Difficulty: {difficulty}
+{description_section}{comments_section}{existing_section}
+Research this task by reading relevant code and files in the project.
+
+Output the complete plan as markdown, starting with `# {todo_ref}: {title}`.
+
+Structure it with these sections:
+- **## Research** — What you found, relevant context, prior art
+- **## Approach Options** — Numbered options with pros/cons
+- **## Recommendation** — Your suggested approach
+- **## Questions** — Bullet-pointed questions for the user (if any)
+
+Output ONLY the markdown plan content. Do not use any write tools."#,
+        project_name = project_name,
+        todo_ref = todo_ref,
+        title = todo.title,
+        priority = todo.priority.as_str(),
+        difficulty = todo.difficulty.as_str(),
+        description_section = description_section,
+        comments_section = comments_section,
+        existing_section = existing_section,
+    );
+
+    // Spawn agent in background
+    let tx = state.tx.clone();
+    let plan_path = absolute.clone();
+    let todo_dir = state.todo_dir.clone();
+
+    tokio::spawn(async move {
+        let _ = tx.send(json!({
+            "type": "plan:start",
+            "todoRef": todo_ref,
+            "number": number,
+        }).to_string());
+
+        let tx_blocking = tx.clone();
+        let result = tokio::task::spawn_blocking(move || {
+            let tx = tx_blocking;
+            let mut cmd = Command::new("claude");
+            cmd.arg("-p")
+                .arg(&prompt)
+                .arg("--output-format").arg("stream-json")
+                .arg("--verbose")
+                .arg("--allowedTools").arg("Read Glob Grep")
+                .arg("--permission-mode").arg("bypassPermissions")
+                .current_dir(&todo_dir)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::null());
+
+            let mut child = match cmd.spawn() {
+                Ok(c) => c,
+                Err(e) => return Err(format!("Failed to spawn claude: {e}")),
+            };
+
+            let stdout = child.stdout.take().unwrap();
+            let reader = BufReader::new(stdout);
+            let mut result_text = String::new();
+            let mut is_error = false;
+
+            for line in reader.lines() {
+                let line = match line {
+                    Ok(l) => l,
+                    Err(_) => break,
+                };
+
+                if let Ok(event) = serde_json::from_str::<serde_json::Value>(&line) {
+                    let event_type = event.get("type").and_then(|v| v.as_str()).unwrap_or("");
+                    match event_type {
+                        "assistant" => {
+                            if let Some(content) = event.get("message")
+                                .and_then(|m| m.get("content"))
+                                .and_then(|c| c.as_array())
+                            {
+                                for block in content {
+                                    let block_type = block.get("type").and_then(|v| v.as_str()).unwrap_or("");
+                                    if block_type == "tool_use" {
+                                        let tool_name = block.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                                        let _ = tx.send(json!({
+                                            "type": "plan:progress",
+                                            "message": format!("Using {tool_name}..."),
+                                        }).to_string());
+                                    }
+                                }
+                            }
+                        }
+                        "result" => {
+                            is_error = event.get("is_error").and_then(|v| v.as_bool()).unwrap_or(false);
+                            result_text = event.get("result").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                        }
+                        _ => {}
+                    }
+                }
+            }
+
+            let status = child.wait().map_err(|e| e.to_string())?;
+            if status.success() && !is_error {
+                Ok(result_text)
+            } else {
+                Err(result_text)
+            }
+        }).await;
+
+        match result {
+            Ok(Ok(content)) => {
+                // Agent outputs the plan — we write it to the file
+                if !content.is_empty() {
+                    let _ = fs::write(&plan_path, &content);
+                }
+                let _ = tx.send(json!({
+                    "type": "plan:done",
+                    "number": number,
+                    "content": content,
+                }).to_string());
+            }
+            Ok(Err(e)) => {
+                let _ = tx.send(json!({
+                    "type": "plan:error",
+                    "number": number,
+                    "message": e,
+                }).to_string());
+            }
+            Err(e) => {
+                let _ = tx.send(json!({
+                    "type": "plan:error",
+                    "number": number,
+                    "message": format!("{e}"),
+                }).to_string());
+            }
+        }
+    });
+
+    Ok(json!({ "ok": true, "planPath": relative, "researching": true }))
 }
 
 // ── WebSocket handler ───────────────────────────────────────────────

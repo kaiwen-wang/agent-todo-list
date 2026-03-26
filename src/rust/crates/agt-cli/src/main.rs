@@ -285,6 +285,14 @@ enum PlanAction {
         /// Todo reference (e.g. "AGT-58" or "58")
         reference: String,
     },
+    /// Spawn an agent to research and flesh out the plan
+    Research {
+        /// Todo reference (e.g. "AGT-58" or "58")
+        reference: String,
+        /// Print the prompt without running the agent
+        #[arg(long)]
+        dry_run: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -516,6 +524,9 @@ fn main() -> Result<()> {
             PlanAction::Init { reference } => commands::plan::init(reference),
             PlanAction::Answer { reference, text } => commands::plan::answer(reference, text),
             PlanAction::Path { reference } => commands::plan::path(reference),
+            PlanAction::Research { reference, dry_run } => {
+                commands::plan::research(reference, dry_run)
+            }
         },
         Commands::Member { action } => match action {
             MemberAction::Add {

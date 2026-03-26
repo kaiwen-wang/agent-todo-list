@@ -6,10 +6,13 @@
 use anyhow::{bail, Context, Result};
 use colored::Colorize;
 use std::fs;
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
+use std::process::{Command, Stdio};
 
 use agt_lib::operations::{self, UpdateTodoFields};
 use agt_lib::queries;
+use agt_lib::storage;
 
 use super::{load_project, parse_ref, save_project};
 
@@ -89,6 +92,7 @@ pub fn init(reference: String) -> Result<()> {
     // Create the file with a header
     let content = format!("# {}: {}\n\n", todo_ref, todo.title);
     fs::write(&absolute, &content)?;
+    storage::git_stage(&absolute);
 
     // Set planPath on the todo
     operations::update_todo(
@@ -145,6 +149,7 @@ pub fn answer(reference: String, text: String) -> Result<()> {
     }
 
     fs::write(&plan_file, &content)?;
+    storage::git_stage(&plan_file);
 
     // Ensure planPath is set if it wasn't
     if todo.plan_path.is_none() {
@@ -182,4 +187,230 @@ pub fn path(reference: String) -> Result<()> {
         println!("{}", absolute.display());
     }
     Ok(())
+}
+
+/// `agt plan research <ref>` — Spawn an agent to research and flesh out the plan.
+pub fn research(reference: String, dry_run: bool) -> Result<()> {
+    let (paths, mut doc) = load_project()?;
+    let (_, prefix, project_name, _) = queries::read_project_meta(&doc);
+    let num = parse_ref(&reference, &prefix)?;
+    let todo_ref = format!("{}-{}", prefix, num);
+
+    let todo = queries::find_todo_by_number(&doc, num)
+        .ok_or_else(|| anyhow::anyhow!("Todo {} not found", todo_ref))?;
+
+    let (relative, absolute) = plan_paths(&paths.todo_dir, &prefix, num);
+
+    // Ensure plans dir + file exist
+    let plans_dir = paths.todo_dir.join("plans");
+    fs::create_dir_all(&plans_dir)?;
+
+    if !absolute.exists() {
+        let content = format!("# {}: {}\n\n", todo_ref, todo.title);
+        fs::write(&absolute, &content)?;
+        storage::git_stage(&absolute);
+    }
+
+    // Set planPath if not already set
+    if todo.plan_path.is_none() {
+        operations::update_todo(
+            &mut doc,
+            num,
+            UpdateTodoFields {
+                plan_path: Some(Some(&relative)),
+                ..Default::default()
+            },
+            None,
+        )?;
+        save_project(&paths, &mut doc)?;
+    }
+
+    // Build prompt (matches server's handle_research_plan)
+    let description_section = if todo.description.is_empty() {
+        String::new()
+    } else {
+        format!("\n## Description\n{}\n", todo.description)
+    };
+
+    let comments_section = if todo.comments.is_empty() {
+        String::new()
+    } else {
+        let comments: Vec<String> = todo
+            .comments
+            .iter()
+            .map(|c| format!("**{}**: {}", c.author_name, c.text))
+            .collect();
+        format!("\n## Comments\n{}\n", comments.join("\n"))
+    };
+
+    // Read existing plan content to include as context
+    let existing_content = fs::read_to_string(&absolute).unwrap_or_default();
+    let existing_section = if existing_content.trim().lines().count() > 1 {
+        format!(
+            "\n## Existing Plan Content\n```markdown\n{}\n```\n\nBuild on this existing content. Keep what's useful, replace what needs updating.\n",
+            existing_content.trim()
+        )
+    } else {
+        String::new()
+    };
+
+    let prompt = format!(
+        r#"You are researching a task for the project "{project_name}".
+
+## Task: {todo_ref} — {title}
+Priority: {priority}
+Difficulty: {difficulty}
+{description_section}{comments_section}{existing_section}
+Research this task by reading relevant code and files in the project.
+
+Output the complete plan as markdown, starting with `# {todo_ref}: {title}`.
+
+Structure it with these sections:
+- **## Research** — What you found, relevant context, prior art
+- **## Approach Options** — Numbered options with pros/cons
+- **## Recommendation** — Your suggested approach
+- **## Questions** — Bullet-pointed questions for the user (if any)
+
+Output ONLY the markdown plan content. Do not use any write tools."#,
+        project_name = project_name,
+        todo_ref = todo_ref,
+        title = todo.title,
+        priority = todo.priority.as_str(),
+        difficulty = todo.difficulty.as_str(),
+        description_section = description_section,
+        comments_section = comments_section,
+        existing_section = existing_section,
+    );
+
+    if dry_run {
+        println!("{}", "Prompt:".bold());
+        println!("{}", prompt);
+        return Ok(());
+    }
+
+    eprintln!(
+        "{} Researching {} — {}",
+        "▶".green().bold(),
+        todo_ref.bold(),
+        todo.title
+    );
+    eprintln!("  Plan: {}", absolute.display().to_string().dimmed());
+    eprintln!();
+
+    let mut cmd = Command::new("claude");
+    cmd.arg("-p")
+        .arg(&prompt)
+        .arg("--output-format")
+        .arg("stream-json")
+        .arg("--verbose")
+        .arg("--allowedTools")
+        .arg("Read Glob Grep")
+        .arg("--permission-mode")
+        .arg("bypassPermissions")
+        .current_dir(&paths.todo_dir)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    let mut child = cmd
+        .spawn()
+        .context("Failed to spawn `claude`. Is Claude Code installed?")?;
+
+    let stdout = child.stdout.take().unwrap();
+    let stderr = child.stderr.take().unwrap();
+
+    // Drain stderr in a background thread so it doesn't block
+    let stderr_handle = std::thread::spawn(move || {
+        let reader = BufReader::new(stderr);
+        let mut buf = String::new();
+        for line in reader.lines() {
+            if let Ok(l) = line {
+                buf.push_str(&l);
+                buf.push('\n');
+            }
+        }
+        buf
+    });
+
+    let reader = BufReader::new(stdout);
+    let mut result_text = String::new();
+    let mut is_error = false;
+
+    for line in reader.lines() {
+        let line = match line {
+            Ok(l) => l,
+            Err(_) => break,
+        };
+
+        if let Ok(event) = serde_json::from_str::<serde_json::Value>(&line) {
+            let event_type = event
+                .get("type")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            match event_type {
+                "assistant" => {
+                    if let Some(content) = event
+                        .get("message")
+                        .and_then(|m| m.get("content"))
+                        .and_then(|c| c.as_array())
+                    {
+                        for block in content {
+                            let block_type =
+                                block.get("type").and_then(|v| v.as_str()).unwrap_or("");
+                            if block_type == "text" {
+                                if let Some(text) =
+                                    block.get("text").and_then(|v| v.as_str())
+                                {
+                                    eprintln!("  {}", text.dimmed());
+                                }
+                            } else if block_type == "tool_use" {
+                                let tool_name = block
+                                    .get("name")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("");
+                                eprintln!("  {} {}", "→".dimmed(), tool_name.dimmed());
+                            }
+                        }
+                    }
+                }
+                "result" => {
+                    is_error = event
+                        .get("is_error")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
+                    result_text = event
+                        .get("result")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                }
+                _ => {}
+            }
+        }
+    }
+
+    let status = child.wait()?;
+    let stderr_output = stderr_handle.join().unwrap_or_default();
+
+    if status.success() && !is_error {
+        if result_text.is_empty() {
+            bail!("Research agent returned empty result");
+        }
+        // Write the agent's output to the plan file
+        fs::write(&absolute, &result_text)
+            .with_context(|| format!("Failed to write plan to {}", absolute.display()))?;
+        storage::git_stage(&absolute);
+        eprintln!();
+        eprintln!("{} Plan written to {}", "✓".green().bold(), absolute.display());
+        println!("{}", result_text);
+        Ok(())
+    } else {
+        let detail = if !result_text.is_empty() {
+            result_text
+        } else if !stderr_output.is_empty() {
+            stderr_output.trim().to_string()
+        } else {
+            format!("exit code {}", status.code().unwrap_or(-1))
+        };
+        bail!("Research agent failed: {}", detail);
+    }
 }
