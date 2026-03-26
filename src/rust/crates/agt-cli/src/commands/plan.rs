@@ -6,7 +6,7 @@
 use anyhow::{bail, Context, Result};
 use colored::Colorize;
 use std::fs;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, IsTerminal};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
@@ -48,7 +48,33 @@ pub fn show(reference: String) -> Result<()> {
 
     let content = fs::read_to_string(&plan_file)
         .with_context(|| format!("Failed to read {}", plan_file.display()))?;
-    println!("{}", content);
+
+    // If stdout is a terminal, use a pager for scrollable viewing
+    if std::io::stdout().is_terminal() {
+        let pager = std::env::var("PAGER").unwrap_or_else(|_| "less".to_string());
+        let mut child = Command::new(&pager)
+            .arg("-R") // interpret ANSI color codes
+            .stdin(Stdio::piped())
+            .spawn();
+
+        match &mut child {
+            Ok(proc) => {
+                use std::io::Write;
+                if let Some(stdin) = proc.stdin.as_mut() {
+                    let _ = stdin.write_all(content.as_bytes());
+                }
+                drop(proc.stdin.take());
+                let _ = proc.wait();
+            }
+            Err(_) => {
+                // Pager not available, fall back to printing
+                println!("{}", content);
+            }
+        }
+    } else {
+        // Piped output — just print raw
+        println!("{}", content);
+    }
     Ok(())
 }
 
