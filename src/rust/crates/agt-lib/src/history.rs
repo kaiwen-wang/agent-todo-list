@@ -43,10 +43,10 @@ pub fn get_audit_log(
         });
     }
 
-    entries.reverse();
-
+    // Oldest first so latest entries appear at the bottom of terminal output.
     if let Some(limit) = limit {
-        entries.truncate(limit);
+        let start = entries.len().saturating_sub(limit);
+        entries.drain(..start);
     }
 
     entries
