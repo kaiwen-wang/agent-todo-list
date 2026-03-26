@@ -577,12 +577,7 @@ fn spawn_research_agent(
                             } else if block_type == "tool_use" {
                                 let tool_name =
                                     block.get("name").and_then(|v| v.as_str()).unwrap_or("");
-                                eprintln!(
-                                    "  {}{} {}",
-                                    ref_tag,
-                                    "→".dimmed(),
-                                    tool_name.dimmed()
-                                );
+                                eprintln!("  {}{} {}", ref_tag, "→".dimmed(), tool_name.dimmed());
                             }
                         }
                     }
@@ -605,7 +600,12 @@ fn spawn_research_agent(
 
     let status = match child.wait() {
         Ok(s) => s,
-        Err(e) => return (todo_ref, Err(anyhow::anyhow!("Failed to wait on claude: {}", e))),
+        Err(e) => {
+            return (
+                todo_ref,
+                Err(anyhow::anyhow!("Failed to wait on claude: {}", e)),
+            );
+        }
     };
     let stderr_output = stderr_handle.join().unwrap_or_default();
 
@@ -661,8 +661,7 @@ pub fn research(references: Vec<String>, all: bool, force: bool, dry_run: bool) 
             }
 
             let todo_ref = format!("{}-{}", prefix, todo.number);
-            let prompt =
-                build_research_prompt(&project_name, todo, &todo_ref, &absolute);
+            let prompt = build_research_prompt(&project_name, todo, &todo_ref, &absolute);
             targets.push(ResearchTarget {
                 num: todo.number,
                 todo_ref,
@@ -703,8 +702,7 @@ pub fn research(references: Vec<String>, all: bool, force: bool, dry_run: bool) 
                 }
             }
 
-            let prompt =
-                build_research_prompt(&project_name, &todo, &todo_ref, &absolute);
+            let prompt = build_research_prompt(&project_name, &todo, &todo_ref, &absolute);
             targets.push(ResearchTarget {
                 num,
                 todo_ref,
@@ -734,18 +732,18 @@ pub fn research(references: Vec<String>, all: bool, force: bool, dry_run: bool) 
         }
 
         let todo = queries::find_todo_by_number(&doc, target.num);
-        if let Some(todo) = todo {
-            if todo.plan_path.is_none() {
-                operations::update_todo(
-                    &mut doc,
-                    target.num,
-                    UpdateTodoFields {
-                        plan_path: Some(Some(&target.plan_relative)),
-                        ..Default::default()
-                    },
-                    None,
-                )?;
-            }
+        if let Some(todo) = todo
+            && todo.plan_path.is_none()
+        {
+            operations::update_todo(
+                &mut doc,
+                target.num,
+                UpdateTodoFields {
+                    plan_path: Some(Some(&target.plan_relative)),
+                    ..Default::default()
+                },
+                None,
+            )?;
         }
     }
     save_project(&paths, &mut doc)?;
@@ -788,7 +786,14 @@ pub fn research(references: Vec<String>, all: bool, force: bool, dry_run: bool) 
             let title = target.title.clone();
             let prompt = target.prompt.clone();
             std::thread::spawn(move || {
-                spawn_research_agent(todo_dir, todo_ref, title, prompt, plan_absolute, is_parallel)
+                spawn_research_agent(
+                    todo_dir,
+                    todo_ref,
+                    title,
+                    prompt,
+                    plan_absolute,
+                    is_parallel,
+                )
             })
         })
         .collect();
@@ -798,9 +803,9 @@ pub fn research(references: Vec<String>, all: bool, force: bool, dry_run: bool) 
     let mut failures = 0u32;
 
     for handle in handles {
-        let (todo_ref, result) = handle.join().unwrap_or_else(|_| {
-            ("???".to_string(), Err(anyhow::anyhow!("Thread panicked")))
-        });
+        let (todo_ref, result) = handle
+            .join()
+            .unwrap_or_else(|_| ("???".to_string(), Err(anyhow::anyhow!("Thread panicked"))));
 
         match result {
             Ok(result_text) => {
@@ -808,7 +813,12 @@ pub fn research(references: Vec<String>, all: bool, force: bool, dry_run: bool) 
                 let num = queries::parse_todo_ref(&todo_ref, &prefix).unwrap_or(0);
                 let (_, absolute) = plan_paths(&paths.todo_dir, &prefix, num);
                 if let Err(e) = fs::write(&absolute, &result_text) {
-                    eprintln!("{} {} failed to write plan: {}", "✗".red().bold(), todo_ref, e);
+                    eprintln!(
+                        "{} {} failed to write plan: {}",
+                        "✗".red().bold(),
+                        todo_ref,
+                        e
+                    );
                     failures += 1;
                 } else {
                     storage::git_stage(&absolute);
