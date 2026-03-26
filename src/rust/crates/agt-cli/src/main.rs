@@ -1,7 +1,7 @@
 mod commands;
 mod output;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use clap::{CommandFactory, Parser, Subcommand};
 
 #[derive(Parser)]
@@ -117,6 +117,7 @@ enum Commands {
         json: bool,
     },
     /// Delete a todo
+    #[command(alias = "del")]
     Delete {
         /// Todo reference
         reference: String,
@@ -196,10 +197,18 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
-    /// Manage plan/research files for todos
+    /// Manage plan/research files for todos (defaults to research)
+    #[command(args_conflicts_with_subcommands = true)]
     Plan {
+        /// Todo reference — runs research by default
+        reference: Option<String>,
+
+        /// Print the prompt without running the agent
+        #[arg(long)]
+        dry_run: bool,
+
         #[command(subcommand)]
-        action: PlanAction,
+        action: Option<PlanAction>,
     },
     /// Manage project members
     Member {
@@ -519,7 +528,7 @@ fn main() -> Result<()> {
         Commands::Poll { dry_run } => commands::poll::run(dry_run),
         Commands::Queue { references } => commands::queue::run(references),
         Commands::Runs { json } => commands::runs::run(json),
-        Commands::Plan { action } => match action {
+        Commands::Plan { action: Some(action), .. } => match action {
             PlanAction::Show { reference } => commands::plan::show(reference),
             PlanAction::Init { reference } => commands::plan::init(reference),
             PlanAction::Answer { reference, text } => commands::plan::answer(reference, text),
@@ -527,6 +536,12 @@ fn main() -> Result<()> {
             PlanAction::Research { reference, dry_run } => {
                 commands::plan::research(reference, dry_run)
             }
+        },
+        Commands::Plan { action: None, reference: Some(reference), dry_run, .. } => {
+            commands::plan::research(reference, dry_run)
+        },
+        Commands::Plan { action: None, reference: None, .. } => {
+            bail!("Usage: agt plan <REFERENCE> or agt plan <subcommand>")
         },
         Commands::Member { action } => match action {
             MemberAction::Add {

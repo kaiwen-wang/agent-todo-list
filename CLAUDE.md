@@ -46,7 +46,9 @@ lib/ code. Use `cargo test` for Rust CLI tests.
 ### CLI
 
 The CLI is a Rust binary (`src/rust/`). Run via `cargo run --` during development, or
-`agt` after `make deploy`.
+`agt` after `make deploy`. The Cargo workspace root is `src/rust/` (not the repo root),
+so `cargo` commands must be run from there. Use LSP diagnostics (rust-analyzer) to check
+for compile errors instead of running `cargo check` manually.
 
 ### Frontend
 
