@@ -46,7 +46,7 @@ lib/ code. Use `cargo test` for Rust CLI tests.
 ### CLI
 
 The CLI is a Rust binary (`src/rust/`). Run via `cargo run --` during development, or
-`agt` after `make deploy`. The Cargo workspace root is `src/rust/` (not the repo root),
+`agt` after `make` (or `make deploy` for full build with web assets). The Cargo workspace root is `src/rust/` (not the repo root),
 so `cargo` commands must be run from there. Use LSP diagnostics (rust-analyzer) to check
 for compile errors instead of running `cargo check` manually.
 
@@ -132,7 +132,7 @@ merge driver handles binary conflicts using `Automerge.merge()` (configured in
 ```
 agent-todo-list/
   package.json
-  Makefile                # `make deploy` builds standalone binary
+  Makefile                # `make` builds + installs CLI, `make deploy` includes web assets
   lefthook.toml
 
   src/

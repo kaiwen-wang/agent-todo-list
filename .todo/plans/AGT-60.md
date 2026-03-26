@@ -86,3 +86,7 @@ This follows Unix/Makefile conventions where `make install` is the standard way 
 
 - Do you still use `make install` (the quick, no-web-assets variant) regularly? If not, we could just drop it and keep things simpler (Option 1).
 - Any preference on the name for the quick variant? (`install-fast`, `install-quick`, `quick`, etc.)
+
+## Answers
+
+- I use make install a lot ot quick install. make 'make' by itself make install, the cli installation. let's keep deploy. uninstall is too many letters 2 type. make install should just become make then.

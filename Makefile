@@ -1,4 +1,8 @@
-.PHONY: dev build web deploy undeploy test lint install
+.PHONY: default dev build web deploy undeploy test lint
+
+default: ## Quick release build + install CLI (no web assets)
+	cd src/rust && cargo build --release
+	cp src/rust/target/release/agt ~/.local/bin/agt
 
 dev: ## Start Rust API server + Vite dev server
 	@bash -c '\
@@ -21,10 +25,6 @@ test: ## Run Rust tests
 lint: ## Run oxlint + oxfmt
 	bunx oxlint src/web/src --fix
 	bunx oxfmt src/web/src
-
-install: ## Quick release build + install (no web assets)
-	cd src/rust && cargo build --release
-	cp src/rust/target/release/agt ~/.local/bin/agt
 
 deploy: build ## Full release build + install with web assets
 	install -d ~/.local/bin
