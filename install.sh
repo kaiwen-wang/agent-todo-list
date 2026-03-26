@@ -62,8 +62,12 @@ download() {
 
   # Install binary
   mkdir -p "$INSTALL_DIR"
-  cp "$TMPDIR/agt" "$INSTALL_DIR/agt"
-  chmod +x "$INSTALL_DIR/agt"
+  install "$TMPDIR/agt" "$INSTALL_DIR/agt"
+
+  # macOS: clear quarantine/provenance xattrs that cause silent hangs
+  if [ "$(uname -s)" = "Darwin" ]; then
+    xattr -cr "$INSTALL_DIR/agt" 2>/dev/null || true
+  fi
 
   # Install web assets if present in the tarball
   if [ -d "$TMPDIR/web" ]; then
