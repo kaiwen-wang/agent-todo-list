@@ -77,6 +77,9 @@ enum Commands {
         /// Show only archived todos
         #[arg(long)]
         archived: bool,
+        /// Sort by actionability (most actionable at bottom)
+        #[arg(long)]
+        rank: bool,
         /// Output as JSON
         #[arg(long)]
         json: bool,
@@ -499,8 +502,9 @@ fn main() -> Result<()> {
             search,
             all,
             archived,
+            rank,
             json,
-        } => commands::list::run(status, assignee, priority, difficulty, search, all, archived, json),
+        } => commands::list::run(status, assignee, priority, difficulty, search, all, archived, rank, json),
         Commands::Show { reference, json } => commands::show::run(reference, json),
         Commands::Edit {
             reference,

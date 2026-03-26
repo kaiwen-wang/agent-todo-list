@@ -32,6 +32,22 @@ impl Status {
         Status::WontDo,
     ];
 
+    /// Rank for sorting: higher number = more actionable.
+    /// Used by `--rank` to put the most actionable items at the bottom (visible in terminal).
+    pub fn rank(&self) -> u8 {
+        match self {
+            Status::Completed => 0,
+            Status::None => 1,
+            Status::NeedsElaboration => 2,
+            Status::Todo => 3,
+            Status::Queued => 4,
+            Status::InProgress => 5,
+            // Archived/WontDo are typically filtered out, but rank low if present
+            Status::Archived => 0,
+            Status::WontDo => 0,
+        }
+    }
+
     pub fn display_name(&self) -> &'static str {
         match self {
             Status::None => "None",
@@ -101,6 +117,17 @@ impl Priority {
         Priority::Medium,
         Priority::Low,
     ];
+
+    /// Rank for sorting: higher number = higher priority.
+    pub fn rank(&self) -> u8 {
+        match self {
+            Priority::None => 0,
+            Priority::Low => 1,
+            Priority::Medium => 2,
+            Priority::High => 3,
+            Priority::Urgent => 4,
+        }
+    }
 
     pub fn display_name(&self) -> &'static str {
         match self {

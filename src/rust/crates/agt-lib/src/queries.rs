@@ -252,6 +252,17 @@ pub fn query_todos(doc: &AutoCommit, filter: &TodoFilter) -> Vec<Todo> {
     todos
 }
 
+/// Sort todos by actionability: most actionable items last (bottom of terminal).
+/// Primary sort: status rank (ascending). Secondary sort: priority rank (ascending).
+pub fn rank_todos(todos: &mut [Todo]) {
+    todos.sort_by(|a, b| {
+        a.status
+            .rank()
+            .cmp(&b.status.rank())
+            .then_with(|| a.priority.rank().cmp(&b.priority.rank()))
+    });
+}
+
 /// Find a single todo by its number.
 pub fn find_todo_by_number(doc: &AutoCommit, num: u64) -> Option<Todo> {
     read_all_todos(doc).into_iter().find(|t| t.number == num)

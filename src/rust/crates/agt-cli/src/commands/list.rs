@@ -14,6 +14,7 @@ pub fn run(
     search: Option<String>,
     all: bool,
     archived: bool,
+    rank: bool,
     json: bool,
 ) -> Result<()> {
     let (_paths, doc) = load_project()?;
@@ -36,7 +37,11 @@ pub fn run(
         search,
     };
 
-    let todos = queries::query_todos(&doc, &filter);
+    let mut todos = queries::query_todos(&doc, &filter);
+
+    if rank {
+        queries::rank_todos(&mut todos);
+    }
 
     if json {
         println!("{}", serde_json::to_string_pretty(&todos)?);
