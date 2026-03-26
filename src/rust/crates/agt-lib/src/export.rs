@@ -68,6 +68,7 @@ pub fn to_json(doc: &mut AutoCommit, include_audit_log: bool) -> Value {
                 "updatedAt": t.updated_at,
                 "createdBy": t.created_by,
                 "platform": t.platform,
+                "planPath": t.plan_path,
             })
         }).collect::<Vec<_>>(),
         "auditLog": audit_log.iter().map(|e| json!({

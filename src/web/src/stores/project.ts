@@ -20,6 +20,9 @@ export const useProjectStore = defineStore("project", () => {
   const inboxText = computed(() => project.value?.inboxText ?? "");
   const inboxProcessed = computed(() => project.value?.inboxProcessed ?? "");
 
+  // ── Plan state ──
+  const planEvents = ref<Array<{ type: string; [key: string]: unknown }>>([]);
+
   // ── Brain state ──
   const brainProcessing = ref(false);
   const brainLogs = ref<BrainEvent[]>([]);
@@ -206,6 +209,45 @@ export const useProjectStore = defineStore("project", () => {
     }
   }
 
+  // ── Plan actions ──
+
+  async function fetchPlan(number: number) {
+    return api.fetchPlan(number);
+  }
+
+  async function initPlan(number: number) {
+    error.value = null;
+    try {
+      const result = await api.initPlan(number);
+      await load();
+      return result;
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
+  async function researchPlan(number: number) {
+    error.value = null;
+    try {
+      const result = await api.researchPlan(number);
+      return result;
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
+  async function answerPlan(number: number, text: string) {
+    error.value = null;
+    try {
+      await api.answerPlan(number, text);
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
   // ── Inbox actions ──
 
   async function updateInbox(text: string) {
@@ -303,6 +345,13 @@ export const useProjectStore = defineStore("project", () => {
             } else {
               load();
             }
+            break;
+          case "plan:start":
+          case "plan:progress":
+          case "plan:done":
+          case "plan:error":
+            // Plan events are handled by the component via the planEvents ref
+            planEvents.value.push(msg);
             break;
           case "brain:log":
           case "brain:task":
@@ -495,6 +544,7 @@ export const useProjectStore = defineStore("project", () => {
     statusCounts,
     inboxText,
     inboxProcessed,
+    planEvents,
     brainProcessing,
     brainLogs,
     selectedTodoNumber,
@@ -507,6 +557,10 @@ export const useProjectStore = defineStore("project", () => {
     createBranch,
     removeBranch,
     updateProjectSettings,
+    fetchPlan,
+    initPlan,
+    researchPlan,
+    answerPlan,
     updateInbox,
     startBrainProcess,
     clearBrainLogs,

@@ -215,6 +215,59 @@ export async function bulkChange(
   return res.json();
 }
 
+// ── Plan API ──
+
+export async function fetchPlan(
+  number: number,
+): Promise<{ content: string | null; exists: boolean }> {
+  const res = await fetch(`${BASE}/api/plan/${number}`);
+  if (!res.ok) throw new Error(`Failed to fetch plan: ${res.statusText}`);
+  return res.json();
+}
+
+export async function initPlan(
+  number: number,
+): Promise<{ ok: boolean; planPath: string; content: string }> {
+  const res = await fetch(`${BASE}/api/change`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "initPlan", number }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || "Failed to init plan");
+  }
+  return res.json();
+}
+
+export async function researchPlan(
+  number: number,
+): Promise<{ ok: boolean; planPath: string; researching: boolean }> {
+  const res = await fetch(`${BASE}/api/change`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "researchPlan", number }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || "Failed to start plan research");
+  }
+  return res.json();
+}
+
+export async function answerPlan(number: number, text: string): Promise<{ ok: boolean }> {
+  const res = await fetch(`${BASE}/api/change`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "answerPlan", number, text }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || "Failed to answer plan");
+  }
+  return res.json();
+}
+
 // ── Inbox API ──
 
 export async function updateInbox(text: string): Promise<{ ok: boolean }> {

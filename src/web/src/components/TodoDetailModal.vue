@@ -9,6 +9,7 @@ import {
   AntennaBars4,
   AntennaBars5,
   ExternalLink,
+  FileText,
   Trash,
 } from "@vicons/tabler";
 import { useProjectStore } from "@/stores/project";
@@ -267,6 +268,105 @@ function handleDetailKeydown(e: KeyboardEvent) {
 onMounted(() => window.addEventListener("keydown", handleDetailKeydown));
 onUnmounted(() => window.removeEventListener("keydown", handleDetailKeydown));
 
+// ── Plan ──
+const planContent = ref<string | null>(null);
+const planExists = ref(false);
+const planLoading = ref(false);
+const planResearching = ref(false);
+const planProgressMsg = ref("");
+const planAnswerText = ref("");
+const planAnswerLoading = ref(false);
+
+async function loadPlan() {
+  if (!todo.value) return;
+  try {
+    const result = await store.fetchPlan(todo.value.number);
+    planContent.value = result.content;
+    planExists.value = result.exists;
+  } catch {
+    // silently fail
+  }
+}
+
+async function handleResearchPlan() {
+  if (!todo.value) return;
+  planLoading.value = true;
+  planResearching.value = true;
+  planProgressMsg.value = "Starting research...";
+  try {
+    await store.researchPlan(todo.value.number);
+    planExists.value = true;
+  } catch (e: unknown) {
+    message.error(e instanceof Error ? e.message : "Failed to start research");
+    planResearching.value = false;
+    planProgressMsg.value = "";
+  } finally {
+    planLoading.value = false;
+  }
+}
+
+// Watch for plan WebSocket events
+watch(
+  () => store.planEvents.length,
+  () => {
+    if (!todo.value) return;
+    const events = store.planEvents;
+    for (const evt of events) {
+      const evtNumber = evt.number as number | undefined;
+      if (evtNumber !== undefined && evtNumber !== todo.value.number) continue;
+
+      if (evt.type === "plan:progress") {
+        planProgressMsg.value = (evt.message as string) || "Working...";
+      } else if (evt.type === "plan:done") {
+        planResearching.value = false;
+        planProgressMsg.value = "";
+        planContent.value = (evt.content as string) || null;
+        planExists.value = true;
+      } else if (evt.type === "plan:error") {
+        planResearching.value = false;
+        planProgressMsg.value = "";
+        message.error((evt.message as string) || "Research failed");
+      }
+    }
+    // Clear processed events
+    store.planEvents.splice(0);
+  },
+);
+
+async function submitPlanAnswer() {
+  if (!todo.value || !planAnswerText.value.trim()) return;
+  planAnswerLoading.value = true;
+  try {
+    await store.answerPlan(todo.value.number, planAnswerText.value.trim());
+    planAnswerText.value = "";
+    await loadPlan();
+  } catch (e: unknown) {
+    message.error(e instanceof Error ? e.message : "Failed to add answer");
+  } finally {
+    planAnswerLoading.value = false;
+  }
+}
+
+// Load plan when modal opens for a different todo
+watch(
+  () => store.selectedTodoNumber,
+  (num) => {
+    if (num !== null) loadPlan();
+    else {
+      planContent.value = null;
+      planExists.value = false;
+    }
+  },
+);
+
+// Reload plan if planPath changes (agent updated it)
+watch(
+  () => todo.value?.planPath,
+  () => {
+    if (todo.value) loadPlan();
+  },
+);
+
 // ── Comments ──
 const commentText = ref("");
 const commentLoading = ref(false);
@@ -410,6 +510,63 @@ async function submitComment() {
                 placeholder="Add a description..."
                 @blur="commitDescription"
               />
+            </div>
+
+            <!-- Plan -->
+            <div class="field-group">
+              <label class="meta-label">
+                <NIcon :size="12" style="vertical-align: -1px; margin-right: 4px"
+                  ><FileText
+                /></NIcon>
+                Plan
+              </label>
+
+              <!-- Researching state -->
+              <div v-if="planResearching" class="plan-researching">
+                <div class="plan-spinner" />
+                <span class="plan-progress-msg">{{ planProgressMsg }}</span>
+              </div>
+
+              <!-- Plan exists with content -->
+              <div v-else-if="planExists && planContent" class="plan-content">
+                <pre class="plan-markdown">{{ planContent }}</pre>
+                <div class="plan-answer-input">
+                  <NInput
+                    v-model:value="planAnswerText"
+                    type="textarea"
+                    :autosize="{ minRows: 2, maxRows: 4 }"
+                    placeholder="Answer questions..."
+                    @keydown.meta.enter="submitPlanAnswer"
+                    @keydown.ctrl.enter="submitPlanAnswer"
+                  />
+                  <NButton
+                    size="small"
+                    type="primary"
+                    :loading="planAnswerLoading"
+                    :disabled="!planAnswerText.trim()"
+                    style="align-self: flex-end; margin-top: 8px"
+                    @click="submitPlanAnswer"
+                  >
+                    Answer
+                  </NButton>
+                </div>
+              </div>
+
+              <!-- No plan yet -->
+              <div v-else>
+                <NButton
+                  size="small"
+                  type="primary"
+                  :loading="planLoading"
+                  @click="handleResearchPlan"
+                >
+                  <template #icon>
+                    <NIcon :size="14"><FileText /></NIcon>
+                  </template>
+                  Research Plan
+                </NButton>
+                <span class="plan-hint">AI agent will research this task and write a plan</span>
+              </div>
             </div>
 
             <!-- Comments -->
@@ -624,5 +781,66 @@ async function submitComment() {
 .comment-input {
   display: flex;
   flex-direction: column;
+}
+
+.plan-content {
+  border: 1px solid rgba(128, 128, 128, 0.15);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.plan-markdown {
+  padding: 12px 16px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: inherit;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.plan-answer-input {
+  padding: 12px 16px;
+  border-top: 1px solid rgba(128, 128, 128, 0.15);
+  display: flex;
+  flex-direction: column;
+}
+
+.plan-researching {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid rgba(128, 128, 128, 0.15);
+  border-radius: 6px;
+}
+
+.plan-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(128, 128, 128, 0.2);
+  border-top-color: var(--n-primary-color, #18a058);
+  border-radius: 50%;
+  animation: plan-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes plan-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.plan-progress-msg {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.plan-hint {
+  font-size: 12px;
+  opacity: 0.4;
+  margin-left: 10px;
 }
 </style>
