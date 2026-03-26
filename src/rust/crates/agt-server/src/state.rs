@@ -25,8 +25,7 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(data_path: PathBuf, config_path: PathBuf, todo_dir: PathBuf) -> Result<Self> {
-        let mut doc = storage::load_doc(&data_path)?
-            .context("Failed to load data.automerge")?;
+        let mut doc = storage::load_doc(&data_path)?.context("Failed to load data.automerge")?;
 
         if migrate::needs_migration(&doc) {
             migrate::migrate_doc(&mut doc)?;
@@ -47,8 +46,8 @@ impl AppState {
 
     /// Reload the document from disk.
     pub async fn reload(&self) -> Result<()> {
-        let mut doc = storage::load_doc(&self.data_path)?
-            .context("Failed to reload data.automerge")?;
+        let mut doc =
+            storage::load_doc(&self.data_path)?.context("Failed to reload data.automerge")?;
 
         if migrate::needs_migration(&doc) {
             migrate::migrate_doc(&mut doc)?;
@@ -88,10 +87,10 @@ pub async fn watch_file(path: PathBuf, state: AppState) -> Result<()> {
 
     let mut watcher = RecommendedWatcher::new(
         move |res: notify::Result<Event>| {
-            if let Ok(event) = res {
-                if matches!(event.kind, EventKind::Modify(_)) {
-                    let _ = tx.blocking_send(());
-                }
+            if let Ok(event) = res
+                && matches!(event.kind, EventKind::Modify(_))
+            {
+                let _ = tx.blocking_send(());
             }
         },
         notify::Config::default(),

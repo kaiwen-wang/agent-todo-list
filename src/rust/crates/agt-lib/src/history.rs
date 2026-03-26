@@ -35,8 +35,10 @@ pub fn get_audit_log(
             actor_id: parsed.actor_id,
             actor_name: parsed.actor_name,
             target: parsed.target,
-            details: parsed.details.unwrap_or(serde_json::Value::Object(Default::default())),
-            timestamp: change.timestamp() as i64 * 1000,
+            details: parsed
+                .details
+                .unwrap_or(serde_json::Value::Object(Default::default())),
+            timestamp: change.timestamp() * 1000,
             hash: change.hash().to_string(),
         });
     }
@@ -55,12 +57,12 @@ pub fn get_audit_log_count(doc: &mut AutoCommit) -> usize {
     let changes = doc.get_changes(&[]);
     let mut count = 0;
     for change in changes {
-        if let Some(msg) = change.message() {
-            if let Ok(parsed) = serde_json::from_str::<ChangeMessage>(msg) {
-                if !parsed.action.is_empty() && !parsed.target.is_empty() {
-                    count += 1;
-                }
-            }
+        if let Some(msg) = change.message()
+            && let Ok(parsed) = serde_json::from_str::<ChangeMessage>(msg)
+            && !parsed.action.is_empty()
+            && !parsed.target.is_empty()
+        {
+            count += 1;
         }
     }
     count

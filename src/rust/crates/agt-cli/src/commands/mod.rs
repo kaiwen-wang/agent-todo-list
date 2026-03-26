@@ -24,7 +24,7 @@ pub mod update;
 pub mod workflow;
 
 use agt_lib::migrate;
-use agt_lib::project::{find_project, TodoPaths};
+use agt_lib::project::{TodoPaths, find_project};
 use agt_lib::storage;
 use anyhow::{Context, Result};
 use std::env;

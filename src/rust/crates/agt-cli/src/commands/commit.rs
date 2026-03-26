@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use std::process::Command;
 
 use agt_lib::history;
@@ -127,7 +127,7 @@ pub fn run(push: bool, message: Option<String>) -> Result<()> {
             "-m",
             &msg,
             "--",
-            &paths.todo_dir.to_string_lossy().to_string(),
+            paths.todo_dir.to_string_lossy().as_ref(),
         ])
         .current_dir(&paths.root)
         .status()?;

@@ -32,7 +32,8 @@ pub fn run(
     let filter = TodoFilter {
         status: status_filter,
         priority: priority.map(|p| p.split(',').filter_map(|v| v.trim().parse().ok()).collect()),
-        difficulty: difficulty.map(|d| d.split(',').filter_map(|v| v.trim().parse().ok()).collect()),
+        difficulty: difficulty
+            .map(|d| d.split(',').filter_map(|v| v.trim().parse().ok()).collect()),
         assignee,
         search,
     };

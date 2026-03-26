@@ -3,7 +3,7 @@
 //! Creates .worktrees/<branch-name>/ with a new branch.
 //! Sets the branch name on the todo in the CRDT.
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;

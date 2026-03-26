@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 mod commands;
 mod output;
 
@@ -375,15 +377,22 @@ fn print_grouped_help() {
     println!("Usage: agt <COMMAND>  [--all for full help]\n");
 
     let groups: &[(&str, &[&str])] = &[
-        ("Todo Management", &["add", "list", "show", "edit", "delete"]),
+        (
+            "Todo Management",
+            &["add", "list", "show", "edit", "delete"],
+        ),
         (
             "Workflow",
-            &["assign", "unassign", "comment", "branch", "unbranch", "plan"],
+            &[
+                "assign", "unassign", "comment", "branch", "unbranch", "plan",
+            ],
         ),
         ("Agent Dispatch", &["run", "poll", "queue", "runs"]),
         (
             "Project",
-            &["init", "member", "config", "serve", "inbox", "commit", "log"],
+            &[
+                "init", "member", "config", "serve", "inbox", "commit", "log",
+            ],
         ),
     ];
 
@@ -405,13 +414,12 @@ fn print_grouped_help() {
 }
 
 fn print_full_help() {
-    let mut cmd = Cli::command()
-        .arg(
-            clap::Arg::new("all")
-                .long("all")
-                .help("Print help for all subcommands")
-                .action(clap::ArgAction::SetTrue),
-        );
+    let mut cmd = Cli::command().arg(
+        clap::Arg::new("all")
+            .long("all")
+            .help("Print help for all subcommands")
+            .action(clap::ArgAction::SetTrue),
+    );
 
     // Print the grouped overview first instead of clap's flat list
     print_grouped_help();
@@ -435,13 +443,15 @@ fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
     let has_all = args.iter().any(|a| a == "--all" || a == "-a");
     let has_help = args.iter().any(|a| a == "--help" || a == "-h");
-    let non_flags: Vec<&String> = args.iter().skip(1).filter(|a| !a.starts_with('-')).collect();
+    let non_flags: Vec<&String> = args
+        .iter()
+        .skip(1)
+        .filter(|a| !a.starts_with('-'))
+        .collect();
     let first_non_flag = non_flags.first().map(|s| s.as_str());
-    let is_help_context =
-        first_non_flag.is_none() || first_non_flag == Some("help");
+    let is_help_context = first_non_flag.is_none() || first_non_flag == Some("help");
     // `agt help <command>` should fall through to clap's per-command help
-    let is_help_for_specific =
-        first_non_flag == Some("help") && non_flags.len() > 1;
+    let is_help_for_specific = first_non_flag == Some("help") && non_flags.len() > 1;
 
     if is_help_context && !is_help_for_specific {
         if has_all {
@@ -504,7 +514,9 @@ fn main() -> Result<()> {
             archived,
             rank,
             json,
-        } => commands::list::run(status, assignee, priority, difficulty, search, all, archived, rank, json),
+        } => commands::list::run(
+            status, assignee, priority, difficulty, search, all, archived, rank, json,
+        ),
         Commands::Show { reference, json } => commands::show::run(reference, json),
         Commands::Edit {
             reference,

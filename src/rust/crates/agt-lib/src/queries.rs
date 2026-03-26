@@ -1,11 +1,12 @@
 //! Read/filter functions for querying the Project document.
 //! All functions are pure — they read from an Automerge doc without mutating.
 
-use automerge::{AutoCommit, ReadDoc, ScalarValue, ROOT};
+use automerge::{AutoCommit, ROOT, ReadDoc, ScalarValue};
 
 use crate::git_identity::get_git_identity;
 use crate::schema::*;
 
+#[derive(Default)]
 pub struct TodoFilter {
     pub status: Option<Vec<Status>>,
     pub priority: Option<Vec<Priority>>,
@@ -14,28 +15,16 @@ pub struct TodoFilter {
     pub search: Option<String>,
 }
 
-impl Default for TodoFilter {
-    fn default() -> Self {
-        Self {
-            status: None,
-            priority: None,
-            difficulty: None,
-            assignee: None,
-            search: None,
-        }
-    }
-}
-
 /// Read all todos from the document as plain Rust structs.
 pub fn read_all_todos(doc: &AutoCommit) -> Vec<Todo> {
     let Some((_, todos_id)) = doc.get(ROOT, "todos").ok().flatten() else {
         return vec![];
     };
     let len = doc.length(&todos_id);
-    let mut todos = Vec::with_capacity(len as usize);
+    let mut todos = Vec::with_capacity(len);
 
     for i in 0..len {
-        if let Some(todo) = read_todo_at(doc, &todos_id, i as usize) {
+        if let Some(todo) = read_todo_at(doc, &todos_id, i) {
             todos.push(todo);
         }
     }
@@ -48,10 +37,10 @@ pub fn read_all_members(doc: &AutoCommit) -> Vec<Member> {
         return vec![];
     };
     let len = doc.length(&members_id);
-    let mut members = Vec::with_capacity(len as usize);
+    let mut members = Vec::with_capacity(len);
 
     for i in 0..len {
-        if let Some(member) = read_member_at(doc, &members_id, i as usize) {
+        if let Some(member) = read_member_at(doc, &members_id, i) {
             members.push(member);
         }
     }
@@ -66,9 +55,7 @@ fn get_str(doc: &AutoCommit, obj: &automerge::ObjId, key: &str) -> Option<String
             _ => None,
         },
         // JS Automerge stores strings as Text objects (ObjType::Text)
-        Ok(Some((automerge::Value::Object(automerge::ObjType::Text), id))) => {
-            doc.text(&id).ok()
-        }
+        Ok(Some((automerge::Value::Object(automerge::ObjType::Text), id))) => doc.text(&id).ok(),
         _ => None,
     }
 }
@@ -102,9 +89,7 @@ fn get_list_str(doc: &AutoCommit, list_id: &automerge::ObjId, idx: usize) -> Opt
             ScalarValue::Str(s) => Some(s.to_string()),
             _ => None,
         },
-        Ok(Some((automerge::Value::Object(automerge::ObjType::Text), id))) => {
-            doc.text(&id).ok()
-        }
+        Ok(Some((automerge::Value::Object(automerge::ObjType::Text), id))) => doc.text(&id).ok(),
         _ => None,
     }
 }
@@ -140,10 +125,10 @@ fn read_todo_at(doc: &AutoCommit, todos_id: &automerge::ObjId, idx: usize) -> Op
     if let Ok(Some((_, labels_id))) = doc.get(&todo_id, "labels") {
         let labels_len = doc.length(&labels_id);
         for j in 0..labels_len {
-            if let Some(label_str) = get_list_str(doc, &labels_id, j) {
-                if let Ok(label) = label_str.parse::<Label>() {
-                    labels.push(label);
-                }
+            if let Some(label_str) = get_list_str(doc, &labels_id, j)
+                && let Ok(label) = label_str.parse::<Label>()
+            {
+                labels.push(label);
             }
         }
     }
@@ -153,7 +138,7 @@ fn read_todo_at(doc: &AutoCommit, todos_id: &automerge::ObjId, idx: usize) -> Op
     if let Ok(Some((_, comments_id))) = doc.get(&todo_id, "comments") {
         let comments_len = doc.length(&comments_id);
         for j in 0..comments_len {
-            if let Ok(Some((_, c_id))) = doc.get(&comments_id, j as usize) {
+            if let Ok(Some((_, c_id))) = doc.get(&comments_id, j) {
                 let comment = Comment {
                     id: get_str(doc, &c_id, "id").unwrap_or_default(),
                     author: get_str(doc, &c_id, "author").unwrap_or_default(),
@@ -186,11 +171,7 @@ fn read_todo_at(doc: &AutoCommit, todos_id: &automerge::ObjId, idx: usize) -> Op
     })
 }
 
-fn read_member_at(
-    doc: &AutoCommit,
-    members_id: &automerge::ObjId,
-    idx: usize,
-) -> Option<Member> {
+fn read_member_at(doc: &AutoCommit, members_id: &automerge::ObjId, idx: usize) -> Option<Member> {
     let (_, m_id) = doc.get(members_id, idx).ok()??;
 
     Some(Member {
@@ -200,8 +181,7 @@ fn read_member_at(
         role: get_str(doc, &m_id, "role")
             .and_then(|s| s.parse().ok())
             .unwrap_or(MemberRole::Member),
-        agent_provider: get_str(doc, &m_id, "agentProvider")
-            .and_then(|s| s.parse().ok()),
+        agent_provider: get_str(doc, &m_id, "agentProvider").and_then(|s| s.parse().ok()),
         agent_model: get_str(doc, &m_id, "agentModel"),
     })
 }
@@ -286,21 +266,19 @@ pub fn find_member(doc: &AutoCommit, name_or_id: &str) -> Option<Member> {
 
     if name_or_id.eq_ignore_ascii_case("me") {
         let git = get_git_identity();
-        if let Some(email) = &git.email {
-            if let Some(m) = members
-                .iter()
-                .find(|m| m.email.as_deref().is_some_and(|e| e.eq_ignore_ascii_case(email)))
-            {
-                return Some(m.clone());
-            }
+        if let Some(email) = &git.email
+            && let Some(m) = members.iter().find(|m| {
+                m.email
+                    .as_deref()
+                    .is_some_and(|e| e.eq_ignore_ascii_case(email))
+            })
+        {
+            return Some(m.clone());
         }
-        if let Some(name) = &git.name {
-            if let Some(m) = members
-                .iter()
-                .find(|m| m.name.eq_ignore_ascii_case(name))
-            {
-                return Some(m.clone());
-            }
+        if let Some(name) = &git.name
+            && let Some(m) = members.iter().find(|m| m.name.eq_ignore_ascii_case(name))
+        {
+            return Some(m.clone());
         }
         return None;
     }
@@ -332,9 +310,9 @@ pub fn count_by_status(doc: &AutoCommit) -> std::collections::HashMap<Status, us
 
 /// Read project-level metadata.
 pub fn read_project_meta(doc: &AutoCommit) -> (String, String, String, String) {
-    let id = get_str(doc, &ROOT.into(), "id").unwrap_or_default();
-    let prefix = get_str(doc, &ROOT.into(), "prefix").unwrap_or_default();
-    let name = get_str(doc, &ROOT.into(), "name").unwrap_or_default();
-    let description = get_str(doc, &ROOT.into(), "description").unwrap_or_default();
+    let id = get_str(doc, &ROOT, "id").unwrap_or_default();
+    let prefix = get_str(doc, &ROOT, "prefix").unwrap_or_default();
+    let name = get_str(doc, &ROOT, "name").unwrap_or_default();
+    let description = get_str(doc, &ROOT, "description").unwrap_or_default();
     (id, prefix, name, description)
 }

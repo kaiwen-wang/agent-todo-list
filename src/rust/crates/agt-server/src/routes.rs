@@ -1,10 +1,10 @@
 //! API route handlers.
 
+use axum::Json;
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
-use axum::Json;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
@@ -85,11 +85,23 @@ pub async fn post_change(
 async fn handle_add(state: &AppState, body: &Value) -> Result<Value, String> {
     let mut doc = state.doc.lock().await;
 
-    let title = body.get("title").and_then(|t| t.as_str()).unwrap_or("Untitled");
+    let title = body
+        .get("title")
+        .and_then(|t| t.as_str())
+        .unwrap_or("Untitled");
     let description = body.get("description").and_then(|d| d.as_str());
-    let status: Option<Status> = body.get("status").and_then(|s| s.as_str()).and_then(|s| s.parse().ok());
-    let priority: Option<Priority> = body.get("priority").and_then(|p| p.as_str()).and_then(|p| p.parse().ok());
-    let difficulty: Option<Difficulty> = body.get("difficulty").and_then(|d| d.as_str()).and_then(|d| d.parse().ok());
+    let status: Option<Status> = body
+        .get("status")
+        .and_then(|s| s.as_str())
+        .and_then(|s| s.parse().ok());
+    let priority: Option<Priority> = body
+        .get("priority")
+        .and_then(|p| p.as_str())
+        .and_then(|p| p.parse().ok());
+    let difficulty: Option<Difficulty> = body
+        .get("difficulty")
+        .and_then(|d| d.as_str())
+        .and_then(|d| d.parse().ok());
     let assignee = body.get("assignee").and_then(|a| a.as_str());
 
     let labels: Option<Vec<Label>> = body.get("labels").and_then(|l| l.as_array()).map(|arr| {
@@ -122,7 +134,10 @@ async fn handle_add(state: &AppState, body: &Value) -> Result<Value, String> {
 
 async fn handle_update(state: &AppState, body: &Value) -> Result<Value, String> {
     let mut doc = state.doc.lock().await;
-    let number = body.get("number").and_then(|n| n.as_u64()).ok_or("missing number")?;
+    let number = body
+        .get("number")
+        .and_then(|n| n.as_u64())
+        .ok_or("missing number")?;
 
     let empty = json!({});
     let updates = body.get("updates").unwrap_or(&empty);
@@ -137,7 +152,10 @@ async fn handle_update(state: &AppState, body: &Value) -> Result<Value, String> 
 
 async fn handle_delete(state: &AppState, body: &Value) -> Result<Value, String> {
     let mut doc = state.doc.lock().await;
-    let number = body.get("number").and_then(|n| n.as_u64()).ok_or("missing number")?;
+    let number = body
+        .get("number")
+        .and_then(|n| n.as_u64())
+        .ok_or("missing number")?;
 
     operations::delete_todo(&mut doc, number, None).map_err(|e| e.to_string())?;
 
@@ -148,7 +166,10 @@ async fn handle_delete(state: &AppState, body: &Value) -> Result<Value, String> 
 
 async fn handle_add_comment(state: &AppState, body: &Value) -> Result<Value, String> {
     let mut doc = state.doc.lock().await;
-    let number = body.get("number").and_then(|n| n.as_u64()).ok_or("missing number")?;
+    let number = body
+        .get("number")
+        .and_then(|n| n.as_u64())
+        .ok_or("missing number")?;
     let text = body.get("text").and_then(|t| t.as_str()).unwrap_or("");
 
     operations::add_comment(&mut doc, number, text, None).map_err(|e| e.to_string())?;
@@ -160,7 +181,10 @@ async fn handle_add_comment(state: &AppState, body: &Value) -> Result<Value, Str
 
 async fn handle_create_branch(state: &AppState, body: &Value) -> Result<Value, String> {
     let doc = state.doc.lock().await;
-    let number = body.get("number").and_then(|n| n.as_u64()).ok_or("missing number")?;
+    let number = body
+        .get("number")
+        .and_then(|n| n.as_u64())
+        .ok_or("missing number")?;
 
     let todo = queries::find_todo_by_number(&doc, number)
         .ok_or_else(|| format!("Todo #{number} not found"))?;
@@ -176,7 +200,10 @@ async fn handle_create_branch(state: &AppState, body: &Value) -> Result<Value, S
     drop(doc);
 
     // Get project root from data_path
-    let project_path = state.data_path.parent().and_then(|p| p.parent())
+    let project_path = state
+        .data_path
+        .parent()
+        .and_then(|p| p.parent())
         .ok_or("invalid project path")?;
     let worktree_path = project_path.join(".worktrees").join(&branch_name);
 
@@ -185,7 +212,13 @@ async fn handle_create_branch(state: &AppState, body: &Value) -> Result<Value, S
     }
 
     let output = Command::new("git")
-        .args(["worktree", "add", "-b", &branch_name, worktree_path.to_str().unwrap_or("")])
+        .args([
+            "worktree",
+            "add",
+            "-b",
+            &branch_name,
+            worktree_path.to_str().unwrap_or(""),
+        ])
         .current_dir(project_path)
         .output()
         .map_err(|e| format!("Failed to spawn git: {e}"))?;
@@ -209,15 +242,24 @@ async fn handle_create_branch(state: &AppState, body: &Value) -> Result<Value, S
 
 async fn handle_remove_branch(state: &AppState, body: &Value) -> Result<Value, String> {
     let doc = state.doc.lock().await;
-    let number = body.get("number").and_then(|n| n.as_u64()).ok_or("missing number")?;
+    let number = body
+        .get("number")
+        .and_then(|n| n.as_u64())
+        .ok_or("missing number")?;
 
     let todo = queries::find_todo_by_number(&doc, number)
         .ok_or_else(|| format!("Todo #{number} not found"))?;
 
-    let branch = todo.branch.clone().ok_or_else(|| format!("Todo #{number} has no branch"))?;
+    let branch = todo
+        .branch
+        .clone()
+        .ok_or_else(|| format!("Todo #{number} has no branch"))?;
     drop(doc);
 
-    let project_path = state.data_path.parent().and_then(|p| p.parent())
+    let project_path = state
+        .data_path
+        .parent()
+        .and_then(|p| p.parent())
         .ok_or("invalid project path")?;
     let worktree_path = project_path.join(".worktrees").join(&branch);
 
@@ -267,12 +309,18 @@ async fn handle_update_project(state: &AppState, body: &Value) -> Result<Value, 
 async fn handle_add_member(state: &AppState, body: &Value) -> Result<Value, String> {
     let mut doc = state.doc.lock().await;
 
-    let name = body.get("name").and_then(|n| n.as_str()).unwrap_or("Unnamed");
-    let role: MemberRole = body.get("role").and_then(|r| r.as_str())
+    let name = body
+        .get("name")
+        .and_then(|n| n.as_str())
+        .unwrap_or("Unnamed");
+    let role: MemberRole = body
+        .get("role")
+        .and_then(|r| r.as_str())
         .and_then(|r| r.parse().ok())
         .unwrap_or(MemberRole::Member);
     let email = body.get("email").and_then(|e| e.as_str());
-    let provider: Option<AgentProvider> = body.get("agentProvider")
+    let provider: Option<AgentProvider> = body
+        .get("agentProvider")
         .and_then(|p| p.as_str())
         .and_then(|p| p.parse().ok());
     let model = body.get("agentModel").and_then(|m| m.as_str());
@@ -293,13 +341,13 @@ async fn handle_add_member(state: &AppState, body: &Value) -> Result<Value, Stri
 async fn handle_remove_member(state: &AppState, body: &Value) -> Result<Value, String> {
     let mut doc = state.doc.lock().await;
 
-    let member_ref = body.get("memberId")
+    let member_ref = body
+        .get("memberId")
         .or_else(|| body.get("name"))
         .and_then(|m| m.as_str())
         .unwrap_or("");
 
-    let member = queries::find_member(&doc, member_ref)
-        .ok_or("Member not found")?;
+    let member = queries::find_member(&doc, member_ref).ok_or("Member not found")?;
 
     operations::remove_member(&mut doc, &member.id, None).map_err(|e| e.to_string())?;
 
@@ -311,24 +359,32 @@ async fn handle_remove_member(state: &AppState, body: &Value) -> Result<Value, S
 async fn handle_update_member(state: &AppState, body: &Value) -> Result<Value, String> {
     let mut doc = state.doc.lock().await;
 
-    let member_ref = body.get("memberId")
+    let member_ref = body
+        .get("memberId")
         .or_else(|| body.get("name"))
         .and_then(|m| m.as_str())
         .unwrap_or("");
 
-    let member = queries::find_member(&doc, member_ref)
-        .ok_or("Member not found")?;
+    let member = queries::find_member(&doc, member_ref).ok_or("Member not found")?;
 
     let empty = json!({});
     let updates = body.get("updates").unwrap_or(&empty);
     let name = updates.get("name").and_then(|n| n.as_str());
     let email = updates.get("email").map(|e| e.as_str());
-    let role: Option<MemberRole> = updates.get("role").and_then(|r| r.as_str()).and_then(|r| r.parse().ok());
-    let provider: Option<AgentProvider> = updates.get("agentProvider").and_then(|p| p.as_str()).and_then(|p| p.parse().ok());
+    let role: Option<MemberRole> = updates
+        .get("role")
+        .and_then(|r| r.as_str())
+        .and_then(|r| r.parse().ok());
+    let provider: Option<AgentProvider> = updates
+        .get("agentProvider")
+        .and_then(|p| p.as_str())
+        .and_then(|p| p.parse().ok());
     let model = updates.get("agentModel").and_then(|m| m.as_str());
 
-    operations::update_member(&mut doc, &member.id, name, email, role, provider, model, None)
-        .map_err(|e| e.to_string())?;
+    operations::update_member(
+        &mut doc, &member.id, name, email, role, provider, model, None,
+    )
+    .map_err(|e| e.to_string())?;
 
     drop(doc);
     state.save().await.map_err(|e| e.to_string())?;
@@ -345,7 +401,8 @@ async fn handle_update_inbox(state: &AppState, body: &Value) -> Result<Value, St
 async fn handle_bulk(state: &AppState, body: &Value) -> Result<Value, String> {
     let mut doc = state.doc.lock().await;
 
-    let ops = body.get("operations")
+    let ops = body
+        .get("operations")
         .and_then(|o| o.as_array())
         .cloned()
         .unwrap_or_default();
@@ -363,8 +420,7 @@ async fn handle_bulk(state: &AppState, body: &Value) -> Result<Value, String> {
                     .map_err(|e| e.to_string())?;
             }
             "delete" => {
-                operations::delete_todo(&mut doc, number, None)
-                    .map_err(|e| e.to_string())?;
+                operations::delete_todo(&mut doc, number, None).map_err(|e| e.to_string())?;
             }
             _ => return Err(format!("Unknown bulk operation: {action}")),
         }
@@ -378,10 +434,7 @@ async fn handle_bulk(state: &AppState, body: &Value) -> Result<Value, String> {
 // ── Plan handlers ───────────────────────────────────────────────────
 
 /// GET /api/plan/:number — read the plan markdown content
-pub async fn get_plan(
-    State(state): State<AppState>,
-    Path(number): Path<u64>,
-) -> impl IntoResponse {
+pub async fn get_plan(State(state): State<AppState>, Path(number): Path<u64>) -> impl IntoResponse {
     let doc = state.doc.lock().await;
     let (_, prefix, _, _) = queries::read_project_meta(&doc);
     let todo = queries::find_todo_by_number(&doc, number);
@@ -394,7 +447,9 @@ pub async fn get_plan(
     let plan_file = if let Some(plan_path) = &todo.plan_path {
         state.todo_dir.join(plan_path)
     } else {
-        state.todo_dir.join(format!("plans/{}-{}.md", prefix, number))
+        state
+            .todo_dir
+            .join(format!("plans/{}-{}.md", prefix, number))
     };
 
     if !plan_file.exists() {
@@ -409,7 +464,10 @@ pub async fn get_plan(
 
 async fn handle_init_plan(state: &AppState, body: &Value) -> Result<Value, String> {
     let mut doc = state.doc.lock().await;
-    let number = body.get("number").and_then(|n| n.as_u64()).ok_or("missing number")?;
+    let number = body
+        .get("number")
+        .and_then(|n| n.as_u64())
+        .ok_or("missing number")?;
     let (_, prefix, _, _) = queries::read_project_meta(&doc);
 
     let todo = queries::find_todo_by_number(&doc, number)
@@ -438,7 +496,8 @@ async fn handle_init_plan(state: &AppState, body: &Value) -> Result<Value, Strin
                 ..Default::default()
             },
             None,
-        ).map_err(|e| e.to_string())?;
+        )
+        .map_err(|e| e.to_string())?;
     }
 
     drop(doc);
@@ -450,7 +509,10 @@ async fn handle_init_plan(state: &AppState, body: &Value) -> Result<Value, Strin
 
 async fn handle_answer_plan(state: &AppState, body: &Value) -> Result<Value, String> {
     let doc = state.doc.lock().await;
-    let number = body.get("number").and_then(|n| n.as_u64()).ok_or("missing number")?;
+    let number = body
+        .get("number")
+        .and_then(|n| n.as_u64())
+        .ok_or("missing number")?;
     let text = body.get("text").and_then(|t| t.as_str()).unwrap_or("");
     let (_, prefix, _, _) = queries::read_project_meta(&doc);
 
@@ -461,11 +523,16 @@ async fn handle_answer_plan(state: &AppState, body: &Value) -> Result<Value, Str
     let plan_file = if let Some(plan_path) = &todo.plan_path {
         state.todo_dir.join(plan_path)
     } else {
-        state.todo_dir.join(format!("plans/{}-{}.md", prefix, number))
+        state
+            .todo_dir
+            .join(format!("plans/{}-{}.md", prefix, number))
     };
 
     if !plan_file.exists() {
-        return Err(format!("No plan file for {}-{}. Init the plan first.", prefix, number));
+        return Err(format!(
+            "No plan file for {}-{}. Init the plan first.",
+            prefix, number
+        ));
     }
 
     let mut content = fs::read_to_string(&plan_file).map_err(|e| e.to_string())?;
@@ -483,7 +550,10 @@ async fn handle_answer_plan(state: &AppState, body: &Value) -> Result<Value, Str
 
 async fn handle_research_plan(state: &AppState, body: &Value) -> Result<Value, String> {
     let mut doc = state.doc.lock().await;
-    let number = body.get("number").and_then(|n| n.as_u64()).ok_or("missing number")?;
+    let number = body
+        .get("number")
+        .and_then(|n| n.as_u64())
+        .ok_or("missing number")?;
     let (_, prefix, project_name, _) = queries::read_project_meta(&doc);
 
     let todo = queries::find_todo_by_number(&doc, number)
@@ -512,7 +582,8 @@ async fn handle_research_plan(state: &AppState, body: &Value) -> Result<Value, S
                 ..Default::default()
             },
             None,
-        ).map_err(|e| e.to_string())?;
+        )
+        .map_err(|e| e.to_string())?;
     }
 
     drop(doc);
@@ -528,7 +599,9 @@ async fn handle_research_plan(state: &AppState, body: &Value) -> Result<Value, S
     let comments_section = if todo.comments.is_empty() {
         String::new()
     } else {
-        let comments: Vec<String> = todo.comments.iter()
+        let comments: Vec<String> = todo
+            .comments
+            .iter()
             .map(|c| format!("**{}**: {}", c.author_name, c.text))
             .collect();
         format!("\n## Comments\n{}\n", comments.join("\n"))
@@ -579,11 +652,14 @@ Output ONLY the markdown plan content. Do not use any write tools."#,
     let todo_dir = state.todo_dir.clone();
 
     tokio::spawn(async move {
-        let _ = tx.send(json!({
-            "type": "plan:start",
-            "todoRef": todo_ref,
-            "number": number,
-        }).to_string());
+        let _ = tx.send(
+            json!({
+                "type": "plan:start",
+                "todoRef": todo_ref,
+                "number": number,
+            })
+            .to_string(),
+        );
 
         let tx_blocking = tx.clone();
         let result = tokio::task::spawn_blocking(move || {
@@ -591,10 +667,13 @@ Output ONLY the markdown plan content. Do not use any write tools."#,
             let mut cmd = Command::new("claude");
             cmd.arg("-p")
                 .arg(&prompt)
-                .arg("--output-format").arg("stream-json")
+                .arg("--output-format")
+                .arg("stream-json")
                 .arg("--verbose")
-                .arg("--allowedTools").arg("Read Glob Grep")
-                .arg("--permission-mode").arg("bypassPermissions")
+                .arg("--allowedTools")
+                .arg("Read Glob Grep")
+                .arg("--permission-mode")
+                .arg("bypassPermissions")
                 .current_dir(&todo_dir)
                 .stdout(Stdio::piped())
                 .stderr(Stdio::null());
@@ -619,25 +698,40 @@ Output ONLY the markdown plan content. Do not use any write tools."#,
                     let event_type = event.get("type").and_then(|v| v.as_str()).unwrap_or("");
                     match event_type {
                         "assistant" => {
-                            if let Some(content) = event.get("message")
+                            if let Some(content) = event
+                                .get("message")
                                 .and_then(|m| m.get("content"))
                                 .and_then(|c| c.as_array())
                             {
                                 for block in content {
-                                    let block_type = block.get("type").and_then(|v| v.as_str()).unwrap_or("");
+                                    let block_type =
+                                        block.get("type").and_then(|v| v.as_str()).unwrap_or("");
                                     if block_type == "tool_use" {
-                                        let tool_name = block.get("name").and_then(|v| v.as_str()).unwrap_or("");
-                                        let _ = tx.send(json!({
-                                            "type": "plan:progress",
-                                            "message": format!("Using {tool_name}..."),
-                                        }).to_string());
+                                        let tool_name = block
+                                            .get("name")
+                                            .and_then(|v| v.as_str())
+                                            .unwrap_or("");
+                                        let _ = tx.send(
+                                            json!({
+                                                "type": "plan:progress",
+                                                "message": format!("Using {tool_name}..."),
+                                            })
+                                            .to_string(),
+                                        );
                                     }
                                 }
                             }
                         }
                         "result" => {
-                            is_error = event.get("is_error").and_then(|v| v.as_bool()).unwrap_or(false);
-                            result_text = event.get("result").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                            is_error = event
+                                .get("is_error")
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(false);
+                            result_text = event
+                                .get("result")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("")
+                                .to_string();
                         }
                         _ => {}
                     }
@@ -650,7 +744,8 @@ Output ONLY the markdown plan content. Do not use any write tools."#,
             } else {
                 Err(result_text)
             }
-        }).await;
+        })
+        .await;
 
         match result {
             Ok(Ok(content)) => {
@@ -658,25 +753,34 @@ Output ONLY the markdown plan content. Do not use any write tools."#,
                 if !content.is_empty() {
                     let _ = fs::write(&plan_path, &content);
                 }
-                let _ = tx.send(json!({
-                    "type": "plan:done",
-                    "number": number,
-                    "content": content,
-                }).to_string());
+                let _ = tx.send(
+                    json!({
+                        "type": "plan:done",
+                        "number": number,
+                        "content": content,
+                    })
+                    .to_string(),
+                );
             }
             Ok(Err(e)) => {
-                let _ = tx.send(json!({
-                    "type": "plan:error",
-                    "number": number,
-                    "message": e,
-                }).to_string());
+                let _ = tx.send(
+                    json!({
+                        "type": "plan:error",
+                        "number": number,
+                        "message": e,
+                    })
+                    .to_string(),
+                );
             }
             Err(e) => {
-                let _ = tx.send(json!({
-                    "type": "plan:error",
-                    "number": number,
-                    "message": format!("{e}"),
-                }).to_string());
+                let _ = tx.send(
+                    json!({
+                        "type": "plan:error",
+                        "number": number,
+                        "message": format!("{e}"),
+                    })
+                    .to_string(),
+                );
             }
         }
     });
@@ -686,10 +790,7 @@ Output ONLY the markdown plan content. Do not use any write tools."#,
 
 // ── WebSocket handler ───────────────────────────────────────────────
 
-pub async fn ws_handler(
-    ws: WebSocketUpgrade,
-    State(state): State<AppState>,
-) -> impl IntoResponse {
+pub async fn ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> impl IntoResponse {
     ws.on_upgrade(move |socket| handle_ws(socket, state))
 }
 
@@ -724,9 +825,18 @@ fn parse_update_fields(updates: &Value) -> UpdateTodoFields<'_> {
     UpdateTodoFields {
         title: updates.get("title").and_then(|t| t.as_str()),
         description: updates.get("description").and_then(|d| d.as_str()),
-        status: updates.get("status").and_then(|s| s.as_str()).and_then(|s| s.parse().ok()),
-        priority: updates.get("priority").and_then(|p| p.as_str()).and_then(|p| p.parse().ok()),
-        difficulty: updates.get("difficulty").and_then(|d| d.as_str()).and_then(|d| d.parse().ok()),
+        status: updates
+            .get("status")
+            .and_then(|s| s.as_str())
+            .and_then(|s| s.parse().ok()),
+        priority: updates
+            .get("priority")
+            .and_then(|p| p.as_str())
+            .and_then(|p| p.parse().ok()),
+        difficulty: updates
+            .get("difficulty")
+            .and_then(|d| d.as_str())
+            .and_then(|d| d.parse().ok()),
         labels: updates.get("labels").and_then(|l| l.as_array()).map(|arr| {
             arr.iter()
                 .filter_map(|v| v.as_str())

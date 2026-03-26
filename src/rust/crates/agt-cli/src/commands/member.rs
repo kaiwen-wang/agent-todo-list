@@ -98,7 +98,12 @@ pub fn update(
     provider: Option<String>,
     model: Option<String>,
 ) -> Result<()> {
-    if new_name.is_none() && role.is_none() && email.is_none() && provider.is_none() && model.is_none() {
+    if new_name.is_none()
+        && role.is_none()
+        && email.is_none()
+        && provider.is_none()
+        && model.is_none()
+    {
         anyhow::bail!("No updates specified. Use --name, --role, --email, --provider, or --model.");
     }
 
@@ -131,6 +136,9 @@ pub fn update(
     )?;
 
     save_project(&paths, &mut doc)?;
-    println!("Updated member: {}", new_name.as_deref().unwrap_or(&member_name));
+    println!(
+        "Updated member: {}",
+        new_name.as_deref().unwrap_or(&member_name)
+    );
     Ok(())
 }

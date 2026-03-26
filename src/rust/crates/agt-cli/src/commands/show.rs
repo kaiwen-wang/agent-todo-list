@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 use agt_lib::queries;
 
@@ -31,8 +31,7 @@ pub fn run(reference: String, json: bool) -> Result<()> {
                     colored::Colorize::dimmed(
                         format!(
                             "Plan: {} (run `agt plan show {}` to view)",
-                            plan_path,
-                            reference
+                            plan_path, reference
                         )
                         .as_str(),
                     )

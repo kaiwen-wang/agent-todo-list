@@ -28,8 +28,7 @@ fn resolve_dist_dir() -> PathBuf {
         return installed;
     }
     // Dev fallback: check for src/web/dist relative to the crate
-    let dev = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../src/web/dist");
+    let dev = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../src/web/dist");
     if dev.exists() {
         return dev;
     }
@@ -71,11 +70,9 @@ pub async fn start_server(project_path: &Path, port: u16) -> Result<()> {
         .layer(CorsLayer::permissive());
 
     // Serve static files as fallback (Vue SPA)
-    let app = api.fallback_service(
-        ServeDir::new(&dist_dir).fallback(
-            tower_http::services::ServeFile::new(dist_dir.join("index.html")),
-        ),
-    );
+    let app = api.fallback_service(ServeDir::new(&dist_dir).fallback(
+        tower_http::services::ServeFile::new(dist_dir.join("index.html")),
+    ));
 
     // Try ports
     let max_attempts = 10;

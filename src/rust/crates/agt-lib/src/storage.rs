@@ -16,8 +16,7 @@ pub fn git_stage(path: &Path) {
 /// Save an Automerge document to a file, then git-add it.
 pub fn save_doc(path: &Path, doc: &mut AutoCommit) -> Result<()> {
     let binary = doc.save();
-    std::fs::write(path, binary)
-        .with_context(|| format!("failed to write {}", path.display()))?;
+    std::fs::write(path, binary).with_context(|| format!("failed to write {}", path.display()))?;
     git_stage(path);
     Ok(())
 }
@@ -27,8 +26,8 @@ pub fn load_doc(path: &Path) -> Result<Option<AutoCommit>> {
     if !path.exists() {
         return Ok(None);
     }
-    let bytes = std::fs::read(path)
-        .with_context(|| format!("failed to read {}", path.display()))?;
+    let bytes =
+        std::fs::read(path).with_context(|| format!("failed to read {}", path.display()))?;
     let doc = AutoCommit::load(&bytes)
         .with_context(|| format!("failed to load automerge doc from {}", path.display()))?;
     Ok(Some(doc))

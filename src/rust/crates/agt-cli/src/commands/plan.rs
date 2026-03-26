@@ -3,7 +3,7 @@
 //! Plans live as markdown files in `.todo/plans/<REF>.md`.
 //! The automerge doc stores a `planPath` pointer on the todo.
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use colored::Colorize;
 use std::fs;
 use std::io::{BufRead, BufReader, IsTerminal};
@@ -105,7 +105,7 @@ pub fn show(reference: String, answer: bool) -> Result<()> {
     if std::io::stdout().is_terminal() {
         // Get terminal width for word wrapping
         let term_width = terminal_size::terminal_size()
-            .map(|(w, _)| w.0 as u16)
+            .map(|(w, _)| w.0)
             .unwrap_or(80);
 
         // Render markdown with termimad (colors, wrapping, formatting)
@@ -113,7 +113,11 @@ pub fn show(reference: String, answer: bool) -> Result<()> {
 
         // Code blocks: bold cyan text, no background highlight
         use termimad::crossterm::style::{Attribute, Color};
-        let orange = Color::Rgb { r: 255, g: 170, b: 60 };
+        let orange = Color::Rgb {
+            r: 255,
+            g: 170,
+            b: 60,
+        };
         skin.code_block.compound_style.set_fg(orange);
         skin.code_block.compound_style.add_attr(Attribute::Bold);
         skin.code_block.compound_style.set_bg(Color::Reset);
@@ -148,8 +152,7 @@ pub fn show(reference: String, answer: bool) -> Result<()> {
             }
         }
         // After pager closes, if -a flag and there's a Questions section, prompt for an answer
-        if answer {
-        if let Some(questions_start) = content.find("\n## Questions") {
+        if answer && let Some(questions_start) = content.find("\n## Questions") {
             let questions_section = &content[questions_start..];
             // Find where the next section starts (or end of file)
             let section_end = questions_section[1..]
@@ -177,13 +180,9 @@ pub fn show(reference: String, answer: bool) -> Result<()> {
                 let input = input.trim();
                 if !input.is_empty() {
                     append_answer_to_file(&plan_file, input)?;
-                    println!(
-                        "{}",
-                        "Answer added to plan.".green()
-                    );
+                    println!("{}", "Answer added to plan.".green());
                 }
             }
-        }
         }
     } else {
         // Piped output — just print raw markdown
@@ -372,7 +371,10 @@ pub fn trash(reference: String) -> Result<()> {
         .context("Failed to run /usr/bin/trash")?;
 
     if !status.success() {
-        bail!("trash command failed with exit code {}", status.code().unwrap_or(-1));
+        bail!(
+            "trash command failed with exit code {}",
+            status.code().unwrap_or(-1)
+        );
     }
 
     // Unstage from git if tracked
@@ -565,11 +567,9 @@ Output ONLY the markdown plan content. Do not use any write tools."#,
     let stderr_handle = std::thread::spawn(move || {
         let reader = BufReader::new(stderr);
         let mut buf = String::new();
-        for line in reader.lines() {
-            if let Ok(l) = line {
-                buf.push_str(&l);
-                buf.push('\n');
-            }
+        for l in reader.lines().map_while(Result::ok) {
+            buf.push_str(&l);
+            buf.push('\n');
         }
         buf
     });
@@ -585,10 +585,7 @@ Output ONLY the markdown plan content. Do not use any write tools."#,
         };
 
         if let Ok(event) = serde_json::from_str::<serde_json::Value>(&line) {
-            let event_type = event
-                .get("type")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
+            let event_type = event.get("type").and_then(|v| v.as_str()).unwrap_or("");
             match event_type {
                 "assistant" => {
                     if let Some(content) = event
@@ -600,16 +597,12 @@ Output ONLY the markdown plan content. Do not use any write tools."#,
                             let block_type =
                                 block.get("type").and_then(|v| v.as_str()).unwrap_or("");
                             if block_type == "text" {
-                                if let Some(text) =
-                                    block.get("text").and_then(|v| v.as_str())
-                                {
+                                if let Some(text) = block.get("text").and_then(|v| v.as_str()) {
                                     eprintln!("  {}", text.dimmed());
                                 }
                             } else if block_type == "tool_use" {
-                                let tool_name = block
-                                    .get("name")
-                                    .and_then(|v| v.as_str())
-                                    .unwrap_or("");
+                                let tool_name =
+                                    block.get("name").and_then(|v| v.as_str()).unwrap_or("");
                                 eprintln!("  {} {}", "→".dimmed(), tool_name.dimmed());
                             }
                         }
@@ -643,7 +636,11 @@ Output ONLY the markdown plan content. Do not use any write tools."#,
             .with_context(|| format!("Failed to write plan to {}", absolute.display()))?;
         storage::git_stage(&absolute);
         eprintln!();
-        eprintln!("{} Plan written to {}", "✓".green().bold(), absolute.display());
+        eprintln!(
+            "{} Plan written to {}",
+            "✓".green().bold(),
+            absolute.display()
+        );
         println!("{}", result_text);
         Ok(())
     } else {

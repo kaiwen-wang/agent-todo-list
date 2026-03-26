@@ -12,13 +12,7 @@ pub fn run(name: Option<String>, prefix: Option<String>) -> Result<()> {
     if has_updates {
         let (paths, mut doc) = load_project()?;
 
-        operations::update_project(
-            &mut doc,
-            name.as_deref(),
-            None,
-            prefix.as_deref(),
-            None,
-        )?;
+        operations::update_project(&mut doc, name.as_deref(), None, prefix.as_deref(), None)?;
 
         save_project(&paths, &mut doc)?;
 

@@ -243,12 +243,11 @@ pub fn run(reference: String, budget: Option<f64>, dry_run: bool) -> Result<()> 
                                     }
                                 }
                                 "tool_use" => {
-                                    if let Some(input) = block.get("input") {
-                                        if let Some(cmd_str) =
+                                    if let Some(input) = block.get("input")
+                                        && let Some(cmd_str) =
                                             input.get("command").and_then(|v| v.as_str())
-                                        {
-                                            eprintln!("  [tool]  $ {}", cmd_str);
-                                        }
+                                    {
+                                        eprintln!("  [tool]  $ {}", cmd_str);
                                     }
                                 }
                                 _ => {}

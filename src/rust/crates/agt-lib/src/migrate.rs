@@ -2,8 +2,8 @@
 
 use anyhow::Result;
 use automerge::{
-    transaction::CommitOptions, transaction::Transactable, AutoCommit, ObjType, ReadDoc,
-    ScalarValue, ROOT,
+    AutoCommit, ObjType, ROOT, ReadDoc, ScalarValue, transaction::CommitOptions,
+    transaction::Transactable,
 };
 
 use crate::schema::CURRENT_SCHEMA_VERSION;
@@ -78,10 +78,10 @@ fn migrate_v2_to_v3(doc: &mut AutoCommit) -> Result<()> {
     if let Ok(Some((_, todos_id))) = doc.get(ROOT, "todos") {
         let len = doc.length(&todos_id);
         for i in 0..len {
-            if let Ok(Some((_, t_id))) = doc.get(&todos_id, i) {
-                if doc.get(&t_id, "platform").ok().flatten().is_none() {
-                    doc.put(&t_id, "platform", "unknown")?;
-                }
+            if let Ok(Some((_, t_id))) = doc.get(&todos_id, i)
+                && doc.get(&t_id, "platform").ok().flatten().is_none()
+            {
+                doc.put(&t_id, "platform", "unknown")?;
             }
         }
     }
@@ -94,10 +94,10 @@ fn migrate_v3_to_v4(doc: &mut AutoCommit) -> Result<()> {
     if let Ok(Some((_, todos_id))) = doc.get(ROOT, "todos") {
         let len = doc.length(&todos_id);
         for i in 0..len {
-            if let Ok(Some((_, t_id))) = doc.get(&todos_id, i) {
-                if doc.get(&t_id, "difficulty").ok().flatten().is_none() {
-                    doc.put(&t_id, "difficulty", "none")?;
-                }
+            if let Ok(Some((_, t_id))) = doc.get(&todos_id, i)
+                && doc.get(&t_id, "difficulty").ok().flatten().is_none()
+            {
+                doc.put(&t_id, "difficulty", "none")?;
             }
         }
     }

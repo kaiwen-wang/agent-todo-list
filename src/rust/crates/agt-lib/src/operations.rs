@@ -4,10 +4,10 @@
 //! Audit metadata is embedded in each Automerge change's `message` field
 //! as a JSON string. This leverages Automerge's built-in history tracking.
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use automerge::{
-    transaction::CommitOptions, transaction::Transactable, AutoCommit, ObjType, ReadDoc,
-    ScalarValue, ROOT,
+    AutoCommit, ObjType, ROOT, ReadDoc, ScalarValue, transaction::CommitOptions,
+    transaction::Transactable,
 };
 use serde_json::json;
 use uuid::Uuid;
@@ -101,12 +101,11 @@ fn resolve_actor(doc: &AutoCommit, actor_id: Option<&str>) -> String {
     }
     if let Ok(Some((_, members_id))) = doc.get(ROOT, K_MEMBERS) {
         let len = doc.length(&members_id);
-        if len > 0 {
-            if let Ok(Some((_, member_id))) = doc.get(&members_id, 0usize) {
-                if let Some(id) = read_str(doc, &member_id, K_ID) {
-                    return id;
-                }
-            }
+        if len > 0
+            && let Ok(Some((_, member_id))) = doc.get(&members_id, 0usize)
+            && let Some(id) = read_str(doc, &member_id, K_ID)
+        {
+            return id;
         }
     }
     "system".to_string()
@@ -117,10 +116,10 @@ fn find_member_name(doc: &AutoCommit, member_id: &str) -> Option<String> {
     let len = doc.length(&members_obj);
     for i in 0..len {
         let (_, m_obj) = doc.get(&members_obj, i).ok()??;
-        if let Some(id) = read_str(doc, &m_obj, K_ID) {
-            if id == member_id {
-                return read_str(doc, &m_obj, K_NAME);
-            }
+        if let Some(id) = read_str(doc, &m_obj, K_ID)
+            && id == member_id
+        {
+            return read_str(doc, &m_obj, K_NAME);
         }
     }
     None
@@ -131,7 +130,7 @@ fn now_millis() -> i64 {
 }
 
 fn get_prefix(doc: &AutoCommit) -> String {
-    read_str(doc, &ROOT.into(), K_PREFIX).unwrap_or_else(|| "TODO".to_string())
+    read_str(doc, &ROOT, K_PREFIX).unwrap_or_else(|| "TODO".to_string())
 }
 
 fn find_todo_obj(doc: &AutoCommit, todo_number: u64) -> Result<(automerge::ObjId, usize)> {
@@ -582,12 +581,12 @@ pub fn remove_member(doc: &mut AutoCommit, member_id: &str, actor_id: Option<&st
     let mut member_name = String::new();
     for i in 0..members_len {
         let (_, m_obj) = doc.get(&members_id, i)?.context("member missing")?;
-        if let Some(id) = read_str(doc, &m_obj, K_ID) {
-            if id == member_id {
-                member_idx = Some(i);
-                member_name = read_str(doc, &m_obj, K_NAME).unwrap_or_default();
-                break;
-            }
+        if let Some(id) = read_str(doc, &m_obj, K_ID)
+            && id == member_id
+        {
+            member_idx = Some(i);
+            member_name = read_str(doc, &m_obj, K_NAME).unwrap_or_default();
+            break;
         }
     }
 
@@ -598,10 +597,10 @@ pub fn remove_member(doc: &mut AutoCommit, member_id: &str, actor_id: Option<&st
     let todos_len = doc.length(&todos_id);
     for i in 0..todos_len {
         let (_, t_obj) = doc.get(&todos_id, i)?.context("todo missing")?;
-        if let Some(assignee) = read_str(doc, &t_obj, K_ASSIGNEE) {
-            if assignee == member_id {
-                doc.put(&t_obj, K_ASSIGNEE, ScalarValue::Null)?;
-            }
+        if let Some(assignee) = read_str(doc, &t_obj, K_ASSIGNEE)
+            && assignee == member_id
+        {
+            doc.put(&t_obj, K_ASSIGNEE, ScalarValue::Null)?;
         }
     }
 
@@ -611,6 +610,7 @@ pub fn remove_member(doc: &mut AutoCommit, member_id: &str, actor_id: Option<&st
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn update_member(
     doc: &mut AutoCommit,
     member_id: &str,
@@ -632,12 +632,12 @@ pub fn update_member(
     let mut current_name = String::new();
     for i in 0..members_len {
         let (_, m_obj) = doc.get(&members_id, i)?.context("member missing")?;
-        if let Some(id) = read_str(doc, &m_obj, K_ID) {
-            if id == member_id {
-                current_name = read_str(doc, &m_obj, K_NAME).unwrap_or_default();
-                member_obj = Some(m_obj);
-                break;
-            }
+        if let Some(id) = read_str(doc, &m_obj, K_ID)
+            && id == member_id
+        {
+            current_name = read_str(doc, &m_obj, K_NAME).unwrap_or_default();
+            member_obj = Some(m_obj);
+            break;
         }
     }
 

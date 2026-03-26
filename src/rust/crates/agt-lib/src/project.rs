@@ -109,7 +109,11 @@ pub fn init_project(dir: &Path, config: &ProjectConfig) -> Result<TodoPaths> {
     if is_git_repo(dir) {
         // The merge driver will call our own binary
         let _ = Command::new("git")
-            .args(["config", "merge.automerge-crdt.name", "Automerge CRDT merge driver"])
+            .args([
+                "config",
+                "merge.automerge-crdt.name",
+                "Automerge CRDT merge driver",
+            ])
             .current_dir(dir)
             .output();
         let _ = Command::new("git")
@@ -145,8 +149,8 @@ pub fn read_config(config_path: &Path) -> Result<ProjectConfig> {
     let mut prefix = None;
     let mut name = None;
 
+    let re = regex::Regex::new(r#"^(\w+)\s*=\s*"([^"]*)""#).unwrap();
     for line in text.lines() {
-        let re = regex::Regex::new(r#"^(\w+)\s*=\s*"([^"]*)""#).unwrap();
         if let Some(caps) = re.captures(line) {
             match &caps[1] {
                 "id" => id = Some(caps[2].to_string()),
@@ -159,7 +163,10 @@ pub fn read_config(config_path: &Path) -> Result<ProjectConfig> {
 
     match (id, prefix, name) {
         (Some(id), Some(prefix), Some(name)) => Ok(ProjectConfig { id, prefix, name }),
-        _ => bail!("invalid config at {}: missing required fields", config_path.display()),
+        _ => bail!(
+            "invalid config at {}: missing required fields",
+            config_path.display()
+        ),
     }
 }
 
@@ -167,16 +174,14 @@ pub fn read_config(config_path: &Path) -> Result<ProjectConfig> {
 pub fn detect_project_name(dir: &Path) -> String {
     // 1. package.json name
     let pkg_path = dir.join("package.json");
-    if pkg_path.exists() {
-        if let Ok(content) = std::fs::read_to_string(&pkg_path) {
-            if let Ok(pkg) = serde_json::from_str::<serde_json::Value>(&content) {
-                if let Some(name) = pkg.get("name").and_then(|n| n.as_str()) {
-                    let trimmed = name.trim();
-                    if !trimmed.is_empty() {
-                        return prettify_name(trimmed);
-                    }
-                }
-            }
+    if pkg_path.exists()
+        && let Ok(content) = std::fs::read_to_string(&pkg_path)
+        && let Ok(pkg) = serde_json::from_str::<serde_json::Value>(&content)
+        && let Some(name) = pkg.get("name").and_then(|n| n.as_str())
+    {
+        let trimmed = name.trim();
+        if !trimmed.is_empty() {
+            return prettify_name(trimmed);
         }
     }
 
@@ -185,18 +190,16 @@ pub fn detect_project_name(dir: &Path) -> String {
         .args(["remote", "get-url", "origin"])
         .current_dir(dir)
         .output()
+        && output.status.success()
     {
-        if output.status.success() {
-            let url = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if let Some(repo_name) = Path::new(&url)
-                .file_name()
-                .and_then(|n| n.to_str())
-                .map(|n| n.trim_end_matches(".git"))
-            {
-                if !repo_name.is_empty() {
-                    return prettify_name(repo_name);
-                }
-            }
+        let url = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if let Some(repo_name) = Path::new(&url)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|n| n.trim_end_matches(".git"))
+            && !repo_name.is_empty()
+        {
+            return prettify_name(repo_name);
         }
     }
 

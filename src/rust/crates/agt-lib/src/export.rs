@@ -2,7 +2,7 @@
 //! Converts Automerge doc to plain JSON-safe objects, adding computed fields.
 
 use automerge::AutoCommit;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::queries::{read_all_members, read_all_todos, read_project_meta};
 
