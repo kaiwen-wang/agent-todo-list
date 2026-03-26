@@ -63,7 +63,9 @@ _agt() {
         'list:List todos'
         'show:Show a single todo'
         'edit:Edit a todo'
+        'update:Edit a todo (alias)'
         'delete:Delete a todo'
+        'del:Delete a todo (alias)'
         'assign:Assign a todo to a member'
         'unassign:Unassign a todo'
         'comment:Add a comment to a todo'
@@ -97,7 +99,7 @@ _agt() {
                         '1:todo reference:_agt_todo_refs' \
                         '--json[Output as JSON]'
                     ;;
-                edit)
+                edit|update)
                     _arguments \
                         '1:todo reference:_agt_todo_refs' \
                         '--title[New title]:title' \
@@ -108,7 +110,7 @@ _agt() {
                         '--labels[Labels]:labels:($_agt_labels)' \
                         '--json[Output as JSON]'
                     ;;
-                delete)
+                delete|del)
                     _arguments \
                         '1:todo reference:_agt_todo_refs' \
                         '--json[Output as JSON]'
@@ -258,8 +260,7 @@ _agt() {
                 config)
                     _arguments \
                         '--name[Set project name]:name' \
-                        '--prefix[Set issue prefix]:prefix' \
-                        '--json[Output as JSON]'
+                        '--prefix[Set issue prefix]:prefix'
                     ;;
                 serve)
                     _arguments \
@@ -267,7 +268,7 @@ _agt() {
                         '--open[Open in browser]'
                     ;;
                 inbox)
-                    _arguments '1:action:(show append clear)'
+                    _arguments '1:action:(show append clear process)'
                     ;;
                 commit)
                     _arguments \

@@ -105,7 +105,9 @@ complete -c agt -n __agt_needs_subcommand -a add     -d "Add a new todo"
 complete -c agt -n __agt_needs_subcommand -a list    -d "List todos"
 complete -c agt -n __agt_needs_subcommand -a show    -d "Show a single todo"
 complete -c agt -n __agt_needs_subcommand -a edit    -d "Edit a todo"
+complete -c agt -n __agt_needs_subcommand -a update  -d "Edit a todo (alias)"
 complete -c agt -n __agt_needs_subcommand -a delete  -d "Delete a todo"
+complete -c agt -n __agt_needs_subcommand -a del     -d "Delete a todo (alias)"
 complete -c agt -n __agt_needs_subcommand -a assign  -d "Assign a todo to a member"
 complete -c agt -n __agt_needs_subcommand -a unassign -d "Unassign a todo"
 complete -c agt -n __agt_needs_subcommand -a comment -d "Add a comment to a todo"
@@ -128,7 +130,7 @@ complete -c agt -n __agt_needs_subcommand -a log     -d "Show audit log"
 # ---------------------------------------------------------------------------
 
 # These commands take a todo ref as their first positional arg
-for subcmd in show edit delete assign unassign comment branch unbranch run queue
+for subcmd in show edit update delete del assign unassign comment branch unbranch run queue
     complete -c agt -n "__agt_needs_positional $subcmd 0" -a "(__agt_todo_refs)"
 end
 
@@ -175,19 +177,23 @@ complete -c agt -n "__agt_using_subcommand show" -l json -d "Output as JSON"
 # edit
 # ---------------------------------------------------------------------------
 
-complete -c agt -n "__agt_using_subcommand edit" -l title      -d "New title" -r
-complete -c agt -n "__agt_using_subcommand edit" -l status     -d "New status" -r -a "none todo queued in_progress completed archived wont_do needs_elaboration"
-complete -c agt -n "__agt_using_subcommand edit" -l priority   -d "New priority" -r -a "none low medium high urgent"
-complete -c agt -n "__agt_using_subcommand edit" -l difficulty  -d "New difficulty" -r -a "none easy medium hard"
-complete -c agt -n "__agt_using_subcommand edit" -l description -d "New description" -r
-complete -c agt -n "__agt_using_subcommand edit" -l labels     -d "Labels" -r -a "bug new_feature feature_plus"
-complete -c agt -n "__agt_using_subcommand edit" -l json       -d "Output as JSON"
+for editcmd in edit update
+    complete -c agt -n "__agt_using_subcommand $editcmd" -l title      -d "New title" -r
+    complete -c agt -n "__agt_using_subcommand $editcmd" -l status     -d "New status" -r -a "none todo queued in_progress completed archived wont_do needs_elaboration"
+    complete -c agt -n "__agt_using_subcommand $editcmd" -l priority   -d "New priority" -r -a "none low medium high urgent"
+    complete -c agt -n "__agt_using_subcommand $editcmd" -l difficulty  -d "New difficulty" -r -a "none easy medium hard"
+    complete -c agt -n "__agt_using_subcommand $editcmd" -l description -d "New description" -r
+    complete -c agt -n "__agt_using_subcommand $editcmd" -l labels     -d "Labels" -r -a "bug new_feature feature_plus"
+    complete -c agt -n "__agt_using_subcommand $editcmd" -l json       -d "Output as JSON"
+end
 
 # ---------------------------------------------------------------------------
 # delete
 # ---------------------------------------------------------------------------
 
-complete -c agt -n "__agt_using_subcommand delete" -l json -d "Output as JSON"
+for delcmd in delete del
+    complete -c agt -n "__agt_using_subcommand $delcmd" -l json -d "Output as JSON"
+end
 
 # ---------------------------------------------------------------------------
 # assign
@@ -292,7 +298,6 @@ complete -c agt -n "__agt_using_subsubcommand member update" -l model    -d "Age
 
 complete -c agt -n "__agt_using_subcommand config" -l name   -d "Set project name" -r
 complete -c agt -n "__agt_using_subcommand config" -l prefix -d "Set issue prefix" -r
-complete -c agt -n "__agt_using_subcommand config" -l json   -d "Output as JSON"
 
 # ---------------------------------------------------------------------------
 # serve
@@ -305,7 +310,7 @@ complete -c agt -n "__agt_using_subcommand serve" -l open -d "Open in browser"
 # inbox
 # ---------------------------------------------------------------------------
 
-complete -c agt -n "__agt_using_subcommand inbox" -a "show append clear" -d "Action"
+complete -c agt -n "__agt_using_subcommand inbox" -a "show append clear process" -d "Action"
 
 # ---------------------------------------------------------------------------
 # commit

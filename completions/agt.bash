@@ -40,7 +40,7 @@ _agt_completions() {
 
     # Subcommand at position 1
     if [ "$COMP_CWORD" -eq 1 ]; then
-        COMPREPLY=($(compgen -W "init add list show edit delete assign unassign comment branch unbranch run poll queue runs plan member config serve inbox commit log" -- "$cur"))
+        COMPREPLY=($(compgen -W "init add list show edit update delete del assign unassign comment branch unbranch run poll queue runs plan member config serve inbox commit log" -- "$cur"))
         return
     fi
 
@@ -82,15 +82,15 @@ _agt_completions() {
 
     case "$subcmd" in
         # Commands that take a todo ref as first positional
-        show|edit|delete|unassign|comment|branch|unbranch|run)
+        show|edit|update|delete|del|unassign|comment|branch|unbranch|run)
             if [ "$pos_count" -eq 0 ]; then
                 COMPREPLY=($(compgen -W "$(_agt_todo_refs)" -- "$cur"))
             fi
             # Per-command flags
             case "$subcmd" in
-                edit)
+                edit|update)
                     COMPREPLY+=($(compgen -W "--title --status --priority --difficulty --description --labels --json" -- "$cur")) ;;
-                show|delete|unassign|comment|branch)
+                show|delete|del|unassign|comment|branch)
                     COMPREPLY+=($(compgen -W "--json" -- "$cur")) ;;
                 unbranch)
                     COMPREPLY+=($(compgen -W "--keep-branch" -- "$cur")) ;;
@@ -153,12 +153,12 @@ _agt_completions() {
             fi
             ;;
         config)
-            COMPREPLY=($(compgen -W "--name --prefix --json" -- "$cur")) ;;
+            COMPREPLY=($(compgen -W "--name --prefix" -- "$cur")) ;;
         serve)
             COMPREPLY=($(compgen -W "--port --open" -- "$cur")) ;;
         inbox)
             if [ "$pos_count" -eq 0 ]; then
-                COMPREPLY=($(compgen -W "show append clear" -- "$cur"))
+                COMPREPLY=($(compgen -W "show append clear process" -- "$cur"))
             fi
             ;;
         commit)

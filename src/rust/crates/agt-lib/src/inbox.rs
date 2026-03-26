@@ -3,6 +3,8 @@
 use anyhow::Result;
 use std::path::Path;
 
+use crate::storage::git_stage;
+
 pub struct ProcessedEntry {
     /// Original text from the inbox
     pub original: String,
@@ -24,7 +26,9 @@ pub fn read_inbox(todo_dir: &Path) -> Result<String> {
 /// Overwrite the inbox (TODO.md) with new content.
 pub fn write_inbox(todo_dir: &Path, text: &str) -> Result<()> {
     let path = todo_dir.join("TODO.md");
-    Ok(std::fs::write(path, text)?)
+    std::fs::write(&path, text)?;
+    git_stage(&path);
+    Ok(())
 }
 
 /// Read the processed archive (TODO-PROCESSED.md).
@@ -58,7 +62,9 @@ pub fn append_processed(todo_dir: &Path, entries: &[ProcessedEntry]) -> Result<(
     };
 
     let path = todo_dir.join("TODO-PROCESSED.md");
-    Ok(std::fs::write(path, content)?)
+    std::fs::write(&path, content)?;
+    git_stage(&path);
+    Ok(())
 }
 
 /// Parse inbox text into individual items.
