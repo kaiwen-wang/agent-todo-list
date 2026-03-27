@@ -23,6 +23,7 @@ pub fn migrate_doc(doc: &mut AutoCommit) -> Result<()> {
             3 => migrate_v3_to_v4(doc)?,
             4 => migrate_v4_to_v5(doc)?,
             5 => migrate_v5_to_v6(doc)?,
+            6 => migrate_v6_to_v7(doc)?,
             _ => {
                 doc.put(ROOT, "_version", (version + 1) as i64)?;
                 doc.commit_with(CommitOptions::default().with_message(format!(
@@ -120,5 +121,25 @@ fn migrate_v5_to_v6(doc: &mut AutoCommit) -> Result<()> {
     // Existing docs don't have queued todos, so nothing to transform.
     doc.put(ROOT, "_version", 6i64)?;
     doc.commit_with(CommitOptions::default().with_message("schema migration v5 -> v6"));
+    Ok(())
+}
+
+fn migrate_v6_to_v7(doc: &mut AutoCommit) -> Result<()> {
+    // Add worktrees and commits lists to all existing todos.
+    if let Ok(Some((_, todos_id))) = doc.get(ROOT, "todos") {
+        let len = doc.length(&todos_id);
+        for i in 0..len {
+            if let Ok(Some((_, t_id))) = doc.get(&todos_id, i) {
+                if doc.get(&t_id, "worktrees").ok().flatten().is_none() {
+                    doc.put_object(&t_id, "worktrees", ObjType::List)?;
+                }
+                if doc.get(&t_id, "commits").ok().flatten().is_none() {
+                    doc.put_object(&t_id, "commits", ObjType::List)?;
+                }
+            }
+        }
+    }
+    doc.put(ROOT, "_version", 7i64)?;
+    doc.commit_with(CommitOptions::default().with_message("schema migration v6 -> v7"));
     Ok(())
 }

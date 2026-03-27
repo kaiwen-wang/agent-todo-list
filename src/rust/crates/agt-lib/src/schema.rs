@@ -435,6 +435,8 @@ pub struct Todo {
     pub labels: Vec<Label>,
     pub assignee: Option<String>,
     pub branch: Option<String>,
+    pub worktrees: Vec<String>,
+    pub commits: Vec<String>,
     pub comments: Vec<Comment>,
     pub created_at: i64,
     pub updated_at: i64,
@@ -457,7 +459,7 @@ pub struct Member {
 }
 
 /// Current schema version — increment when making breaking changes.
-pub const CURRENT_SCHEMA_VERSION: u64 = 6;
+pub const CURRENT_SCHEMA_VERSION: u64 = 7;
 
 /// Config stored in .todo/config.toml (committed to git).
 #[derive(Debug, Clone, Serialize, Deserialize)]

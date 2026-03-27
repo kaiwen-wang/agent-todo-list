@@ -57,6 +57,8 @@ pub fn to_json(doc: &mut AutoCommit, include_audit_log: bool) -> Value {
                 "assignee": t.assignee,
                 "assigneeName": assignee_name,
                 "branch": t.branch,
+                "worktrees": t.worktrees,
+                "commits": t.commits,
                 "comments": t.comments.iter().map(|c| json!({
                     "id": c.id,
                     "author": c.author,

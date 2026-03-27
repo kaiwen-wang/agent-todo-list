@@ -57,6 +57,8 @@ export interface Todo {
   assignee: string | null;
   assigneeName: string | null;
   branch: string | null;
+  worktrees: string[];
+  commits: string[];
   planPath: string | null;
   comments: Comment[];
   createdAt: Timestamp;

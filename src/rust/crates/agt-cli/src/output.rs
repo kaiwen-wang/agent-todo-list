@@ -175,6 +175,27 @@ pub fn print_todo_detail(todo: &Todo, prefix: &str, members: &[Member]) {
         println!("  {}   {}", "Branch:".dimmed(), branch.cyan());
     }
 
+    if !todo.worktrees.is_empty() {
+        for (i, wt) in todo.worktrees.iter().enumerate() {
+            if i == 0 {
+                println!("  {} {}", "Worktree:".dimmed(), wt.cyan());
+            } else {
+                println!("           {}", wt.cyan());
+            }
+        }
+    }
+
+    if !todo.commits.is_empty() {
+        for (i, sha) in todo.commits.iter().enumerate() {
+            let short = if sha.len() > 8 { &sha[..8] } else { sha };
+            if i == 0 {
+                println!("  {}  {}", "Commits:".dimmed(), short.cyan());
+            } else {
+                println!("           {}", short.cyan());
+            }
+        }
+    }
+
     if let Some(plan_path) = &todo.plan_path {
         println!("  {}     {}", "Plan:".dimmed(), plan_path.cyan());
     }

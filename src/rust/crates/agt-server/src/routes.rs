@@ -64,6 +64,7 @@ pub async fn post_change(
         "addComment" => handle_add_comment(&state, &body).await,
         "createBranch" => handle_create_branch(&state, &body).await,
         "removeBranch" => handle_remove_branch(&state, &body).await,
+        "linkCommit" => handle_link_commit(&state, &body).await,
         "updateProject" => handle_update_project(&state, &body).await,
         "addMember" => handle_add_member(&state, &body).await,
         "removeMember" => handle_remove_member(&state, &body).await,
@@ -231,14 +232,34 @@ async fn handle_create_branch(state: &AppState, body: &Value) -> Result<Value, S
 
     let mut doc = state.doc.lock().await;
     operations::set_branch(&mut doc, number, &branch_name, None).map_err(|e| e.to_string())?;
+    let wt_rel = format!(".worktrees/{branch_name}");
+    operations::link_worktree(&mut doc, number, &wt_rel, None).map_err(|e| e.to_string())?;
     drop(doc);
     state.save().await.map_err(|e| e.to_string())?;
 
     Ok(json!({
         "ok": true,
         "branch": branch_name,
-        "worktree": format!(".worktrees/{branch_name}"),
+        "worktree": wt_rel,
     }))
+}
+
+async fn handle_link_commit(state: &AppState, body: &Value) -> Result<Value, String> {
+    let number = body
+        .get("number")
+        .and_then(|n| n.as_u64())
+        .ok_or("missing number")?;
+    let commit = body
+        .get("commit")
+        .and_then(|c| c.as_str())
+        .ok_or("missing commit")?;
+
+    let mut doc = state.doc.lock().await;
+    operations::link_commit(&mut doc, number, commit, None).map_err(|e| e.to_string())?;
+    drop(doc);
+    state.save().await.map_err(|e| e.to_string())?;
+
+    Ok(json!({ "ok": true }))
 }
 
 async fn handle_remove_branch(state: &AppState, body: &Value) -> Result<Value, String> {

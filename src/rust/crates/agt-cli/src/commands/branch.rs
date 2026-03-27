@@ -144,8 +144,10 @@ pub fn run(reference: String, json: bool) -> Result<()> {
 
     let (branch_name, worktree_path) = ensure_worktree(&paths.root, &prefix, &todo)?;
 
-    // Record branch on todo
+    // Record branch and worktree on todo
     operations::set_branch(&mut doc, num, &branch_name, None)?;
+    let wt_rel = format!(".worktrees/{}", branch_name);
+    operations::link_worktree(&mut doc, num, &wt_rel, None)?;
     save_project(&paths, &mut doc)?;
 
     if json {

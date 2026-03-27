@@ -45,6 +45,8 @@ const K_AUTHOR: &str = "author";
 const K_AUTHOR_NAME: &str = "authorName";
 const K_TEXT: &str = "text";
 const K_PLAN_PATH: &str = "planPath";
+const K_WORKTREES: &str = "worktrees";
+const K_COMMITS: &str = "commits";
 
 // ── Change message helper ───────────────────────────────────────────
 
@@ -292,6 +294,8 @@ pub fn add_todo(doc: &mut AutoCommit, opts: AddTodoOpts<'_>) -> Result<u64> {
         doc.put(&todo_obj, K_ASSIGNEE, ScalarValue::Null)?;
     }
     doc.put(&todo_obj, K_BRANCH, ScalarValue::Null)?;
+    doc.put_object(&todo_obj, K_WORKTREES, ObjType::List)?;
+    doc.put_object(&todo_obj, K_COMMITS, ObjType::List)?;
     doc.put_object(&todo_obj, K_COMMENTS, ObjType::List)?;
     doc.put(&todo_obj, K_CREATED_AT, now)?;
     doc.put(&todo_obj, K_UPDATED_AT, now)?;
@@ -520,6 +524,84 @@ pub fn clear_branch(doc: &mut AutoCommit, todo_number: u64, actor_id: Option<&st
         &actor,
         &format!("{prefix}-{todo_number}"),
         None,
+    );
+    commit_msg(doc, msg);
+    Ok(())
+}
+
+pub fn link_worktree(
+    doc: &mut AutoCommit,
+    todo_number: u64,
+    worktree_path: &str,
+    actor_id: Option<&str>,
+) -> Result<()> {
+    let actor = resolve_actor(doc, actor_id);
+    let (todo_obj, _) = find_todo_obj(doc, todo_number)?;
+
+    let worktrees_id = match doc.get(&todo_obj, K_WORKTREES)? {
+        Some((_, id)) => id,
+        None => doc.put_object(&todo_obj, K_WORKTREES, ObjType::List)?,
+    };
+
+    let len = doc.length(&worktrees_id);
+    for i in 0..len {
+        if let Ok(Some((automerge::Value::Scalar(s), _))) = doc.get(&worktrees_id, i)
+            && let ScalarValue::Str(existing) = s.as_ref()
+            && AsRef::<str>::as_ref(existing) == worktree_path
+        {
+            return Ok(());
+        }
+    }
+
+    doc.insert(&worktrees_id, len, worktree_path)?;
+    doc.put(&todo_obj, K_UPDATED_AT, now_millis())?;
+
+    let prefix = get_prefix(doc);
+    let msg = build_msg(
+        doc,
+        "todo.worktree_linked",
+        &actor,
+        &format!("{prefix}-{todo_number}"),
+        Some(json!({ "worktree": worktree_path })),
+    );
+    commit_msg(doc, msg);
+    Ok(())
+}
+
+pub fn link_commit(
+    doc: &mut AutoCommit,
+    todo_number: u64,
+    commit_sha: &str,
+    actor_id: Option<&str>,
+) -> Result<()> {
+    let actor = resolve_actor(doc, actor_id);
+    let (todo_obj, _) = find_todo_obj(doc, todo_number)?;
+
+    let commits_id = match doc.get(&todo_obj, K_COMMITS)? {
+        Some((_, id)) => id,
+        None => doc.put_object(&todo_obj, K_COMMITS, ObjType::List)?,
+    };
+
+    let len = doc.length(&commits_id);
+    for i in 0..len {
+        if let Ok(Some((automerge::Value::Scalar(s), _))) = doc.get(&commits_id, i)
+            && let ScalarValue::Str(existing) = s.as_ref()
+            && AsRef::<str>::as_ref(existing) == commit_sha
+        {
+            return Ok(());
+        }
+    }
+
+    doc.insert(&commits_id, len, commit_sha)?;
+    doc.put(&todo_obj, K_UPDATED_AT, now_millis())?;
+
+    let prefix = get_prefix(doc);
+    let msg = build_msg(
+        doc,
+        "todo.commit_linked",
+        &actor,
+        &format!("{prefix}-{todo_number}"),
+        Some(json!({ "commit": commit_sha })),
     );
     commit_msg(doc, msg);
     Ok(())

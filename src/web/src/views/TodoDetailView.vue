@@ -10,6 +10,8 @@ import {
   AntennaBars5,
   ChevronLeft,
   FileText,
+  GitBranch,
+  GitCommit,
   Trash,
 } from "@vicons/tabler";
 import { useProjectStore } from "@/stores/project";
@@ -643,6 +645,32 @@ async function submitComment() {
               @update:value="changeAssignee"
             />
           </div>
+
+          <div class="sidebar-section">
+            <label class="meta-label">
+              <NIcon :size="11" style="vertical-align: -1px; margin-right: 2px"
+                ><GitBranch
+              /></NIcon>
+              Git
+            </label>
+            <div v-if="todo.branch" class="git-item">
+              <NIcon :size="13" class="git-icon"><GitBranch /></NIcon>
+              <code class="git-ref">{{ todo.branch }}</code>
+            </div>
+            <div v-for="wt in todo.worktrees ?? []" :key="wt" class="git-item">
+              <span class="git-wt-dot" />
+              <code class="git-ref">{{ wt }}</code>
+            </div>
+            <div v-for="sha in todo.commits ?? []" :key="sha" class="git-item">
+              <NIcon :size="13" class="git-icon"><GitCommit /></NIcon>
+              <code class="git-ref">{{ sha.slice(0, 8) }}</code>
+            </div>
+            <span
+              v-if="!todo.branch && !todo.worktrees?.length && !todo.commits?.length"
+              class="git-none"
+              >None</span
+            >
+          </div>
         </div>
       </div>
     </div>
@@ -856,5 +884,42 @@ async function submitComment() {
   font-size: 12px;
   opacity: 0.4;
   margin-left: 10px;
+}
+
+.git-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.git-icon {
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.git-wt-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #6b7280;
+  opacity: 0.5;
+  flex-shrink: 0;
+  margin: 0 2px;
+}
+
+.git-ref {
+  font-size: 11px;
+  background: rgba(128, 128, 128, 0.1);
+  padding: 1px 5px;
+  border-radius: 3px;
+  word-break: break-all;
+  font-family: monospace;
+}
+
+.git-none {
+  font-size: 12px;
+  opacity: 0.35;
 }
 </style>

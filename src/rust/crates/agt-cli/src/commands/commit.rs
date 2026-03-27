@@ -64,6 +64,8 @@ fn summarize_entries(entries: &[agt_lib::schema::AuditEntry]) -> Result<String> 
                 "todo.commented" => "commented on",
                 "todo.branched" => "branched",
                 "todo.unbranched" => "unbranched",
+                "todo.worktree_linked" => "linked worktree to",
+                "todo.commit_linked" => "linked commit to",
                 "member.added" => "added member",
                 "member.removed" => "removed member",
                 "member.updated" => "updated member",

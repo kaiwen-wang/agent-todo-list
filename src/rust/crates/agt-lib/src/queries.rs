@@ -120,6 +120,28 @@ fn read_todo_at(doc: &AutoCommit, todos_id: &automerge::ObjId, idx: usize) -> Op
     let updated_at = get_i64(doc, &todo_id, "updatedAt").unwrap_or(0);
     let created_by = get_str(doc, &todo_id, "createdBy").unwrap_or_default();
 
+    // Read worktrees
+    let mut worktrees = Vec::new();
+    if let Ok(Some((_, wt_id))) = doc.get(&todo_id, "worktrees") {
+        let wt_len = doc.length(&wt_id);
+        for j in 0..wt_len {
+            if let Some(s) = get_list_str(doc, &wt_id, j) {
+                worktrees.push(s);
+            }
+        }
+    }
+
+    // Read commits
+    let mut commits = Vec::new();
+    if let Ok(Some((_, cm_id))) = doc.get(&todo_id, "commits") {
+        let cm_len = doc.length(&cm_id);
+        for j in 0..cm_len {
+            if let Some(s) = get_list_str(doc, &cm_id, j) {
+                commits.push(s);
+            }
+        }
+    }
+
     // Read labels
     let mut labels = Vec::new();
     if let Ok(Some((_, labels_id))) = doc.get(&todo_id, "labels") {
@@ -162,6 +184,8 @@ fn read_todo_at(doc: &AutoCommit, todos_id: &automerge::ObjId, idx: usize) -> Op
         labels,
         assignee,
         branch,
+        worktrees,
+        commits,
         comments,
         created_at,
         updated_at,
