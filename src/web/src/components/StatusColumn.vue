@@ -60,8 +60,18 @@ async function onDrop(e: DragEvent) {
 </script>
 
 <template>
-  <div class="status-column">
-    <div class="column-header">
+  <div
+    class="status-column"
+    :class="{ 'drag-over': isDragOver }"
+    @dragover="onDragOver"
+    @dragenter="onDragEnter"
+    @dragleave="onDragLeave"
+    @drop="onDrop"
+  >
+    <div
+      class="column-header"
+      :style="isDragOver ? { borderBottomColor: color + '66', background: color + '14' } : {}"
+    >
       <div class="column-indicator" :style="{ background: color }" />
       <span class="column-label">{{ label }}</span>
       <span class="column-count" :style="{ background: color + '22', color: color }">{{
@@ -69,14 +79,7 @@ async function onDrop(e: DragEvent) {
       }}</span>
       <NButton size="tiny" quaternary @click="showCreate = true" class="add-btn">+</NButton>
     </div>
-    <div
-      class="column-body"
-      :class="{ 'drag-over': isDragOver }"
-      @dragover="onDragOver"
-      @dragenter="onDragEnter"
-      @dragleave="onDragLeave"
-      @drop="onDrop"
-    >
+    <div class="column-body">
       <TodoCard v-for="todo in todos" :key="todo.id" :todo="todo" :column-todos="todos" />
       <!-- <div v-if="todos.length === 0" class="column-empty">No items</div> -->
     </div>
@@ -162,6 +165,11 @@ async function onDrop(e: DragEvent) {
 }
 
 .drag-over {
-  background: rgba(59, 130, 246, 0.08);
+  background: rgba(59, 130, 246, 0.05);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.drag-over .column-body {
+  background: rgba(59, 130, 246, 0.04);
 }
 </style>

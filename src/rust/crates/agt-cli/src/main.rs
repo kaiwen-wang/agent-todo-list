@@ -74,7 +74,7 @@ enum Commands {
         #[arg(long)]
         search: Option<String>,
         /// Include all todos (archived + won't do)
-        #[arg(long)]
+        #[arg(short = 'a', long)]
         all: bool,
         /// Show only archived todos
         #[arg(long)]
@@ -301,7 +301,7 @@ enum PlanAction {
         /// Todo references (e.g. "AGT-58" or "58"); omit for --all
         references: Vec<String>,
         /// Research all todos with status none/todo that lack plans
-        #[arg(long)]
+        #[arg(short = 'a', long)]
         all: bool,
         /// Overwrite existing plan files
         #[arg(long)]
