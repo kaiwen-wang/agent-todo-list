@@ -10,12 +10,13 @@ import {
   NTag,
   NIcon,
 } from "naive-ui";
-import { Inbox, LayoutKanban, Table, Users, Settings } from "@vicons/tabler";
+import { Inbox, LayoutKanban, Table, Users, Settings, Search } from "@vicons/tabler";
 import { useProjectStore } from "@/stores/project";
 import { STATUSES, STATUS_DISPLAY, STATUS_COLORS } from "@/types";
 import SettingsModal from "@/components/SettingsModal.vue";
 import CreateTodoModal from "@/components/CreateTodoModal.vue";
 import TodoDetailModal from "@/components/TodoDetailModal.vue";
+import SearchModal from "@/components/SearchModal.vue";
 
 const store = useProjectStore();
 const route = useRoute();
@@ -23,6 +24,7 @@ const router = useRouter();
 
 const showSettings = ref(false);
 const showCreate = ref(false);
+const showSearch = ref(false);
 
 function isTyping(): boolean {
   const tag = (document.activeElement as HTMLElement)?.tagName;
@@ -38,6 +40,13 @@ function handleGlobalKeydown(e: KeyboardEvent) {
   if (e.key === "Escape" && store.hasSelection) {
     e.preventDefault();
     store.clearSelection();
+    return;
+  }
+
+  // CMD/Ctrl+K — search palette
+  if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+    e.preventDefault();
+    showSearch.value = true;
     return;
   }
 
@@ -124,6 +133,11 @@ const themeOverrides = {
                 <NIcon :size="18"><component :is="item.icon" /></NIcon>
                 {{ item.label }}
               </button>
+              <button class="nav-item search-trigger" @click="showSearch = true">
+                <NIcon :size="18"><Search /></NIcon>
+                Search
+                <kbd class="kbd-hint">&#8984;K</kbd>
+              </button>
             </nav>
 
             <!-- Status overview -->
@@ -167,6 +181,7 @@ const themeOverrides = {
       <TodoDetailModal />
       <CreateTodoModal :open="showCreate" @close="showCreate = false" />
       <SettingsModal :open="showSettings" @close="showSettings = false" />
+      <SearchModal :open="showSearch" @close="showSearch = false" />
     </NMessageProvider>
   </NConfigProvider>
 </template>
@@ -318,6 +333,17 @@ body {
   background: rgba(0, 0, 0, 0.08);
   opacity: 1;
   font-weight: 600;
+}
+
+.search-trigger .kbd-hint {
+  margin-left: auto;
+  font-size: 10px;
+  font-family: inherit;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.08);
+  color: inherit;
+  opacity: 0.5;
 }
 
 .nav-icon {
