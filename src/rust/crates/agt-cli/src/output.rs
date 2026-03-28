@@ -1,6 +1,7 @@
 //! Terminal formatting helpers.
 //! Matches the original TypeScript CLI's compact line-per-todo format.
 
+use agt_lib::git::CommitInfo;
 use agt_lib::schema::*;
 use colored::Colorize;
 
@@ -139,7 +140,13 @@ pub fn print_todo_list(todos: &[Todo], prefix: &str, members: &[Member]) {
 }
 
 /// Print detailed view of a single todo.
-pub fn print_todo_detail(todo: &Todo, prefix: &str, members: &[Member]) {
+pub fn print_todo_detail(
+    todo: &Todo,
+    prefix: &str,
+    members: &[Member],
+    branch_commits: &[CommitInfo],
+    linked_commits: &[CommitInfo],
+) {
     let todo_ref = format!("{}-{}", prefix, todo.number);
     println!("{}", format!("{}: {}", todo_ref, todo.title).bold());
     println!();
@@ -185,14 +192,38 @@ pub fn print_todo_detail(todo: &Todo, prefix: &str, members: &[Member]) {
         }
     }
 
-    if !todo.commits.is_empty() {
-        for (i, sha) in todo.commits.iter().enumerate() {
-            let short = if sha.len() > 8 { &sha[..8] } else { sha };
-            if i == 0 {
-                println!("  {}  {}", "Commits:".dimmed(), short.cyan());
-            } else {
-                println!("           {}", short.cyan());
-            }
+    // Show commits: branch commits first, then manually linked
+    let has_branch_commits = !branch_commits.is_empty();
+    let has_linked_commits = !linked_commits.is_empty();
+
+    if has_branch_commits || has_linked_commits {
+        println!("  {}  ", "Commits:".dimmed());
+        for c in branch_commits {
+            let url_hint = c
+                .url
+                .as_deref()
+                .map(|u| format!(" {}", u.dimmed()))
+                .unwrap_or_default();
+            println!(
+                "           {} {}{}",
+                c.short_sha.cyan(),
+                c.subject,
+                url_hint
+            );
+        }
+        for c in linked_commits {
+            let url_hint = c
+                .url
+                .as_deref()
+                .map(|u| format!(" {}", u.dimmed()))
+                .unwrap_or_default();
+            println!(
+                "           {} {} {}{}",
+                c.short_sha.cyan(),
+                c.subject,
+                "(linked)".dimmed(),
+                url_hint
+            );
         }
     }
 

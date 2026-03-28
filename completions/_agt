@@ -71,6 +71,7 @@ _agt() {
         'comment:Add a comment to a todo'
         'branch:Create worktree + branch for a todo'
         'unbranch:Remove worktree + branch for a todo'
+        'link-commit:Link a git commit to a todo'
         'run:Run a coding agent on a todo'
         'poll:Poll for todo-status tasks and dispatch'
         'queue:Set todo status to todo'
@@ -141,6 +142,12 @@ _agt() {
                     _arguments \
                         '1:todo reference:_agt_todo_refs' \
                         '--keep-branch[Keep the git branch]'
+                    ;;
+                link-commit)
+                    _arguments \
+                        '1:todo reference:_agt_todo_refs' \
+                        '2:commit SHA' \
+                        '--json[Output as JSON]'
                     ;;
                 run)
                     _arguments \

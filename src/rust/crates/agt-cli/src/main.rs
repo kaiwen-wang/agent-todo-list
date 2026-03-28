@@ -166,6 +166,17 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Link a git commit to a todo
+    #[command(name = "link-commit")]
+    LinkCommit {
+        /// Todo reference (e.g. "ATL-1" or "1")
+        reference: String,
+        /// Commit SHA (defaults to HEAD if omitted)
+        sha: Option<String>,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
     /// Remove a git worktree + branch for a todo
     Unbranch {
         /// Todo reference
@@ -390,7 +401,13 @@ fn print_grouped_help() {
         (
             "Workflow",
             &[
-                "assign", "unassign", "comment", "branch", "unbranch", "plan",
+                "assign",
+                "unassign",
+                "comment",
+                "branch",
+                "unbranch",
+                "link-commit",
+                "plan",
             ],
         ),
         ("Agent Dispatch", &["run", "poll", "queue", "runs"]),
@@ -574,6 +591,11 @@ fn main() -> Result<()> {
             json,
         } => commands::comment::run(reference, text, json),
         Commands::Branch { reference, json } => commands::branch::run(reference, json),
+        Commands::LinkCommit {
+            reference,
+            sha,
+            json,
+        } => commands::link_commit::run(reference, sha, json),
         Commands::Unbranch {
             reference,
             keep_branch,

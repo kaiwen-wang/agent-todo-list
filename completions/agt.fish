@@ -113,6 +113,7 @@ complete -c agt -n __agt_needs_subcommand -a unassign -d "Unassign a todo"
 complete -c agt -n __agt_needs_subcommand -a comment -d "Add a comment to a todo"
 complete -c agt -n __agt_needs_subcommand -a branch  -d "Create worktree + branch for a todo"
 complete -c agt -n __agt_needs_subcommand -a unbranch -d "Remove worktree + branch for a todo"
+complete -c agt -n __agt_needs_subcommand -a link-commit -d "Link a git commit to a todo"
 complete -c agt -n __agt_needs_subcommand -a run     -d "Run a coding agent on a todo"
 complete -c agt -n __agt_needs_subcommand -a poll    -d "Poll for todo-status tasks and dispatch"
 complete -c agt -n __agt_needs_subcommand -a queue   -d "Set todo status to todo"
@@ -130,7 +131,7 @@ complete -c agt -n __agt_needs_subcommand -a log     -d "Show audit log"
 # ---------------------------------------------------------------------------
 
 # These commands take a todo ref as their first positional arg
-for subcmd in show edit update delete del assign unassign comment branch unbranch run queue
+for subcmd in show edit update delete del assign unassign comment branch unbranch link-commit run queue
     complete -c agt -n "__agt_needs_positional $subcmd 0" -a "(__agt_todo_refs)"
 end
 
@@ -219,6 +220,12 @@ complete -c agt -n "__agt_using_subcommand comment" -l json -d "Output as JSON"
 
 complete -c agt -n "__agt_using_subcommand branch" -l json -d "Output as JSON"
 complete -c agt -n "__agt_using_subcommand unbranch" -l keep-branch -d "Keep the git branch"
+
+# ---------------------------------------------------------------------------
+# link-commit
+# ---------------------------------------------------------------------------
+
+complete -c agt -n "__agt_using_subcommand link-commit" -l json -d "Output as JSON"
 
 # ---------------------------------------------------------------------------
 # run

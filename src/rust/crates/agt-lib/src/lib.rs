@@ -1,4 +1,5 @@
 pub mod export;
+pub mod git;
 pub mod git_identity;
 pub mod history;
 pub mod inbox;

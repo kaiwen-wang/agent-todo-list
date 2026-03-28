@@ -7,6 +7,7 @@ pub mod config;
 pub mod delete;
 pub mod inbox;
 pub mod init;
+pub mod link_commit;
 pub mod list;
 pub mod log;
 pub mod member;

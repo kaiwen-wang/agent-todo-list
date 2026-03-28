@@ -97,6 +97,8 @@ const todo = computed(() => store.todos.find((t) => t.number === props.number));
 // Local editable copies
 const title = ref("");
 const description = ref("");
+const commitShaInput = ref("");
+const showCommitInput = ref(false);
 
 watch(
   () => props.number,
@@ -183,6 +185,19 @@ async function changeLabels(labels: Label[]) {
 async function changeAssignee(assignee: string | null) {
   if (!todo.value || assignee === todo.value.assignee) return;
   saveField("assignee", assignee);
+}
+
+async function submitCommitLink() {
+  const sha = commitShaInput.value.trim();
+  if (!todo.value || !sha) return;
+  try {
+    await store.linkCommit(todo.value.number, sha);
+    commitShaInput.value = "";
+    showCommitInput.value = false;
+    message.success(`Linked ${sha.slice(0, 8)}`);
+  } catch {
+    message.error("Failed to link commit");
+  }
 }
 
 async function handleArchive() {
@@ -663,12 +678,40 @@ async function submitComment() {
             </div>
             <div v-for="sha in todo.commits ?? []" :key="sha" class="git-item">
               <NIcon :size="13" class="git-icon"><GitCommit /></NIcon>
-              <code class="git-ref">{{ sha.slice(0, 8) }}</code>
+              <a
+                v-if="store.remoteUrl"
+                :href="`${store.remoteUrl}/commit/${sha}`"
+                target="_blank"
+                class="git-ref git-link"
+                >{{ sha.slice(0, 8) }}</a
+              >
+              <code v-else class="git-ref">{{ sha.slice(0, 8) }}</code>
             </div>
             <span
-              v-if="!todo.branch && !todo.worktrees?.length && !todo.commits?.length"
+              v-if="
+                !todo.branch && !todo.worktrees?.length && !todo.commits?.length && !showCommitInput
+              "
               class="git-none"
               >None</span
+            >
+            <div v-if="showCommitInput" class="git-commit-input">
+              <NInput
+                v-model:value="commitShaInput"
+                size="tiny"
+                placeholder="Commit SHA"
+                @keyup.enter="submitCommitLink"
+                @keyup.escape="showCommitInput = false"
+              />
+              <NButton
+                size="tiny"
+                type="primary"
+                :disabled="!commitShaInput.trim()"
+                @click="submitCommitLink"
+                >Link</NButton
+              >
+            </div>
+            <NButton v-else text size="tiny" class="git-add-btn" @click="showCommitInput = true"
+              >+ commit</NButton
             >
           </div>
         </div>
@@ -916,6 +959,31 @@ async function submitComment() {
   border-radius: 3px;
   word-break: break-all;
   font-family: monospace;
+}
+
+a.git-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+a.git-link:hover {
+  text-decoration: underline;
+  color: #63e2b7;
+}
+
+.git-commit-input {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.git-add-btn {
+  font-size: 11px;
+  opacity: 0.4;
+  margin-top: 2px;
+}
+.git-add-btn:hover {
+  opacity: 1;
 }
 
 .git-none {

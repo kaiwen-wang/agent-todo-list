@@ -15,6 +15,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
+use agt_lib::git;
 use agt_lib::operations::{self, UpdateTodoFields};
 use agt_lib::queries;
 use agt_lib::schema::Status;
@@ -284,6 +285,23 @@ pub fn run(reference: String, budget: Option<f64>, dry_run: bool) -> Result<()> 
 
     if exit_status.success() && !is_error {
         eprintln!("Agent completed successfully for {}", todo_ref);
+
+        // Auto-link commits from the branch
+        let todo = queries::find_todo_by_number(&doc, num);
+        if let Some(ref todo) = todo
+            && let Some(ref branch) = todo.branch
+        {
+            let base = git::get_default_branch(&paths.root).unwrap_or_else(|_| "main".into());
+            if let Ok(commits) = git::commits_on_branch(&paths.root, branch, &base) {
+                let linked = commits.len();
+                for c in &commits {
+                    let _ = operations::link_commit(&mut doc, num, &c.sha, None);
+                }
+                if linked > 0 {
+                    eprintln!("Linked {} commit(s) from branch {}", linked, branch);
+                }
+            }
+        }
 
         // Add a comment summarizing the run
         let summary = if result_text.is_empty() {

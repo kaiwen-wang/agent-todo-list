@@ -10,6 +10,7 @@ use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
 
 use agt_lib::export::to_json;
+use agt_lib::git;
 use agt_lib::inbox;
 use agt_lib::operations::{self, AddTodoOpts, UpdateTodoFields};
 use agt_lib::project::sync_config;
@@ -41,9 +42,15 @@ pub async fn get_project(State(state): State<AppState>) -> impl IntoResponse {
     let inbox_processed = inbox::read_processed(&state.todo_dir).unwrap_or_default();
 
     let mut project = to_json(&mut doc, false);
+
+    // Derive project root from todo_dir (parent of .todo/)
+    let project_root = state.todo_dir.parent().unwrap_or(&state.todo_dir);
+    let remote_url = git::remote_base_url(project_root);
+
     if let Some(obj) = project.as_object_mut() {
         obj.insert("inboxText".into(), json!(inbox_text));
         obj.insert("inboxProcessed".into(), json!(inbox_processed));
+        obj.insert("remoteUrl".into(), json!(remote_url));
     }
 
     Json(project).into_response()
@@ -254,8 +261,12 @@ async fn handle_link_commit(state: &AppState, body: &Value) -> Result<Value, Str
         .and_then(|c| c.as_str())
         .ok_or("missing commit")?;
 
+    // Verify commit exists in the repo
+    let project_root = state.todo_dir.parent().unwrap_or(&state.todo_dir);
+    let full_sha = git::verify_commit(project_root, commit).map_err(|e| e.to_string())?;
+
     let mut doc = state.doc.lock().await;
-    operations::link_commit(&mut doc, number, commit, None).map_err(|e| e.to_string())?;
+    operations::link_commit(&mut doc, number, &full_sha, None).map_err(|e| e.to_string())?;
     drop(doc);
     state.save().await.map_err(|e| e.to_string())?;
 

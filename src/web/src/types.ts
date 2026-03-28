@@ -88,6 +88,8 @@ export interface Project {
   inboxText?: string;
   /** Processed inbox archive from .todo/TODO-PROCESSED.md */
   inboxProcessed?: string;
+  /** Remote base URL (e.g. https://github.com/owner/repo) for commit links */
+  remoteUrl?: string;
 }
 
 export const STATUSES: Status[] = [

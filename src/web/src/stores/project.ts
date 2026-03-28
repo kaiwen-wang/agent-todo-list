@@ -19,6 +19,7 @@ export const useProjectStore = defineStore("project", () => {
   const auditLog = computed(() => project.value?.auditLog ?? []);
   const inboxText = computed(() => project.value?.inboxText ?? "");
   const inboxProcessed = computed(() => project.value?.inboxProcessed ?? "");
+  const remoteUrl = computed(() => project.value?.remoteUrl ?? null);
 
   // ── Plan state ──
   const planEvents = ref<Array<{ type: string; [key: string]: unknown }>>([]);
@@ -181,6 +182,18 @@ export const useProjectStore = defineStore("project", () => {
     error.value = null;
     try {
       const result = await api.createBranchApi(number);
+      await load();
+      return result;
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
+  async function linkCommit(number: number, commit: string) {
+    error.value = null;
+    try {
+      const result = await api.linkCommitApi(number, commit);
       await load();
       return result;
     } catch (e: unknown) {
@@ -537,6 +550,7 @@ export const useProjectStore = defineStore("project", () => {
     statusCounts,
     inboxText,
     inboxProcessed,
+    remoteUrl,
     planEvents,
     inboxProcessing,
     inboxResult,
@@ -548,6 +562,7 @@ export const useProjectStore = defineStore("project", () => {
     moveTodo,
     addComment,
     createBranch,
+    linkCommit,
     removeBranch,
     updateProjectSettings,
     fetchPlan,

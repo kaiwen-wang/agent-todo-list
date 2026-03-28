@@ -165,6 +165,19 @@ export async function createBranchApi(
   return res.json();
 }
 
+export async function linkCommitApi(number: number, commit: string): Promise<{ ok: boolean }> {
+  const res = await fetch(`${BASE}/api/change`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "linkCommit", number, commit }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || "Failed to link commit");
+  }
+  return res.json();
+}
+
 export async function removeBranchApi(number: number): Promise<{ ok: boolean; branch: string }> {
   const res = await fetch(`${BASE}/api/change`, {
     method: "POST",
