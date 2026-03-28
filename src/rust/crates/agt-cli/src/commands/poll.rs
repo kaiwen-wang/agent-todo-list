@@ -1,6 +1,6 @@
 //! `agt poll` — Cron-compatible dispatcher.
 //!
-//! Runs once: checks for queued todos, spawns `agt run` for each eligible one,
+//! Runs once: checks for todo-status tasks, spawns `agt run` for each eligible one,
 //! reaps dead runs, exits.
 //!
 //! Designed to be called from cron/launchd/systemd timer every 10-60 seconds.
@@ -77,9 +77,9 @@ pub fn run(dry_run: bool) -> Result<()> {
         }
     }
 
-    // ── Step 2: Find eligible todos (status = queued) ───────────────
+    // ── Step 2: Find eligible todos (status = todo) ─────────────────
     let filter = queries::TodoFilter {
-        status: Some(vec![Status::Queued]),
+        status: Some(vec![Status::Todo]),
         ..Default::default()
     };
     let mut candidates = queries::query_todos(&doc, &filter);
@@ -113,7 +113,7 @@ pub fn run(dry_run: bool) -> Result<()> {
         println!("Running: {}", live_count);
         println!("Max concurrent: {}", max_concurrent);
         println!("Available slots: {}", available_slots);
-        println!("Queued candidates: {}", candidates.len());
+        println!("Todo candidates: {}", candidates.len());
         println!();
         for todo in to_dispatch {
             println!(
@@ -181,7 +181,7 @@ pub fn run(dry_run: bool) -> Result<()> {
     // ── Summary ─────────────────────────────────────────────────────
     let remaining = candidates.len() - dispatched;
     eprintln!(
-        "Dispatched: {}, Running: {}, Queued remaining: {}",
+        "Dispatched: {}, Running: {}, Remaining: {}",
         dispatched,
         live_count + dispatched,
         remaining,

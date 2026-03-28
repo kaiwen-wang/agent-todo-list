@@ -10,8 +10,8 @@ fn status_icon(status: &Status) -> &'static str {
     match status {
         Status::None => " ",
         Status::Todo => " ",
-        Status::Queued => ">",
         Status::InProgress => "*",
+        Status::Paused => "|",
         Status::Completed => "x",
         Status::Archived => "-",
         Status::WontDo => "~",
@@ -23,8 +23,8 @@ fn colored_title(title: &str, status: &Status) -> String {
     match status {
         Status::None => title.dimmed().to_string(),
         Status::Todo => title.white().to_string(),
-        Status::Queued => title.blue().to_string(),
         Status::InProgress => title.cyan().to_string(),
+        Status::Paused => title.yellow().to_string(),
         Status::Completed => title.green().to_string(),
         Status::Archived => title.dimmed().to_string(),
         Status::WontDo => title.strikethrough().to_string(),
@@ -37,8 +37,8 @@ pub fn colored_status(status: &Status) -> String {
     match status {
         Status::None => s.dimmed().to_string(),
         Status::Todo => s.white().to_string(),
-        Status::Queued => s.blue().to_string(),
         Status::InProgress => s.cyan().to_string(),
+        Status::Paused => s.yellow().to_string(),
         Status::Completed => s.green().to_string(),
         Status::Archived => s.dimmed().to_string(),
         Status::WontDo => s.strikethrough().to_string(),

@@ -24,6 +24,7 @@ pub fn migrate_doc(doc: &mut AutoCommit) -> Result<()> {
             4 => migrate_v4_to_v5(doc)?,
             5 => migrate_v5_to_v6(doc)?,
             6 => migrate_v6_to_v7(doc)?,
+            7 => migrate_v7_to_v8(doc)?,
             _ => {
                 doc.put(ROOT, "_version", (version + 1) as i64)?;
                 doc.commit_with(CommitOptions::default().with_message(format!(
@@ -141,5 +142,31 @@ fn migrate_v6_to_v7(doc: &mut AutoCommit) -> Result<()> {
     }
     doc.put(ROOT, "_version", 7i64)?;
     doc.commit_with(CommitOptions::default().with_message("schema migration v6 -> v7"));
+    Ok(())
+}
+
+fn migrate_v7_to_v8(doc: &mut AutoCommit) -> Result<()> {
+    // Replace "queued" status with "todo" (queued status removed, paused added).
+    if let Ok(Some((_, todos_id))) = doc.get(ROOT, "todos") {
+        let len = doc.length(&todos_id);
+        for i in 0..len {
+            if let Ok(Some((_, t_id))) = doc.get(&todos_id, i)
+                && let Ok(Some((ScalarValue::Str(s), _))) = doc.get(&t_id, "status").map(|v| {
+                    v.map(|(v, id)| {
+                        if let automerge::Value::Scalar(s) = v {
+                            (s.into_owned(), id)
+                        } else {
+                            (ScalarValue::Null, id)
+                        }
+                    })
+                })
+                && s.as_str() == "queued"
+            {
+                doc.put(&t_id, "status", "todo")?;
+            }
+        }
+    }
+    doc.put(ROOT, "_version", 8i64)?;
+    doc.commit_with(CommitOptions::default().with_message("schema migration v7 -> v8"));
     Ok(())
 }

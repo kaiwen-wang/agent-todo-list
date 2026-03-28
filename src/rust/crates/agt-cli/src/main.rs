@@ -37,7 +37,7 @@ enum Commands {
         /// Priority (none, low, medium, high, urgent)
         #[arg(long)]
         priority: Option<String>,
-        /// Status (none, todo, queued, in_progress, completed, archived, wont_do, needs_elaboration)
+        /// Status (none, todo, in_progress, paused, completed, archived, wont_do, needs_elaboration)
         #[arg(long)]
         status: Option<String>,
         /// Difficulty (none, easy, medium, hard)
@@ -185,13 +185,13 @@ enum Commands {
         #[arg(long)]
         dry_run: bool,
     },
-    /// Poll for queued todos and dispatch agents (cron-compatible)
+    /// Poll for todo-status tasks and dispatch agents (cron-compatible)
     Poll {
         /// Print what would be dispatched without doing it
         #[arg(long)]
         dry_run: bool,
     },
-    /// Set todo status to queued (ready for agent dispatch)
+    /// Set todo status to todo (ready for agent dispatch)
     Queue {
         /// Todo references (e.g. "ATL-1" "ATL-2")
         references: Vec<String>,

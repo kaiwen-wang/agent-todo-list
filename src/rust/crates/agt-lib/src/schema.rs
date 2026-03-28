@@ -12,8 +12,8 @@ pub enum Status {
     #[default]
     None,
     Todo,
-    Queued,
     InProgress,
+    Paused,
     Completed,
     Archived,
     WontDo,
@@ -25,8 +25,8 @@ impl Status {
         Status::None,
         Status::Todo,
         Status::NeedsElaboration,
-        Status::Queued,
         Status::InProgress,
+        Status::Paused,
         Status::Completed,
         Status::Archived,
         Status::WontDo,
@@ -40,7 +40,7 @@ impl Status {
             Status::None => 1,
             Status::NeedsElaboration => 2,
             Status::Todo => 3,
-            Status::Queued => 4,
+            Status::Paused => 4,
             Status::InProgress => 5,
             // Archived/WontDo are typically filtered out, but rank low if present
             Status::Archived => 0,
@@ -52,8 +52,8 @@ impl Status {
         match self {
             Status::None => "None",
             Status::Todo => "To Do",
-            Status::Queued => "Queued",
             Status::InProgress => "In Progress",
+            Status::Paused => "Paused",
             Status::Completed => "Completed",
             Status::Archived => "Archived",
             Status::WontDo => "Won't Do",
@@ -65,8 +65,8 @@ impl Status {
         match self {
             Status::None => "none",
             Status::Todo => "todo",
-            Status::Queued => "queued",
             Status::InProgress => "in_progress",
+            Status::Paused => "paused",
             Status::Completed => "completed",
             Status::Archived => "archived",
             Status::WontDo => "wont_do",
@@ -87,8 +87,9 @@ impl std::str::FromStr for Status {
         match s {
             "none" => Ok(Status::None),
             "todo" => Ok(Status::Todo),
-            "queued" => Ok(Status::Queued),
             "in_progress" => Ok(Status::InProgress),
+            "paused" => Ok(Status::Paused),
+            "queued" => Ok(Status::Todo), // backwards compat: queued -> todo
             "completed" | "done" => Ok(Status::Completed),
             "archived" => Ok(Status::Archived),
             "wont_do" => Ok(Status::WontDo),
@@ -459,7 +460,7 @@ pub struct Member {
 }
 
 /// Current schema version — increment when making breaking changes.
-pub const CURRENT_SCHEMA_VERSION: u64 = 7;
+pub const CURRENT_SCHEMA_VERSION: u64 = 8;
 
 /// Config stored in .todo/config.toml (committed to git).
 #[derive(Debug, Clone, Serialize, Deserialize)]

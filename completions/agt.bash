@@ -13,7 +13,7 @@ import sys, json
 data = json.load(sys.stdin)
 prefix = '$prefix'
 icons = {
-    'none': '[ ]', 'todo': '[ ]', 'queued': '[~]',
+    'none': '[ ]', 'todo': '[ ]', 'paused': '[|]',
     'in_progress': '[*]', 'completed': '[x]', 'archived': '[-]',
     'wont_do': '[-]', 'needs_elaboration': '[?]',
 }
@@ -61,7 +61,7 @@ _agt_completions() {
             COMPREPLY=($(compgen -W "none low medium high urgent" -- "$cur"))
             return ;;
         --status)
-            COMPREPLY=($(compgen -W "none todo queued in_progress completed archived wont_do needs_elaboration" -- "$cur"))
+            COMPREPLY=($(compgen -W "none todo in_progress paused completed archived wont_do needs_elaboration" -- "$cur"))
             return ;;
         --difficulty)
             COMPREPLY=($(compgen -W "none easy medium hard" -- "$cur"))

@@ -16,7 +16,7 @@ import sys, json
 data = json.load(sys.stdin)
 prefix = '$prefix'
 icons = {
-    'none': '[ ]', 'todo': '[ ]', 'queued': '[~]',
+    'none': '[ ]', 'todo': '[ ]', 'paused': '[|]',
     'in_progress': '[*]', 'completed': '[x]', 'archived': '[-]',
     'wont_do': '[-]', 'needs_elaboration': '[?]',
 }
@@ -48,7 +48,7 @@ for m in json.load(sys.stdin):
     _describe 'member' members
 }
 
-_agt_statuses=(none todo queued in_progress completed archived wont_do needs_elaboration)
+_agt_statuses=(none todo in_progress paused completed archived wont_do needs_elaboration)
 _agt_priorities=(none low medium high urgent)
 _agt_difficulties=(none easy medium hard)
 _agt_labels=(bug new_feature feature_plus)
@@ -72,8 +72,8 @@ _agt() {
         'branch:Create worktree + branch for a todo'
         'unbranch:Remove worktree + branch for a todo'
         'run:Run a coding agent on a todo'
-        'poll:Poll for queued todos and dispatch'
-        'queue:Set todo status to queued'
+        'poll:Poll for todo-status tasks and dispatch'
+        'queue:Set todo status to todo'
         'runs:List active agent runs'
         'plan:Manage plan/research files'
         'member:Manage project members'

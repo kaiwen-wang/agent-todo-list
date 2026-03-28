@@ -20,7 +20,7 @@ import sys, json
 data = json.load(sys.stdin)
 prefix = '$prefix'
 icons = {
-    'none': '[ ]', 'todo': '[ ]', 'queued': '[~]',
+    'none': '[ ]', 'todo': '[ ]', 'paused': '[|]',
     'in_progress': '[*]', 'completed': '[x]', 'archived': '[-]',
     'wont_do': '[-]', 'needs_elaboration': '[?]',
 }
@@ -114,8 +114,8 @@ complete -c agt -n __agt_needs_subcommand -a comment -d "Add a comment to a todo
 complete -c agt -n __agt_needs_subcommand -a branch  -d "Create worktree + branch for a todo"
 complete -c agt -n __agt_needs_subcommand -a unbranch -d "Remove worktree + branch for a todo"
 complete -c agt -n __agt_needs_subcommand -a run     -d "Run a coding agent on a todo"
-complete -c agt -n __agt_needs_subcommand -a poll    -d "Poll for queued todos and dispatch"
-complete -c agt -n __agt_needs_subcommand -a queue   -d "Set todo status to queued"
+complete -c agt -n __agt_needs_subcommand -a poll    -d "Poll for todo-status tasks and dispatch"
+complete -c agt -n __agt_needs_subcommand -a queue   -d "Set todo status to todo"
 complete -c agt -n __agt_needs_subcommand -a runs    -d "List active agent runs"
 complete -c agt -n __agt_needs_subcommand -a plan    -d "Manage plan/research files"
 complete -c agt -n __agt_needs_subcommand -a member  -d "Manage project members"
@@ -146,7 +146,7 @@ complete -c agt -n "__agt_needs_positional assign 1" -a "(__agt_members)"
 # ---------------------------------------------------------------------------
 
 complete -c agt -n "__agt_using_subcommand add" -l priority   -d "Priority" -r -a "none low medium high urgent"
-complete -c agt -n "__agt_using_subcommand add" -l status     -d "Status" -r -a "none todo queued in_progress completed archived wont_do needs_elaboration"
+complete -c agt -n "__agt_using_subcommand add" -l status     -d "Status" -r -a "none todo in_progress paused completed archived wont_do needs_elaboration"
 complete -c agt -n "__agt_using_subcommand add" -l difficulty  -d "Difficulty" -r -a "none easy medium hard"
 complete -c agt -n "__agt_using_subcommand add" -l assignee   -d "Assignee" -r -a "(__agt_members)"
 complete -c agt -n "__agt_using_subcommand add" -l description -d "Description" -r
@@ -157,7 +157,7 @@ complete -c agt -n "__agt_using_subcommand add" -l json       -d "Output as JSON
 # list
 # ---------------------------------------------------------------------------
 
-complete -c agt -n "__agt_using_subcommand list" -l status     -d "Filter by status" -r -a "none todo queued in_progress completed archived wont_do needs_elaboration"
+complete -c agt -n "__agt_using_subcommand list" -l status     -d "Filter by status" -r -a "none todo in_progress paused completed archived wont_do needs_elaboration"
 complete -c agt -n "__agt_using_subcommand list" -l assignee   -d "Filter by assignee" -r -a "(__agt_members)"
 complete -c agt -n "__agt_using_subcommand list" -l priority   -d "Filter by priority" -r -a "none low medium high urgent"
 complete -c agt -n "__agt_using_subcommand list" -l difficulty  -d "Filter by difficulty" -r -a "none easy medium hard"
@@ -179,7 +179,7 @@ complete -c agt -n "__agt_using_subcommand show" -l json -d "Output as JSON"
 
 for editcmd in edit update
     complete -c agt -n "__agt_using_subcommand $editcmd" -l title      -d "New title" -r
-    complete -c agt -n "__agt_using_subcommand $editcmd" -l status     -d "New status" -r -a "none todo queued in_progress completed archived wont_do needs_elaboration"
+    complete -c agt -n "__agt_using_subcommand $editcmd" -l status     -d "New status" -r -a "none todo in_progress paused completed archived wont_do needs_elaboration"
     complete -c agt -n "__agt_using_subcommand $editcmd" -l priority   -d "New priority" -r -a "none low medium high urgent"
     complete -c agt -n "__agt_using_subcommand $editcmd" -l difficulty  -d "New difficulty" -r -a "none easy medium hard"
     complete -c agt -n "__agt_using_subcommand $editcmd" -l description -d "New description" -r

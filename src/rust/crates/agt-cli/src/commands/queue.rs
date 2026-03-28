@@ -1,6 +1,6 @@
-//! `agt queue <ref> [<ref>...]` — Set todo status to queued.
+//! `agt queue <ref> [<ref>...]` — Set todo status to todo (ready for agent dispatch).
 //!
-//! Convenience command equivalent to `agt update <ref> --status queued`.
+//! Convenience command equivalent to `agt update <ref> --status todo`.
 
 use anyhow::Result;
 
@@ -23,7 +23,7 @@ pub fn run(references: Vec<String>) -> Result<()> {
         let todo = queries::find_todo_by_number(&doc, num)
             .ok_or_else(|| anyhow::anyhow!("Todo {}-{} not found", prefix, num))?;
 
-        if todo.status == Status::Queued {
+        if todo.status == Status::Todo {
             eprintln!("{}-{} is already queued", prefix, num);
             continue;
         }
@@ -32,7 +32,7 @@ pub fn run(references: Vec<String>) -> Result<()> {
             &mut doc,
             num,
             UpdateTodoFields {
-                status: Some(Status::Queued),
+                status: Some(Status::Todo),
                 ..Default::default()
             },
             None,
