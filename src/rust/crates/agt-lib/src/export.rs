@@ -4,7 +4,7 @@
 use automerge::AutoCommit;
 use serde_json::{Value, json};
 
-use crate::queries::{read_all_members, read_all_todos, read_project_meta};
+use crate::queries::{read_all_cycles, read_all_members, read_all_todos, read_project_meta};
 
 /// Serialize the project as a JSON-serializable value.
 ///
@@ -14,6 +14,7 @@ pub fn to_json(doc: &mut AutoCommit, include_audit_log: bool) -> Value {
     let (id, prefix, name, description) = read_project_meta(doc);
     let members = read_all_members(doc);
     let todos = read_all_todos(doc);
+    let cycles = read_all_cycles(doc);
     let audit_log = if include_audit_log {
         crate::history::get_audit_log(doc, None, None)
     } else {
@@ -71,8 +72,20 @@ pub fn to_json(doc: &mut AutoCommit, include_audit_log: bool) -> Value {
                 "createdBy": t.created_by,
                 "platform": t.platform,
                 "planPath": t.plan_path,
+                "cycleId": t.cycle_id,
             })
         }).collect::<Vec<_>>(),
+        "cycles": cycles.iter().map(|c| json!({
+            "id": c.id,
+            "name": c.name,
+            "description": c.description,
+            "status": c.status,
+            "startDate": c.start_date,
+            "endDate": c.end_date,
+            "createdAt": c.created_at,
+            "updatedAt": c.updated_at,
+            "createdBy": c.created_by,
+        })).collect::<Vec<_>>(),
         "auditLog": audit_log.iter().map(|e| json!({
             "action": e.action,
             "actorId": e.actor_id,

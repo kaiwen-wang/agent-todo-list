@@ -80,7 +80,7 @@ function renderPriorityLabel(option: { label: string; value: string }) {
 }
 
 const filteredTodos = computed(() => {
-  let list = store.todos;
+  let list = store.filteredTodos;
   if (filterStatus.value) {
     list = list.filter((t) => t.status === filterStatus.value);
   }

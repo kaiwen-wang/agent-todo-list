@@ -14,6 +14,7 @@ pub fn run(
     difficulty: Option<String>,
     description: Option<String>,
     labels: Option<String>,
+    cycle: Option<String>,
     json: bool,
 ) -> Result<()> {
     let (paths, mut doc) = load_project()?;
@@ -41,6 +42,22 @@ pub fn run(
         .transpose()
         .map_err(|e: String| anyhow::anyhow!(e))?;
 
+    // Resolve cycle: "none" clears it, otherwise look up by name/id
+    let cycle_id: Option<Option<String>> = if let Some(ref name) = cycle {
+        if name.eq_ignore_ascii_case("none") {
+            Some(None)
+        } else {
+            let c = queries::find_cycle(&doc, name)
+                .ok_or_else(|| anyhow::anyhow!("Cycle \"{}\" not found", name))?;
+            Some(Some(c.id))
+        }
+    } else {
+        None
+    };
+
+    // Convert cycle_id to the right lifetime shape
+    let cycle_id_ref: Option<Option<&str>> = cycle_id.as_ref().map(|opt| opt.as_deref());
+
     operations::update_todo(
         &mut doc,
         num,
@@ -51,6 +68,7 @@ pub fn run(
             priority,
             difficulty,
             labels,
+            cycle_id: cycle_id_ref,
             ..Default::default()
         },
         None,

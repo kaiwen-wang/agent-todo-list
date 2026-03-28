@@ -310,6 +310,62 @@ impl std::str::FromStr for Platform {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum CycleStatus {
+    #[default]
+    Planning,
+    Active,
+    Completed,
+    Cancelled,
+}
+
+impl CycleStatus {
+    pub const ALL: &[CycleStatus] = &[
+        CycleStatus::Planning,
+        CycleStatus::Active,
+        CycleStatus::Completed,
+        CycleStatus::Cancelled,
+    ];
+
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            CycleStatus::Planning => "Planning",
+            CycleStatus::Active => "Active",
+            CycleStatus::Completed => "Completed",
+            CycleStatus::Cancelled => "Cancelled",
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            CycleStatus::Planning => "planning",
+            CycleStatus::Active => "active",
+            CycleStatus::Completed => "completed",
+            CycleStatus::Cancelled => "cancelled",
+        }
+    }
+}
+
+impl fmt::Display for CycleStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for CycleStatus {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "planning" => Ok(CycleStatus::Planning),
+            "active" => Ok(CycleStatus::Active),
+            "completed" => Ok(CycleStatus::Completed),
+            "cancelled" | "canceled" => Ok(CycleStatus::Cancelled),
+            _ => Err(format!("unknown cycle status: {s}")),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MemberRole {
@@ -444,6 +500,21 @@ pub struct Todo {
     pub created_by: String,
     pub platform: Platform,
     pub plan_path: Option<String>,
+    pub cycle_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Cycle {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub status: CycleStatus,
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
+    pub created_at: i64,
+    pub updated_at: i64,
+    pub created_by: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -460,7 +531,7 @@ pub struct Member {
 }
 
 /// Current schema version — increment when making breaking changes.
-pub const CURRENT_SCHEMA_VERSION: u64 = 8;
+pub const CURRENT_SCHEMA_VERSION: u64 = 9;
 
 /// Config stored in .todo/config.toml (committed to git).
 #[derive(Debug, Clone, Serialize, Deserialize)]

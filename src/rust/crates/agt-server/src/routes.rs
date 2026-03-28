@@ -12,7 +12,7 @@ use std::process::{Command, Stdio};
 use agt_lib::export::to_json;
 use agt_lib::git;
 use agt_lib::inbox;
-use agt_lib::operations::{self, AddTodoOpts, UpdateTodoFields};
+use agt_lib::operations::{self, AddCycleOpts, AddTodoOpts, UpdateCycleFields, UpdateTodoFields};
 use agt_lib::project::sync_config;
 use agt_lib::queries;
 use agt_lib::schema::*;
@@ -70,6 +70,7 @@ pub async fn post_change(
         "delete" => handle_delete(&state, &body).await,
         "addComment" => handle_add_comment(&state, &body).await,
         "createBranch" => handle_create_branch(&state, &body).await,
+        "createBranchOnly" => handle_create_branch_only(&state, &body).await,
         "removeBranch" => handle_remove_branch(&state, &body).await,
         "linkCommit" => handle_link_commit(&state, &body).await,
         "updateProject" => handle_update_project(&state, &body).await,
@@ -82,6 +83,9 @@ pub async fn post_change(
         "researchPlan" => handle_research_plan(&state, &body).await,
         "answerPlan" => handle_answer_plan(&state, &body).await,
         "bulk" => handle_bulk(&state, &body).await,
+        "addCycle" => handle_add_cycle(&state, &body).await,
+        "updateCycle" => handle_update_cycle(&state, &body).await,
+        "deleteCycle" => handle_delete_cycle(&state, &body).await,
         _ => Err(format!("Unknown action: {action}")),
     };
 
@@ -249,6 +253,51 @@ async fn handle_create_branch(state: &AppState, body: &Value) -> Result<Value, S
         "branch": branch_name,
         "worktree": wt_rel,
     }))
+}
+
+async fn handle_create_branch_only(state: &AppState, body: &Value) -> Result<Value, String> {
+    let doc = state.doc.lock().await;
+    let number = body
+        .get("number")
+        .and_then(|n| n.as_u64())
+        .ok_or("missing number")?;
+
+    let todo = queries::find_todo_by_number(&doc, number)
+        .ok_or_else(|| format!("Todo #{number} not found"))?;
+
+    if let Some(branch) = &todo.branch {
+        return Ok(json!({ "ok": true, "branch": branch, "alreadyExists": true }));
+    }
+
+    let (_, prefix, _, _) = queries::read_project_meta(&doc);
+    let slug = slugify(&todo.title, 5);
+    let branch_name = format!("{}-{}-{}", prefix.to_lowercase(), number, slug);
+
+    drop(doc);
+
+    let project_path = state
+        .data_path
+        .parent()
+        .and_then(|p| p.parent())
+        .ok_or("invalid project path")?;
+
+    let output = Command::new("git")
+        .args(["branch", &branch_name])
+        .current_dir(project_path)
+        .output()
+        .map_err(|e| format!("Failed to spawn git: {e}"))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Failed to create branch: {}", stderr.trim()));
+    }
+
+    let mut doc = state.doc.lock().await;
+    operations::set_branch(&mut doc, number, &branch_name, None).map_err(|e| e.to_string())?;
+    drop(doc);
+    state.save().await.map_err(|e| e.to_string())?;
+
+    Ok(json!({ "ok": true, "branch": branch_name }))
 }
 
 async fn handle_link_commit(state: &AppState, body: &Value) -> Result<Value, String> {
@@ -515,6 +564,85 @@ async fn handle_bulk(state: &AppState, body: &Value) -> Result<Value, String> {
     drop(doc);
     state.save().await.map_err(|e| e.to_string())?;
     Ok(json!({ "ok": true, "count": ops.len() }))
+}
+
+// ── Cycle handlers ──────────────────────────────────────────────────
+
+async fn handle_add_cycle(state: &AppState, body: &Value) -> Result<Value, String> {
+    let mut doc = state.doc.lock().await;
+
+    let name = body
+        .get("name")
+        .and_then(|n| n.as_str())
+        .unwrap_or("Untitled Cycle");
+    let description = body.get("description").and_then(|d| d.as_str());
+    let status: Option<CycleStatus> = body
+        .get("status")
+        .and_then(|s| s.as_str())
+        .and_then(|s| s.parse().ok());
+    let start_date = body.get("startDate").and_then(|d| d.as_str());
+    let end_date = body.get("endDate").and_then(|d| d.as_str());
+
+    let id = operations::add_cycle(
+        &mut doc,
+        AddCycleOpts {
+            name,
+            description,
+            status,
+            start_date,
+            end_date,
+            created_by: None,
+        },
+    )
+    .map_err(|e| e.to_string())?;
+
+    drop(doc);
+    state.save().await.map_err(|e| e.to_string())?;
+    Ok(json!({ "ok": true, "id": id }))
+}
+
+async fn handle_update_cycle(state: &AppState, body: &Value) -> Result<Value, String> {
+    let mut doc = state.doc.lock().await;
+
+    let cycle_id = body
+        .get("cycleId")
+        .and_then(|c| c.as_str())
+        .ok_or("missing cycleId")?;
+
+    let empty = json!({});
+    let updates = body.get("updates").unwrap_or(&empty);
+
+    let fields = UpdateCycleFields {
+        name: updates.get("name").and_then(|n| n.as_str()),
+        description: updates.get("description").and_then(|d| d.as_str()),
+        status: updates
+            .get("status")
+            .and_then(|s| s.as_str())
+            .and_then(|s| s.parse().ok()),
+        start_date: updates.get("startDate").map(|d| d.as_str()),
+        end_date: updates.get("endDate").map(|d| d.as_str()),
+    };
+
+    operations::update_cycle(&mut doc, cycle_id, fields, None).map_err(|e| e.to_string())?;
+
+    drop(doc);
+    state.save().await.map_err(|e| e.to_string())?;
+    Ok(json!({ "ok": true }))
+}
+
+async fn handle_delete_cycle(state: &AppState, body: &Value) -> Result<Value, String> {
+    let mut doc = state.doc.lock().await;
+
+    let cycle_id = body
+        .get("cycleId")
+        .and_then(|c| c.as_str())
+        .ok_or("missing cycleId")?;
+
+    operations::delete_cycle(&mut doc, cycle_id, None).map_err(|e| e.to_string())?;
+
+    drop(doc);
+    state.save().await.map_err(|e| e.to_string())?;
+    Ok(json!({ "ok": true }))
 }
 
 // ── Plan handlers ───────────────────────────────────────────────────
@@ -931,6 +1059,7 @@ fn parse_update_fields(updates: &Value) -> UpdateTodoFields<'_> {
         }),
         assignee: updates.get("assignee").map(|a| a.as_str()),
         plan_path: updates.get("planPath").map(|p| p.as_str()),
+        cycle_id: updates.get("cycleId").map(|c| c.as_str()),
     }
 }
 

@@ -10,9 +10,9 @@ import {
   NTag,
   NIcon,
 } from "naive-ui";
-import { Inbox, LayoutKanban, Table, Users, Settings, Search } from "@vicons/tabler";
+import { Inbox, LayoutKanban, LayoutRows, Table, Users, Settings, Search } from "@vicons/tabler";
 import { useProjectStore } from "@/stores/project";
-import { STATUSES, STATUS_DISPLAY, STATUS_COLORS } from "@/types";
+import { STATUSES, STATUS_DISPLAY, STATUS_COLORS, CYCLE_STATUS_COLORS } from "@/types";
 import SettingsModal from "@/components/SettingsModal.vue";
 import CreateTodoModal from "@/components/CreateTodoModal.vue";
 import TodoDetailModal from "@/components/TodoDetailModal.vue";
@@ -82,6 +82,7 @@ const activeKey = computed(() => (route.name as string) ?? "board");
 const navItems = [
   { label: "Inbox", key: "inbox", icon: Inbox },
   { label: "Board", key: "board", icon: LayoutKanban },
+  { label: "Sprints", key: "cycles", icon: LayoutRows },
   { label: "Table", key: "list", icon: Table },
   { label: "Members", key: "members", icon: Users },
 ];
@@ -165,6 +166,34 @@ const themeOverrides = {
                   <span class="member-name">{{ m.name }}</span>
                   <NTag size="tiny" :bordered="false" round>{{ m.role }}</NTag>
                 </div>
+              </div>
+            </div>
+
+            <!-- Cycles -->
+            <div class="sidebar-section">
+              <div class="section-label">Sprints</div>
+              <div class="cycle-list">
+                <button
+                  v-if="store.activeCycleId"
+                  class="cycle-row cycle-clear"
+                  @click="store.setActiveCycle(null)"
+                >
+                  <span class="cycle-name">All todos</span>
+                </button>
+                <button
+                  v-for="c in store.cycles"
+                  :key="c.id"
+                  class="cycle-row"
+                  :class="{ active: store.activeCycleId === c.id }"
+                  @click="store.setActiveCycle(c.id)"
+                >
+                  <span class="status-dot" :style="{ background: CYCLE_STATUS_COLORS[c.status] }" />
+                  <span class="cycle-name">{{ c.name }}</span>
+                  <span class="cycle-count">{{
+                    store.todos.filter((t) => t.cycleId === c.id).length
+                  }}</span>
+                </button>
+                <span v-if="store.cycles.length === 0" class="cycle-empty">No cycles yet</span>
               </div>
             </div>
           </template>
@@ -447,6 +476,69 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ── Cycles ── */
+
+.cycle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.cycle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+  text-align: left;
+  font-family: inherit;
+  width: 100%;
+}
+
+.cycle-row:hover {
+  background: rgba(0, 0, 0, 0.05);
+  opacity: 0.9;
+}
+
+.cycle-row.active {
+  background: rgba(0, 0, 0, 0.08);
+  opacity: 1;
+  font-weight: 600;
+}
+
+.cycle-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cycle-empty {
+  font-size: 12px;
+  opacity: 0.35;
+  padding: 2px 8px;
+}
+
+.cycle-clear {
+  opacity: 0.45;
+  font-style: italic;
+}
+
+.cycle-count {
+  font-weight: 600;
+  font-size: 12px;
+  opacity: 0.4;
+  font-variant-numeric: tabular-nums;
+  min-width: 16px;
+  text-align: right;
 }
 
 /* ── Main content ── */

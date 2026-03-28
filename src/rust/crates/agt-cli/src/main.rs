@@ -52,6 +52,9 @@ enum Commands {
         /// Labels (comma-separated: bug, new_feature, feature_plus)
         #[arg(long)]
         labels: Option<String>,
+        /// Cycle name or ID
+        #[arg(long)]
+        cycle: Option<String>,
         /// Output as JSON
         #[arg(long)]
         json: bool,
@@ -117,6 +120,9 @@ enum Commands {
         /// Labels (comma-separated: bug, new_feature, feature_plus)
         #[arg(long)]
         labels: Option<String>,
+        /// Cycle name or ID
+        #[arg(long)]
+        cycle: Option<String>,
         /// Output as JSON
         #[arg(long)]
         json: bool,
@@ -217,6 +223,12 @@ enum Commands {
     Plan {
         #[command(subcommand)]
         action: PlanAction,
+    },
+    /// Manage sprints (cycles)
+    #[command(alias = "cycle")]
+    Sprint {
+        #[command(subcommand)]
+        action: CycleAction,
     },
     /// Manage project members
     Member {
@@ -386,6 +398,72 @@ enum MemberAction {
     },
 }
 
+#[derive(Subcommand)]
+enum CycleAction {
+    /// Create a new cycle
+    Create {
+        /// Cycle name
+        name: String,
+        /// Description
+        #[arg(long)]
+        description: Option<String>,
+        /// Status (planning, active, completed, cancelled)
+        #[arg(long)]
+        status: Option<String>,
+        /// Start date (YYYY-MM-DD)
+        #[arg(long)]
+        start_date: Option<String>,
+        /// End date (YYYY-MM-DD)
+        #[arg(long)]
+        end_date: Option<String>,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// List all cycles
+    List {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Show cycle details
+    Show {
+        /// Cycle name or ID
+        name: String,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Edit a cycle
+    Edit {
+        /// Cycle name or ID
+        name_or_id: String,
+        /// New name
+        #[arg(long)]
+        name: Option<String>,
+        /// New description
+        #[arg(long)]
+        description: Option<String>,
+        /// New status (planning, active, completed, cancelled)
+        #[arg(long)]
+        status: Option<String>,
+        /// Start date (YYYY-MM-DD)
+        #[arg(long)]
+        start_date: Option<String>,
+        /// End date (YYYY-MM-DD)
+        #[arg(long)]
+        end_date: Option<String>,
+    },
+    /// Delete a cycle
+    Delete {
+        /// Cycle name or ID
+        name: String,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+}
+
 fn print_grouped_help() {
     let cmd = Cli::command();
     let version = cmd.get_version().unwrap_or("unknown");
@@ -414,7 +492,7 @@ fn print_grouped_help() {
         (
             "Project",
             &[
-                "init", "member", "config", "serve", "inbox", "commit", "log",
+                "init", "member", "sprint", "config", "serve", "inbox", "commit", "log",
             ],
         ),
     ];
@@ -534,6 +612,7 @@ fn main() -> Result<()> {
             assignee,
             description,
             labels,
+            cycle,
             json,
         } => commands::add::run(
             title,
@@ -543,6 +622,7 @@ fn main() -> Result<()> {
             assignee,
             description,
             labels,
+            cycle,
             json,
         ),
         Commands::List {
@@ -567,6 +647,7 @@ fn main() -> Result<()> {
             difficulty,
             description,
             labels,
+            cycle,
             json,
         } => commands::update::run(
             reference,
@@ -576,6 +657,7 @@ fn main() -> Result<()> {
             difficulty,
             description,
             labels,
+            cycle,
             json,
         ),
         Commands::Delete { reference, json } => commands::delete::run(reference, json),
@@ -621,6 +703,27 @@ fn main() -> Result<()> {
                 dry_run,
             } => commands::plan::research(references, all, force, dry_run),
             PlanAction::Trash { reference } => commands::plan::trash(reference),
+        },
+        Commands::Sprint { action } => match action {
+            CycleAction::Create {
+                name,
+                description,
+                status,
+                start_date,
+                end_date,
+                json,
+            } => commands::cycle::create(name, description, status, start_date, end_date, json),
+            CycleAction::List { json } => commands::cycle::list(json),
+            CycleAction::Show { name, json } => commands::cycle::show(name, json),
+            CycleAction::Edit {
+                name_or_id,
+                name,
+                description,
+                status,
+                start_date,
+                end_date,
+            } => commands::cycle::edit(name_or_id, name, description, status, start_date, end_date),
+            CycleAction::Delete { name, json } => commands::cycle::delete(name, json),
         },
         Commands::Member { action } => match action {
             MemberAction::Add {

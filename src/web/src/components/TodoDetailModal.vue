@@ -87,6 +87,7 @@ function renderLabelTag(option: { label: string; value: string }) {
 }
 
 const assigneeOptions = computed(() => store.members.map((m) => ({ label: m.name, value: m.id })));
+const sprintOptions = computed(() => store.cycles.map((c) => ({ label: c.name, value: c.id })));
 
 const isOpen = computed(() => store.selectedTodoNumber !== null);
 const todo = computed(() =>
@@ -100,6 +101,7 @@ const title = ref("");
 const description = ref("");
 const commitShaInput = ref("");
 const showCommitInput = ref(false);
+const branchLoading = ref(false);
 // Sync local state when a different todo is opened
 watch(
   () => store.selectedTodoNumber,
@@ -176,6 +178,11 @@ async function changeAssignee(assignee: string | null) {
   saveField("assignee", assignee);
 }
 
+async function changeSprint(cycleId: string | null) {
+  if (!todo.value || cycleId === todo.value.cycleId) return;
+  saveField("cycleId", cycleId);
+}
+
 async function submitCommitLink() {
   const sha = commitShaInput.value.trim();
   if (!todo.value || !sha) return;
@@ -186,6 +193,42 @@ async function submitCommitLink() {
     message.success(`Linked ${sha.slice(0, 8)}`);
   } catch {
     message.error("Failed to link commit");
+  }
+}
+
+async function handleCreateBranchOnly() {
+  if (!todo.value) return;
+  branchLoading.value = true;
+  try {
+    const result = await store.createBranchOnly(todo.value.number);
+    message.success(`Branch: ${result.branch}`);
+  } catch {
+    message.error("Failed to create branch");
+  } finally {
+    branchLoading.value = false;
+  }
+}
+
+async function handleCreateBranch() {
+  if (!todo.value) return;
+  branchLoading.value = true;
+  try {
+    const result = await store.createBranch(todo.value.number);
+    message.success(`Branch: ${result.branch}`);
+  } catch {
+    message.error("Failed to create branch & worktree");
+  } finally {
+    branchLoading.value = false;
+  }
+}
+
+async function handleRemoveBranch() {
+  if (!todo.value) return;
+  try {
+    await store.removeBranch(todo.value.number);
+    message.success("Branch removed");
+  } catch {
+    message.error("Failed to remove branch");
   }
 }
 
@@ -660,20 +703,59 @@ async function submitComment() {
             </div>
 
             <div class="sidebar-section">
+              <label class="meta-label">Sprint</label>
+              <NSelect
+                :value="todo.cycleId"
+                :options="sprintOptions"
+                size="small"
+                clearable
+                placeholder="No sprint"
+                @update:value="changeSprint"
+              />
+            </div>
+
+            <div class="sidebar-section">
               <label class="meta-label">
                 <NIcon :size="11" style="vertical-align: -1px; margin-right: 2px"
                   ><GitBranch
                 /></NIcon>
-                Git
+                Branch
               </label>
               <div v-if="todo.branch" class="git-item">
                 <NIcon :size="13" class="git-icon"><GitBranch /></NIcon>
                 <code class="git-ref">{{ todo.branch }}</code>
               </div>
-              <div v-for="wt in todo.worktrees ?? []" :key="wt" class="git-item">
+              <div v-if="todo.branch" class="git-branch-actions">
+                <NButton text size="tiny" type="error" @click="handleRemoveBranch">Remove</NButton>
+              </div>
+              <template v-else>
+                <span class="git-none">None</span>
+                <div class="git-branch-actions">
+                  <NButton text size="tiny" :loading="branchLoading" @click="handleCreateBranchOnly"
+                    >+ Branch</NButton
+                  >
+                  <NButton text size="tiny" :loading="branchLoading" @click="handleCreateBranch"
+                    >+ Branch &amp; Worktree</NButton
+                  >
+                </div>
+              </template>
+            </div>
+
+            <div class="sidebar-section" v-if="todo.worktrees?.length">
+              <label class="meta-label">Worktrees</label>
+              <div v-for="wt in todo.worktrees" :key="wt" class="git-item">
                 <span class="git-wt-dot" />
                 <code class="git-ref">{{ wt }}</code>
               </div>
+            </div>
+
+            <div class="sidebar-section">
+              <label class="meta-label">
+                <NIcon :size="11" style="vertical-align: -1px; margin-right: 2px"
+                  ><GitCommit
+                /></NIcon>
+                Commits
+              </label>
               <div v-for="sha in todo.commits ?? []" :key="sha" class="git-item">
                 <NIcon :size="13" class="git-icon"><GitCommit /></NIcon>
                 <a
@@ -685,16 +767,7 @@ async function submitComment() {
                 >
                 <code v-else class="git-ref">{{ sha.slice(0, 8) }}</code>
               </div>
-              <span
-                v-if="
-                  !todo.branch &&
-                  !todo.worktrees?.length &&
-                  !todo.commits?.length &&
-                  !showCommitInput
-                "
-                class="git-none"
-                >None</span
-              >
+              <span v-if="!todo.commits?.length && !showCommitInput" class="git-none">None</span>
               <div v-if="showCommitInput" class="git-commit-input">
                 <NInput
                   v-model:value="commitShaInput"
@@ -1002,5 +1075,11 @@ a.git-link:hover {
 .git-none {
   font-size: 12px;
   opacity: 0.35;
+}
+
+.git-branch-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
 }
 </style>

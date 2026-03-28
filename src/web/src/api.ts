@@ -1,6 +1,14 @@
 /** API client — talks to the Bun server's two endpoints */
 
-import type { Project, Status, Priority, Difficulty, Label, MemberRole } from "./types";
+import type {
+  Project,
+  Status,
+  Priority,
+  Difficulty,
+  Label,
+  MemberRole,
+  CycleStatus,
+} from "./types";
 
 const BASE = ""; // same origin (Vite proxy in dev, Bun.serve in prod)
 
@@ -41,6 +49,7 @@ export interface UpdateTodoParams {
   difficulty?: Difficulty;
   labels?: Label[];
   assignee?: string | null;
+  cycleId?: string | null;
 }
 
 export async function updateTodo(
@@ -146,6 +155,21 @@ export async function addCommentApi(number: number, text: string): Promise<{ ok:
   if (!res.ok) {
     const data = await res.json();
     throw new Error(data.error || "Failed to add comment");
+  }
+  return res.json();
+}
+
+export async function createBranchOnlyApi(
+  number: number,
+): Promise<{ ok: boolean; branch: string; alreadyExists?: boolean }> {
+  const res = await fetch(`${BASE}/api/change`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "createBranchOnly", number }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || "Failed to create branch");
   }
   return res.json();
 }
@@ -292,6 +316,66 @@ export async function updateInbox(text: string): Promise<{ ok: boolean }> {
   if (!res.ok) {
     const data = await res.json();
     throw new Error(data.error || "Failed to update inbox");
+  }
+  return res.json();
+}
+
+// ── Cycle API ──
+
+export interface AddCycleParams {
+  name: string;
+  description?: string;
+  status?: CycleStatus;
+  startDate?: string;
+  endDate?: string;
+}
+
+export async function addCycle(params: AddCycleParams): Promise<{ ok: boolean; id: string }> {
+  const res = await fetch(`${BASE}/api/change`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "addCycle", ...params }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || "Failed to add cycle");
+  }
+  return res.json();
+}
+
+export interface UpdateCycleParams {
+  name?: string;
+  description?: string;
+  status?: CycleStatus;
+  startDate?: string | null;
+  endDate?: string | null;
+}
+
+export async function updateCycle(
+  cycleId: string,
+  updates: UpdateCycleParams,
+): Promise<{ ok: boolean }> {
+  const res = await fetch(`${BASE}/api/change`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "updateCycle", cycleId, updates }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || "Failed to update cycle");
+  }
+  return res.json();
+}
+
+export async function deleteCycle(cycleId: string): Promise<{ ok: boolean }> {
+  const res = await fetch(`${BASE}/api/change`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "deleteCycle", cycleId }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || "Failed to delete cycle");
   }
   return res.json();
 }

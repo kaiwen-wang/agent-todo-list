@@ -25,6 +25,7 @@ pub fn migrate_doc(doc: &mut AutoCommit) -> Result<()> {
             5 => migrate_v5_to_v6(doc)?,
             6 => migrate_v6_to_v7(doc)?,
             7 => migrate_v7_to_v8(doc)?,
+            8 => migrate_v8_to_v9(doc)?,
             _ => {
                 doc.put(ROOT, "_version", (version + 1) as i64)?;
                 doc.commit_with(CommitOptions::default().with_message(format!(
@@ -168,5 +169,26 @@ fn migrate_v7_to_v8(doc: &mut AutoCommit) -> Result<()> {
     }
     doc.put(ROOT, "_version", 8i64)?;
     doc.commit_with(CommitOptions::default().with_message("schema migration v7 -> v8"));
+    Ok(())
+}
+
+fn migrate_v8_to_v9(doc: &mut AutoCommit) -> Result<()> {
+    // Create cycles list at root
+    if doc.get(ROOT, "cycles").ok().flatten().is_none() {
+        doc.put_object(ROOT, "cycles", ObjType::List)?;
+    }
+    // Add cycleId field to all existing todos
+    if let Ok(Some((_, todos_id))) = doc.get(ROOT, "todos") {
+        let len = doc.length(&todos_id);
+        for i in 0..len {
+            if let Ok(Some((_, t_id))) = doc.get(&todos_id, i)
+                && doc.get(&t_id, "cycleId").ok().flatten().is_none()
+            {
+                doc.put(&t_id, "cycleId", ScalarValue::Null)?;
+            }
+        }
+    }
+    doc.put(ROOT, "_version", 9i64)?;
+    doc.commit_with(CommitOptions::default().with_message("schema migration v8 -> v9"));
     Ok(())
 }

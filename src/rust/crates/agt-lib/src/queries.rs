@@ -116,6 +116,7 @@ fn read_todo_at(doc: &AutoCommit, todos_id: &automerge::ObjId, idx: usize) -> Op
     let assignee = get_nullable_str(doc, &todo_id, "assignee");
     let branch = get_nullable_str(doc, &todo_id, "branch");
     let plan_path = get_nullable_str(doc, &todo_id, "planPath");
+    let cycle_id = get_nullable_str(doc, &todo_id, "cycleId");
     let created_at = get_i64(doc, &todo_id, "createdAt").unwrap_or(0);
     let updated_at = get_i64(doc, &todo_id, "updatedAt").unwrap_or(0);
     let created_by = get_str(doc, &todo_id, "createdBy").unwrap_or_default();
@@ -192,6 +193,7 @@ fn read_todo_at(doc: &AutoCommit, todos_id: &automerge::ObjId, idx: usize) -> Op
         created_by,
         platform,
         plan_path,
+        cycle_id,
     })
 }
 
@@ -337,6 +339,61 @@ pub fn count_by_status(doc: &AutoCommit) -> std::collections::HashMap<Status, us
         *counts.entry(todo.status).or_insert(0) += 1;
     }
     counts
+}
+
+// ── Cycle queries ──────────────────────────────────────────────────
+
+/// Read all cycles from the document.
+pub fn read_all_cycles(doc: &AutoCommit) -> Vec<Cycle> {
+    let Some((_, cycles_id)) = doc.get(ROOT, "cycles").ok().flatten() else {
+        return vec![];
+    };
+    let len = doc.length(&cycles_id);
+    let mut cycles = Vec::with_capacity(len);
+    for i in 0..len {
+        if let Some(cycle) = read_cycle_at(doc, &cycles_id, i) {
+            cycles.push(cycle);
+        }
+    }
+    cycles
+}
+
+fn read_cycle_at(doc: &AutoCommit, cycles_id: &automerge::ObjId, idx: usize) -> Option<Cycle> {
+    let (_, c_id) = doc.get(cycles_id, idx).ok()??;
+    Some(Cycle {
+        id: get_str(doc, &c_id, "id").unwrap_or_default(),
+        name: get_str(doc, &c_id, "name").unwrap_or_default(),
+        description: get_str(doc, &c_id, "description").unwrap_or_default(),
+        status: get_str(doc, &c_id, "status")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or_default(),
+        start_date: get_nullable_str(doc, &c_id, "startDate"),
+        end_date: get_nullable_str(doc, &c_id, "endDate"),
+        created_at: get_i64(doc, &c_id, "createdAt").unwrap_or(0),
+        updated_at: get_i64(doc, &c_id, "updatedAt").unwrap_or(0),
+        created_by: get_str(doc, &c_id, "createdBy").unwrap_or_default(),
+    })
+}
+
+/// Find a cycle by its UUID.
+pub fn find_cycle_by_id(doc: &AutoCommit, id: &str) -> Option<Cycle> {
+    read_all_cycles(doc).into_iter().find(|c| c.id == id)
+}
+
+/// Find a cycle by name (case-insensitive partial match) or ID.
+pub fn find_cycle(doc: &AutoCommit, name_or_id: &str) -> Option<Cycle> {
+    let cycles = read_all_cycles(doc);
+    let lower = name_or_id.to_lowercase();
+    cycles
+        .iter()
+        .find(|c| c.id == name_or_id)
+        .or_else(|| cycles.iter().find(|c| c.name.to_lowercase() == lower))
+        .or_else(|| {
+            cycles
+                .iter()
+                .find(|c| c.name.to_lowercase().contains(&lower))
+        })
+        .cloned()
 }
 
 /// Read project-level metadata.

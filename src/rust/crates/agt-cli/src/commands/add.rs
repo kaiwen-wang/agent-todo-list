@@ -14,6 +14,7 @@ pub fn run(
     assignee: Option<String>,
     description: Option<String>,
     labels: Option<String>,
+    cycle: Option<String>,
     json: bool,
 ) -> Result<()> {
     let (paths, mut doc) = load_project()?;
@@ -48,6 +49,15 @@ pub fn run(
         None
     };
 
+    // Resolve cycle
+    let cycle_id = if let Some(name) = &cycle {
+        let c = queries::find_cycle(&doc, name)
+            .ok_or_else(|| anyhow::anyhow!("Cycle \"{}\" not found", name))?;
+        Some(c.id)
+    } else {
+        None
+    };
+
     let number = operations::add_todo(
         &mut doc,
         AddTodoOpts {
@@ -62,6 +72,19 @@ pub fn run(
             platform: Some(Platform::Cli),
         },
     )?;
+
+    // Set cycle if provided
+    if let Some(cid) = &cycle_id {
+        operations::update_todo(
+            &mut doc,
+            number,
+            operations::UpdateTodoFields {
+                cycle_id: Some(Some(cid)),
+                ..Default::default()
+            },
+            None,
+        )?;
+    }
 
     save_project(&paths, &mut doc)?;
 

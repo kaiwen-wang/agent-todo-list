@@ -24,6 +24,8 @@ export const AGENT_PROVIDER_DISPLAY: Record<AgentProvider, string> = {
   custom: "Custom",
 };
 
+export type CycleStatus = "planning" | "active" | "completed" | "cancelled";
+
 export type Timestamp = number;
 
 export interface Comment {
@@ -60,6 +62,7 @@ export interface Todo {
   worktrees: string[];
   commits: string[];
   planPath: string | null;
+  cycleId: string | null;
   comments: Comment[];
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -76,6 +79,18 @@ export interface Member {
   agentModel?: string;
 }
 
+export interface Cycle {
+  id: string;
+  name: string;
+  description: string;
+  status: CycleStatus;
+  startDate: string | null;
+  endDate: string | null;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  createdBy: string;
+}
+
 export interface Project {
   id: string;
   prefix: string;
@@ -83,6 +98,7 @@ export interface Project {
   description: string;
   members: Member[];
   todos: Todo[];
+  cycles: Cycle[];
   auditLog: AuditEntry[];
   /** Inbox text from .todo/TODO.md */
   inboxText?: string;
@@ -183,4 +199,20 @@ export const STATUS_COLORS: Record<Status, string> = {
   archived: "#6b7280",
   wont_do: "#ef4444",
   needs_elaboration: "#a855f7",
+};
+
+export const CYCLE_STATUSES: CycleStatus[] = ["planning", "active", "completed", "cancelled"];
+
+export const CYCLE_STATUS_DISPLAY: Record<CycleStatus, string> = {
+  planning: "Planning",
+  active: "Active",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+export const CYCLE_STATUS_COLORS: Record<CycleStatus, string> = {
+  planning: "#3b82f6",
+  active: "#f59e0b",
+  completed: "#10b981",
+  cancelled: "#ef4444",
 };

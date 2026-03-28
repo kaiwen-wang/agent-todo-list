@@ -47,6 +47,10 @@ const K_TEXT: &str = "text";
 const K_PLAN_PATH: &str = "planPath";
 const K_WORKTREES: &str = "worktrees";
 const K_COMMITS: &str = "commits";
+const K_CYCLES: &str = "cycles";
+const K_CYCLE_ID: &str = "cycleId";
+const K_START_DATE: &str = "startDate";
+const K_END_DATE: &str = "endDate";
 
 // ── Change message helper ───────────────────────────────────────────
 
@@ -193,6 +197,7 @@ pub fn create_project(
     doc.put(&member, K_ROLE, MemberRole::Owner.as_str())?;
 
     doc.put_object(ROOT, K_TODOS, ObjType::List)?;
+    doc.put_object(ROOT, K_CYCLES, ObjType::List)?;
 
     commit_msg(&mut doc, "project.created".to_string());
     Ok(doc)
@@ -302,6 +307,7 @@ pub fn add_todo(doc: &mut AutoCommit, opts: AddTodoOpts<'_>) -> Result<u64> {
     doc.put(&todo_obj, K_CREATED_BY, actor.as_str())?;
     doc.put(&todo_obj, K_PLATFORM, platform.as_str())?;
     doc.put(&todo_obj, K_PLAN_PATH, ScalarValue::Null)?;
+    doc.put(&todo_obj, K_CYCLE_ID, ScalarValue::Null)?;
 
     let prefix = get_prefix(doc);
     let msg = build_msg(
@@ -329,6 +335,7 @@ pub struct UpdateTodoFields<'a> {
     pub labels: Option<Vec<Label>>,
     pub assignee: Option<Option<&'a str>>,
     pub plan_path: Option<Option<&'a str>>,
+    pub cycle_id: Option<Option<&'a str>>,
 }
 
 pub fn update_todo(
@@ -387,6 +394,15 @@ pub fn update_todo(
         } else {
             doc.put(&todo_obj, K_PLAN_PATH, ScalarValue::Null)?;
             changed.insert("planPath".into(), json!(null));
+        }
+    }
+    if let Some(cycle_id_opt) = updates.cycle_id {
+        if let Some(cycle_id) = cycle_id_opt {
+            doc.put(&todo_obj, K_CYCLE_ID, cycle_id)?;
+            changed.insert("cycleId".into(), json!(cycle_id));
+        } else {
+            doc.put(&todo_obj, K_CYCLE_ID, ScalarValue::Null)?;
+            changed.insert("cycleId".into(), json!(null));
         }
     }
 
@@ -754,6 +770,159 @@ pub fn update_member(
 
     let target = name.unwrap_or(&current_name);
     let msg = build_msg(doc, "member.updated", &actor, target, Some(json!(changed)));
+    commit_msg(doc, msg);
+    Ok(())
+}
+
+// ── Cycle operations ───────────────────────────────────────────────
+
+fn find_cycle_obj(doc: &AutoCommit, cycle_id: &str) -> Result<(automerge::ObjId, usize)> {
+    let (_, cycles_id) = doc.get(ROOT, K_CYCLES)?.context("cycles list not found")?;
+    let len = doc.length(&cycles_id);
+    for i in 0..len {
+        let (_, c_id) = doc.get(&cycles_id, i)?.context("cycle entry missing")?;
+        if let Some(id) = read_str(doc, &c_id, K_ID)
+            && id == cycle_id
+        {
+            return Ok((c_id, i));
+        }
+    }
+    bail!("Cycle \"{cycle_id}\" not found");
+}
+
+pub struct AddCycleOpts<'a> {
+    pub name: &'a str,
+    pub description: Option<&'a str>,
+    pub status: Option<CycleStatus>,
+    pub start_date: Option<&'a str>,
+    pub end_date: Option<&'a str>,
+    pub created_by: Option<&'a str>,
+}
+
+/// Add a new cycle and return its UUID.
+pub fn add_cycle(doc: &mut AutoCommit, opts: AddCycleOpts<'_>) -> Result<String> {
+    let actor = resolve_actor(doc, opts.created_by);
+    let now = now_millis();
+    let cycle_id = Uuid::new_v4().to_string();
+    let status = opts.status.unwrap_or(CycleStatus::Planning);
+
+    let (_, cycles_id) = doc.get(ROOT, K_CYCLES)?.context("cycles list not found")?;
+    let len = doc.length(&cycles_id);
+
+    let cycle_obj = doc.insert_object(&cycles_id, len, ObjType::Map)?;
+    doc.put(&cycle_obj, K_ID, cycle_id.as_str())?;
+    doc.put(&cycle_obj, K_NAME, opts.name)?;
+    doc.put(&cycle_obj, K_DESCRIPTION, opts.description.unwrap_or(""))?;
+    doc.put(&cycle_obj, K_STATUS, status.as_str())?;
+    if let Some(start) = opts.start_date {
+        doc.put(&cycle_obj, K_START_DATE, start)?;
+    } else {
+        doc.put(&cycle_obj, K_START_DATE, ScalarValue::Null)?;
+    }
+    if let Some(end) = opts.end_date {
+        doc.put(&cycle_obj, K_END_DATE, end)?;
+    } else {
+        doc.put(&cycle_obj, K_END_DATE, ScalarValue::Null)?;
+    }
+    doc.put(&cycle_obj, K_CREATED_AT, now)?;
+    doc.put(&cycle_obj, K_UPDATED_AT, now)?;
+    doc.put(&cycle_obj, K_CREATED_BY, actor.as_str())?;
+
+    let msg = build_msg(
+        doc,
+        "cycle.created",
+        &actor,
+        opts.name,
+        Some(json!({ "status": status.as_str() })),
+    );
+    commit_msg(doc, msg);
+    Ok(cycle_id)
+}
+
+#[derive(Default)]
+pub struct UpdateCycleFields<'a> {
+    pub name: Option<&'a str>,
+    pub description: Option<&'a str>,
+    pub status: Option<CycleStatus>,
+    pub start_date: Option<Option<&'a str>>,
+    pub end_date: Option<Option<&'a str>>,
+}
+
+pub fn update_cycle(
+    doc: &mut AutoCommit,
+    cycle_id: &str,
+    updates: UpdateCycleFields<'_>,
+    actor_id: Option<&str>,
+) -> Result<()> {
+    let actor = resolve_actor(doc, actor_id);
+    let (cycle_obj, _) = find_cycle_obj(doc, cycle_id)?;
+    let mut changed = serde_json::Map::new();
+
+    if let Some(name) = updates.name {
+        doc.put(&cycle_obj, K_NAME, name)?;
+        changed.insert("name".into(), json!(name));
+    }
+    if let Some(desc) = updates.description {
+        doc.put(&cycle_obj, K_DESCRIPTION, desc)?;
+        changed.insert("description".into(), json!(desc));
+    }
+    if let Some(status) = updates.status {
+        doc.put(&cycle_obj, K_STATUS, status.as_str())?;
+        changed.insert("status".into(), json!(status.as_str()));
+    }
+    if let Some(start_opt) = updates.start_date {
+        if let Some(start) = start_opt {
+            doc.put(&cycle_obj, K_START_DATE, start)?;
+            changed.insert("startDate".into(), json!(start));
+        } else {
+            doc.put(&cycle_obj, K_START_DATE, ScalarValue::Null)?;
+            changed.insert("startDate".into(), json!(null));
+        }
+    }
+    if let Some(end_opt) = updates.end_date {
+        if let Some(end) = end_opt {
+            doc.put(&cycle_obj, K_END_DATE, end)?;
+            changed.insert("endDate".into(), json!(end));
+        } else {
+            doc.put(&cycle_obj, K_END_DATE, ScalarValue::Null)?;
+            changed.insert("endDate".into(), json!(null));
+        }
+    }
+
+    doc.put(&cycle_obj, K_UPDATED_AT, now_millis())?;
+
+    let cycle_name = read_str(doc, &cycle_obj, K_NAME).unwrap_or_default();
+    let msg = build_msg(
+        doc,
+        "cycle.updated",
+        &actor,
+        &cycle_name,
+        Some(json!(changed)),
+    );
+    commit_msg(doc, msg);
+    Ok(())
+}
+
+pub fn delete_cycle(doc: &mut AutoCommit, cycle_id: &str, actor_id: Option<&str>) -> Result<()> {
+    let actor = resolve_actor(doc, actor_id);
+    let (cycle_obj, idx) = find_cycle_obj(doc, cycle_id)?;
+    let cycle_name = read_str(doc, &cycle_obj, K_NAME).unwrap_or_default();
+
+    // Unset cycleId on any todos referencing this cycle
+    let (_, todos_id) = doc.get(ROOT, K_TODOS)?.context("todos list not found")?;
+    let todos_len = doc.length(&todos_id);
+    for i in 0..todos_len {
+        let (_, t_obj) = doc.get(&todos_id, i)?.context("todo missing")?;
+        if let Some(cid) = read_str(doc, &t_obj, K_CYCLE_ID)
+            && cid == cycle_id
+        {
+            doc.put(&t_obj, K_CYCLE_ID, ScalarValue::Null)?;
+        }
+    }
+
+    let msg = build_msg(doc, "cycle.deleted", &actor, &cycle_name, None);
+    let (_, cycles_id) = doc.get(ROOT, K_CYCLES)?.context("cycles list not found")?;
+    doc.delete(&cycles_id, idx)?;
     commit_msg(doc, msg);
     Ok(())
 }

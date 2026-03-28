@@ -4,6 +4,7 @@ pub mod branch;
 pub mod comment;
 pub mod commit;
 pub mod config;
+pub mod cycle;
 pub mod delete;
 pub mod inbox;
 pub mod init;

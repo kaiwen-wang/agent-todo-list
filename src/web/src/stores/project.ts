@@ -20,6 +20,14 @@ export const useProjectStore = defineStore("project", () => {
   const inboxText = computed(() => project.value?.inboxText ?? "");
   const inboxProcessed = computed(() => project.value?.inboxProcessed ?? "");
   const remoteUrl = computed(() => project.value?.remoteUrl ?? null);
+  const cycles = computed(() => project.value?.cycles ?? []);
+
+  // ── Cycle filter state ──
+  const activeCycleId = ref<string | null>(null);
+
+  function setActiveCycle(cycleId: string | null) {
+    activeCycleId.value = activeCycleId.value === cycleId ? null : cycleId;
+  }
 
   // ── Plan state ──
   const planEvents = ref<Array<{ type: string; [key: string]: unknown }>>([]);
@@ -30,6 +38,12 @@ export const useProjectStore = defineStore("project", () => {
     processed: number;
     tasks: Array<{ ref: string; title: string }>;
   } | null>(null);
+
+  /** Todos filtered by active cycle (if any) */
+  const filteredTodos = computed(() => {
+    if (!activeCycleId.value) return todos.value;
+    return todos.value.filter((t) => t.cycleId === activeCycleId.value);
+  });
 
   /** Todos grouped by status for the board view */
   const todosByStatus = computed(() => {
@@ -43,7 +57,7 @@ export const useProjectStore = defineStore("project", () => {
       wont_do: [],
       needs_elaboration: [],
     };
-    for (const todo of todos.value) {
+    for (const todo of filteredTodos.value) {
       const key = todo.status;
       if (key && grouped[key]) {
         grouped[key].push(todo);
@@ -62,7 +76,7 @@ export const useProjectStore = defineStore("project", () => {
 
   /** Active todos (not archived or won't do) */
   const activeTodos = computed(() =>
-    todos.value.filter((t) => t.status !== "archived" && t.status !== "wont_do"),
+    filteredTodos.value.filter((t) => t.status !== "archived" && t.status !== "wont_do"),
   );
 
   /** Counts per status */
@@ -77,7 +91,7 @@ export const useProjectStore = defineStore("project", () => {
       wont_do: 0,
       needs_elaboration: 0,
     };
-    for (const todo of todos.value) {
+    for (const todo of filteredTodos.value) {
       const key = todo.status;
       if (key && counts[key] !== undefined) {
         counts[key]++;
@@ -172,6 +186,18 @@ export const useProjectStore = defineStore("project", () => {
     try {
       await api.addCommentApi(number, text);
       await load();
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
+  async function createBranchOnly(number: number) {
+    error.value = null;
+    try {
+      const result = await api.createBranchOnlyApi(number);
+      await load();
+      return result;
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : String(e);
       throw e;
@@ -329,6 +355,46 @@ export const useProjectStore = defineStore("project", () => {
     error.value = null;
     try {
       await api.updateMemberApi(memberId, updates);
+      await load();
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
+  // ── Cycle actions ──
+
+  async function addCycle(params: api.AddCycleParams) {
+    error.value = null;
+    try {
+      const result = await api.addCycle(params);
+      await load();
+      return result;
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
+  async function updateCycle(cycleId: string, updates: api.UpdateCycleParams) {
+    error.value = null;
+    try {
+      await api.updateCycle(cycleId, updates);
+      await load();
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
+  async function deleteCycle(cycleId: string) {
+    error.value = null;
+    try {
+      await api.deleteCycle(cycleId);
+      // Clear filter if the deleted cycle was active
+      if (activeCycleId.value === cycleId) {
+        activeCycleId.value = null;
+      }
       await load();
     } catch (e: unknown) {
       error.value = e instanceof Error ? e.message : String(e);
@@ -551,6 +617,9 @@ export const useProjectStore = defineStore("project", () => {
     inboxText,
     inboxProcessed,
     remoteUrl,
+    cycles,
+    activeCycleId,
+    filteredTodos,
     planEvents,
     inboxProcessing,
     inboxResult,
@@ -561,6 +630,7 @@ export const useProjectStore = defineStore("project", () => {
     deleteTodo,
     moveTodo,
     addComment,
+    createBranchOnly,
     createBranch,
     linkCommit,
     removeBranch,
@@ -575,6 +645,10 @@ export const useProjectStore = defineStore("project", () => {
     addMember,
     removeMember,
     updateMember,
+    addCycle,
+    updateCycle,
+    deleteCycle,
+    setActiveCycle,
     openTodo,
     closeTodo,
     connectWebSocket,

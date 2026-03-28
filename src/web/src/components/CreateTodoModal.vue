@@ -63,9 +63,11 @@ const priority = ref<Priority>("none");
 const difficulty = ref<Difficulty>("none");
 const labels = ref<Label[]>([]);
 const assignee = ref<string | null>(null);
+const sprint = ref<string | null>(null);
 const submitting = ref(false);
 
 const memberOptions = computed(() => store.members.map((m) => ({ label: m.name, value: m.id })));
+const sprintOptions = computed(() => store.cycles.map((c) => ({ label: c.name, value: c.id })));
 
 const statusOptions = STATUSES.map((s) => ({ label: STATUS_DISPLAY[s], value: s }));
 const priorityOptions = PRIORITIES.map((p) => ({ label: PRIORITY_DISPLAY[p], value: p }));
@@ -121,6 +123,7 @@ watch(
       difficulty.value = "none";
       labels.value = [];
       assignee.value = null;
+      sprint.value = store.activeCycleId;
     }
   },
 );
@@ -150,6 +153,9 @@ async function submit() {
       labels: labels.value.length ? labels.value : undefined,
       assignee: assignee.value,
     });
+    if (sprint.value) {
+      await store.updateTodo(result.number, { cycleId: sprint.value });
+    }
     message.success(`${store.prefix}-${result.number} created`);
     emit("close");
   } catch {
@@ -219,14 +225,24 @@ async function submit() {
           />
         </NFormItem>
 
-        <NFormItem label="Assignee">
-          <NSelect
-            v-model:value="assignee"
-            :options="memberOptions"
-            placeholder="Assign to a member..."
-            clearable
-          />
-        </NFormItem>
+        <NSpace :size="12">
+          <NFormItem label="Assignee" style="flex: 1">
+            <NSelect
+              v-model:value="assignee"
+              :options="memberOptions"
+              placeholder="Assign to a member..."
+              clearable
+            />
+          </NFormItem>
+          <NFormItem label="Sprint" style="flex: 1">
+            <NSelect
+              v-model:value="sprint"
+              :options="sprintOptions"
+              placeholder="No sprint"
+              clearable
+            />
+          </NFormItem>
+        </NSpace>
 
         <NSpace justify="end" :size="8">
           <NButton @click="emit('close')">Cancel</NButton>
