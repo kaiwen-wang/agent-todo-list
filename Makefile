@@ -5,11 +5,11 @@ default: completions ## Quick release build + install CLI (no web assets)
 	install src/rust/target/release/agt ~/.local/bin/agt
 	-xattr -cr ~/.local/bin/agt 2>/dev/null
 
-dev: ## Start Rust API server + Vite dev server
+dev: ## Start Rust API server (auto-rebuild) + Vite dev server
 	@bash -c '\
 		trap "kill 0" EXIT; \
-		src/rust/target/debug/agt serve & \
-		until curl -s http://localhost:3000/api/project > /dev/null 2>&1; do sleep 0.2; done; \
+		cd src/rust && watchexec -r -w crates --exts rs,toml -- cargo run -- serve & \
+		until curl -s http://localhost:3000/api/project > /dev/null 2>&1; do sleep 0.5; done; \
 		cd src/web && bunx vite \
 	'
 
