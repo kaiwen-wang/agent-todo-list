@@ -14,6 +14,7 @@ import {
   GitCommit,
   Trash,
 } from "@vicons/tabler";
+import { marked } from "marked";
 import { useProjectStore } from "@/stores/project";
 import type { Status, Priority, Difficulty, Label } from "@/types";
 import {
@@ -347,6 +348,10 @@ const planResearching = ref(false);
 const planProgressMsg = ref("");
 const planAnswerText = ref("");
 const planAnswerLoading = ref(false);
+const renderedPlan = computed(() => {
+  if (!planContent.value) return "";
+  return marked.parse(planContent.value) as string;
+});
 
 async function loadPlan() {
   if (!todo.value) return;
@@ -613,7 +618,7 @@ async function submitComment() {
 
               <!-- Plan exists with content -->
               <div v-else-if="planExists && planContent" class="plan-content">
-                <pre class="plan-markdown">{{ planContent }}</pre>
+                <div class="plan-markdown" v-html="renderedPlan" />
                 <div class="plan-answer-input">
                   <NInput
                     v-model:value="planAnswerText"
@@ -726,18 +731,33 @@ async function submitComment() {
                 <code class="git-ref">{{ todo.branch }}</code>
               </div>
               <div v-if="todo.branch" class="git-branch-actions">
-                <NButton text size="tiny" type="error" @click="handleRemoveBranch">Remove</NButton>
+                <NButton
+                  text
+                  size="tiny"
+                  type="error"
+                  class="git-add-btn"
+                  @click="handleRemoveBranch"
+                  >remove</NButton
+                >
               </div>
               <template v-else>
                 <span class="git-none">None</span>
-                <div class="git-branch-actions">
-                  <NButton text size="tiny" :loading="branchLoading" @click="handleCreateBranchOnly"
-                    >+ Branch</NButton
-                  >
-                  <NButton text size="tiny" :loading="branchLoading" @click="handleCreateBranch"
-                    >+ Branch &amp; Worktree</NButton
-                  >
-                </div>
+                <NButton
+                  text
+                  size="tiny"
+                  class="git-add-btn"
+                  :loading="branchLoading"
+                  @click="handleCreateBranchOnly"
+                  >+ branch</NButton
+                >
+                <NButton
+                  text
+                  size="tiny"
+                  class="git-add-btn"
+                  :loading="branchLoading"
+                  @click="handleCreateBranch"
+                  >+ branch &amp; worktree</NButton
+                >
               </template>
             </div>
 
@@ -965,11 +985,63 @@ async function submitComment() {
   margin: 0;
   font-size: 13px;
   line-height: 1.6;
-  white-space: pre-wrap;
   word-wrap: break-word;
   font-family: inherit;
   max-height: 300px;
   overflow-y: auto;
+}
+
+.plan-markdown :deep(h1) {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+.plan-markdown :deep(h2) {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 12px 0 6px;
+}
+.plan-markdown :deep(h3) {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 10px 0 4px;
+}
+.plan-markdown :deep(p) {
+  margin: 0 0 8px;
+}
+.plan-markdown :deep(ul),
+.plan-markdown :deep(ol) {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+.plan-markdown :deep(li) {
+  margin: 2px 0;
+}
+.plan-markdown :deep(code) {
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+.plan-markdown :deep(pre) {
+  background: rgba(0, 0, 0, 0.04);
+  padding: 8px 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 0 0 8px;
+}
+.plan-markdown :deep(pre code) {
+  background: none;
+  padding: 0;
+}
+.plan-markdown :deep(strong) {
+  font-weight: 600;
+}
+.plan-markdown :deep(blockquote) {
+  border-left: 3px solid rgba(0, 0, 0, 0.15);
+  padding-left: 12px;
+  margin: 0 0 8px;
+  opacity: 0.7;
 }
 
 .plan-answer-input {
@@ -1078,8 +1150,6 @@ a.git-link:hover {
 }
 
 .git-branch-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 </style>
