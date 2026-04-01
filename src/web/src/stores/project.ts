@@ -10,6 +10,12 @@ export const useProjectStore = defineStore("project", () => {
   const loading = ref(false);
   const error = ref<string | null>(null);
 
+  /**
+   * Skip the next WebSocket-triggered refresh. Used after optimistic updates
+   * to prevent a redundant re-render from our own server write.
+   */
+  let skipNextRefresh = false;
+
   // Getters
   const todos = computed(() => project.value?.todos ?? []);
   const members = computed(() => project.value?.members ?? []);
@@ -183,11 +189,38 @@ export const useProjectStore = defineStore("project", () => {
 
   async function addComment(number: number, text: string) {
     error.value = null;
+
+    // Optimistic update — show the comment immediately
+    const snapshot = project.value;
+    if (project.value) {
+      const todo = project.value.todos.find((t) => t.number === number);
+      if (todo) {
+        const optimisticComment = {
+          id: crypto.randomUUID(),
+          author: "local",
+          authorName: members.value[0]?.name ?? "You",
+          text,
+          createdAt: Date.now(),
+        };
+        project.value = {
+          ...project.value,
+          todos: project.value.todos.map((t) =>
+            t.number === number
+              ? { ...t, comments: [...(t.comments ?? []), optimisticComment] }
+              : t,
+          ),
+        };
+      }
+    }
+
+    skipNextRefresh = true;
     try {
       await api.addCommentApi(number, text);
-      await load();
     } catch (e: unknown) {
+      // Rollback on failure
+      project.value = snapshot;
       error.value = e instanceof Error ? e.message : String(e);
+      skipNextRefresh = false;
       throw e;
     }
   }
@@ -407,12 +440,6 @@ export const useProjectStore = defineStore("project", () => {
   let ws: WebSocket | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   const WS_RECONNECT_MS = 2000;
-
-  /**
-   * Skip the next WebSocket-triggered refresh. Used after optimistic updates
-   * to prevent a redundant re-render from our own server write.
-   */
-  let skipNextRefresh = false;
 
   function connectWebSocket() {
     if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;

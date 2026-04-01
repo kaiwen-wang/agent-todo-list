@@ -1,7 +1,18 @@
 <script setup lang="ts">
 import { ref, computed, watch, h, onMounted, onUnmounted, type Component } from "vue";
 import { useRouter } from "vue-router";
-import { NModal, NCard, NTag, NIcon, NSelect, NInput, NButton, useMessage } from "naive-ui";
+import {
+  NModal,
+  NCard,
+  NTag,
+  NIcon,
+  NSelect,
+  NInput,
+  NButton,
+  NTabs,
+  NTabPane,
+  useMessage,
+} from "naive-ui";
 import {
   AntennaBars1,
   AntennaBars2,
@@ -13,6 +24,9 @@ import {
   GitBranch,
   GitCommit,
   Trash,
+  User,
+  CalendarEvent,
+  X,
 } from "@vicons/tabler";
 import { marked } from "marked";
 import { useProjectStore } from "@/stores/project";
@@ -88,7 +102,41 @@ function renderLabelTag(option: { label: string; value: string }) {
 }
 
 const assigneeOptions = computed(() => store.members.map((m) => ({ label: m.name, value: m.id })));
+
+function getInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+function renderAssigneeLabel(option: { label: string; value: string }) {
+  return h("span", { style: "display: flex; align-items: center; gap: 8px" }, [
+    h(
+      "span",
+      {
+        style:
+          "width: 18px; height: 18px; border-radius: 50%; background: rgba(128,128,128,0.15); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; flex-shrink: 0; line-height: 1",
+      },
+      getInitials(option.label),
+    ),
+    option.label,
+  ]);
+}
 const sprintOptions = computed(() => store.cycles.map((c) => ({ label: c.name, value: c.id })));
+
+function renderSprintLabel(option: { label: string; value: string }) {
+  return h("span", { style: "display: flex; align-items: center; gap: 8px" }, [
+    h(
+      NIcon,
+      { size: 14, style: "opacity: 0.5; flex-shrink: 0" },
+      { default: () => h(CalendarEvent) },
+    ),
+    option.label,
+  ]);
+}
 
 const isOpen = computed(() => store.selectedTodoNumber !== null);
 const todo = computed(() =>
@@ -103,6 +151,7 @@ const description = ref("");
 const commitShaInput = ref("");
 const showCommitInput = ref(false);
 const branchLoading = ref(false);
+const activeTab = ref("details");
 // Sync local state when a different todo is opened
 watch(
   () => store.selectedTodoNumber,
@@ -110,6 +159,8 @@ watch(
     if (todo.value) {
       title.value = todo.value.title;
       description.value = todo.value.description;
+      activeTab.value = "details";
+      showCommitInput.value = false;
     }
   },
 );
@@ -512,105 +563,266 @@ async function submitComment() {
 
         <!-- Property pills bar -->
         <div class="prop-bar">
-          <div class="prop-pill">
-            <label class="prop-label">Status</label>
-            <NSelect
-              ref="statusSelectRef"
-              :value="todo.status"
-              :options="statusOptions"
-              :render-label="renderStatusLabel"
-              size="tiny"
-              :show="statusPickerOpen"
-              @update:value="changeStatus"
-              @update:show="(v: boolean) => (statusPickerOpen = v)"
-            />
+          <div class="prop-row">
+            <div class="prop-pill">
+              <label class="prop-label">Status</label>
+              <NSelect
+                ref="statusSelectRef"
+                :value="todo.status"
+                :options="statusOptions"
+                :render-label="renderStatusLabel"
+                size="tiny"
+                :show="statusPickerOpen"
+                @update:value="changeStatus"
+                @update:show="(v: boolean) => (statusPickerOpen = v)"
+              />
+            </div>
+            <div class="prop-pill">
+              <label class="prop-label">Priority</label>
+              <NSelect
+                ref="prioritySelectRef"
+                :value="todo.priority"
+                :options="priorityOptions"
+                :render-label="renderPriorityLabel"
+                size="tiny"
+                :show="priorityPickerOpen"
+                @update:value="changePriority"
+                @update:show="(v: boolean) => (priorityPickerOpen = v)"
+              />
+            </div>
+            <div class="prop-pill">
+              <label class="prop-label">Difficulty</label>
+              <NSelect
+                ref="difficultySelectRef"
+                :value="todo.difficulty"
+                :options="difficultyOptions"
+                :render-label="renderDifficultyLabel"
+                size="tiny"
+                :show="difficultyPickerOpen"
+                @update:value="changeDifficulty"
+                @update:show="(v: boolean) => (difficultyPickerOpen = v)"
+              />
+            </div>
           </div>
-          <div class="prop-pill">
-            <label class="prop-label">Priority</label>
-            <NSelect
-              ref="prioritySelectRef"
-              :value="todo.priority"
-              :options="priorityOptions"
-              :render-label="renderPriorityLabel"
-              size="tiny"
-              :show="priorityPickerOpen"
-              @update:value="changePriority"
-              @update:show="(v: boolean) => (priorityPickerOpen = v)"
-            />
-          </div>
-          <div class="prop-pill">
-            <label class="prop-label">Difficulty</label>
-            <NSelect
-              ref="difficultySelectRef"
-              :value="todo.difficulty"
-              :options="difficultyOptions"
-              :render-label="renderDifficultyLabel"
-              size="tiny"
-              :show="difficultyPickerOpen"
-              @update:value="changeDifficulty"
-              @update:show="(v: boolean) => (difficultyPickerOpen = v)"
-            />
-          </div>
-          <div class="prop-pill prop-pill-wide">
-            <label class="prop-label">Labels</label>
-            <NSelect
-              :value="todo.labels"
-              :options="labelOptions"
-              :render-label="renderLabelTag"
-              size="tiny"
-              multiple
-              clearable
-              placeholder="None"
-              @update:value="changeLabels"
-            />
-          </div>
-          <div class="prop-pill">
-            <label class="prop-label">Assignee</label>
-            <NSelect
-              :value="todo.assignee"
-              :options="assigneeOptions"
-              size="tiny"
-              clearable
-              placeholder="None"
-              @update:value="changeAssignee"
-            />
-          </div>
-          <div class="prop-pill">
-            <label class="prop-label">Sprint</label>
-            <NSelect
-              :value="todo.cycleId"
-              :options="sprintOptions"
-              size="tiny"
-              clearable
-              placeholder="None"
-              @update:value="changeSprint"
-            />
+          <div class="prop-row">
+            <div class="prop-pill prop-pill-wide">
+              <label class="prop-label">Labels</label>
+              <NSelect
+                :value="todo.labels"
+                :options="labelOptions"
+                :render-label="renderLabelTag"
+                size="tiny"
+                multiple
+                clearable
+                placeholder="None"
+                @update:value="changeLabels"
+              />
+            </div>
+            <div class="prop-pill">
+              <label class="prop-label">Assignee</label>
+              <NSelect
+                :value="todo.assignee"
+                :options="assigneeOptions"
+                :render-label="renderAssigneeLabel"
+                size="tiny"
+                clearable
+                placeholder="None"
+                @update:value="changeAssignee"
+              />
+            </div>
+            <div class="prop-pill">
+              <label class="prop-label">Sprint</label>
+              <NSelect
+                :value="todo.cycleId"
+                :options="sprintOptions"
+                :render-label="renderSprintLabel"
+                size="tiny"
+                clearable
+                placeholder="None"
+                @update:value="changeSprint"
+              />
+            </div>
           </div>
         </div>
 
-        <div class="detail-columns">
-          <!-- Main content -->
-          <div class="detail-main">
-            <!-- Description -->
-            <div class="field-group">
-              <NInput
-                v-model:value="description"
-                type="textarea"
-                :autosize="{ minRows: 4, maxRows: 16 }"
-                placeholder="Add a description..."
-                @blur="commitDescription"
-              />
+        <NTabs v-model:value="activeTab" type="line" size="small" class="detail-tabs">
+          <NTabPane name="details" tab="Details">
+            <div class="detail-columns">
+              <!-- Main content -->
+              <div class="detail-main">
+                <!-- Description -->
+                <div class="field-group">
+                  <NInput
+                    v-model:value="description"
+                    type="textarea"
+                    :autosize="{ minRows: 4, maxRows: 16 }"
+                    placeholder="Add a description..."
+                    @blur="commitDescription"
+                  />
+                </div>
+
+                <!-- Activity / Comments -->
+                <div class="activity-section">
+                  <label class="section-label">Activity</label>
+                  <div v-if="todo.comments?.length" class="comments-list">
+                    <div v-for="c in todo.comments" :key="c.id" class="comment-item">
+                      <div class="comment-avatar">{{ (c.authorName || "?")[0].toUpperCase() }}</div>
+                      <div class="comment-body">
+                        <div class="comment-header">
+                          <strong>{{ c.authorName }}</strong>
+                          <span class="comment-date">{{ formatDate(c.createdAt) }}</span>
+                        </div>
+                        <div class="comment-text">{{ c.text }}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="comment-input">
+                    <NInput
+                      v-model:value="commentText"
+                      type="textarea"
+                      :autosize="{ minRows: 2, maxRows: 6 }"
+                      placeholder="Leave a comment..."
+                      @keydown.meta.enter="submitComment"
+                      @keydown.ctrl.enter="submitComment"
+                    />
+                    <NButton
+                      size="small"
+                      type="primary"
+                      :loading="commentLoading"
+                      :disabled="!commentText.trim()"
+                      style="align-self: flex-end; margin-top: 8px"
+                      @click="submitComment"
+                    >
+                      Comment
+                    </NButton>
+                  </div>
+                </div>
+
+                <!-- Timestamps footer -->
+                <div class="timestamps">
+                  Created {{ formatDate(todo.createdAt) }} · Updated
+                  {{ formatDate(todo.updatedAt) }}
+                </div>
+              </div>
+
+              <!-- Git sidebar -->
+              <div class="detail-sidebar">
+                <label class="section-label">
+                  <NIcon :size="12" style="vertical-align: -1px; margin-right: 4px"
+                    ><GitBranch
+                  /></NIcon>
+                  Git
+                </label>
+
+                <!-- Branch -->
+                <div class="git-row">
+                  <span class="git-row-label">Branch</span>
+                  <div v-if="todo.branch" class="git-row-value">
+                    <code class="git-ref">{{ todo.branch }}</code>
+                    <button
+                      class="icon-btn icon-btn-danger"
+                      title="Remove branch"
+                      @click="handleRemoveBranch"
+                    >
+                      <NIcon :size="12"><Trash /></NIcon>
+                    </button>
+                  </div>
+                  <div v-else class="git-row-actions">
+                    <NButton
+                      size="tiny"
+                      quaternary
+                      :loading="branchLoading"
+                      @click="handleCreateBranchOnly"
+                    >
+                      + branch
+                    </NButton>
+                    <NButton
+                      size="tiny"
+                      quaternary
+                      :loading="branchLoading"
+                      @click="handleCreateBranch"
+                    >
+                      + worktree
+                    </NButton>
+                  </div>
+                </div>
+
+                <!-- Worktrees -->
+                <div v-if="todo.worktrees?.length" class="git-row">
+                  <span class="git-row-label">Worktrees</span>
+                  <div class="git-row-list">
+                    <div v-for="wt in todo.worktrees" :key="wt" class="git-row-value">
+                      <code class="git-ref">{{ wt }}</code>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Commits -->
+                <div class="git-row">
+                  <span class="git-row-label">Commits</span>
+                  <div v-if="todo.commits?.length || showCommitInput" class="git-row-list">
+                    <div v-for="sha in todo.commits ?? []" :key="sha" class="git-row-value">
+                      <NIcon :size="12" style="opacity: 0.4; flex-shrink: 0"><GitCommit /></NIcon>
+                      <a
+                        v-if="store.remoteUrl"
+                        :href="`${store.remoteUrl}/commit/${sha}`"
+                        target="_blank"
+                        class="git-ref git-link"
+                        >{{ sha.slice(0, 8) }}</a
+                      >
+                      <code v-else class="git-ref">{{ sha.slice(0, 8) }}</code>
+                    </div>
+                    <div v-if="showCommitInput" class="git-commit-input">
+                      <NInput
+                        v-model:value="commitShaInput"
+                        size="tiny"
+                        placeholder="Paste SHA..."
+                        @keyup.enter="submitCommitLink"
+                        @keyup.escape="
+                          showCommitInput = false;
+                          commitShaInput = '';
+                        "
+                      />
+                      <NButton
+                        size="tiny"
+                        type="primary"
+                        :disabled="!commitShaInput.trim()"
+                        @click="submitCommitLink"
+                        >Link</NButton
+                      >
+                      <button
+                        class="icon-btn"
+                        title="Cancel"
+                        @click="
+                          showCommitInput = false;
+                          commitShaInput = '';
+                        "
+                      >
+                        <NIcon :size="12"><X /></NIcon>
+                      </button>
+                    </div>
+                    <NButton
+                      v-else
+                      text
+                      size="tiny"
+                      class="git-add-btn"
+                      @click="showCommitInput = true"
+                    >
+                      + link commit
+                    </NButton>
+                  </div>
+                  <div v-else class="git-row-actions">
+                    <NButton size="tiny" quaternary @click="showCommitInput = true">
+                      + link commit
+                    </NButton>
+                  </div>
+                </div>
+              </div>
             </div>
+          </NTabPane>
 
-            <!-- Plan -->
-            <div class="field-group">
-              <label class="section-label">
-                <NIcon :size="12" style="vertical-align: -1px; margin-right: 4px"
-                  ><FileText
-                /></NIcon>
-                Plan
-              </label>
-
+          <NTabPane name="plan" tab="Plan">
+            <div class="plan-tab-content">
               <!-- Researching state -->
               <div v-if="planResearching" class="plan-researching">
                 <div class="plan-spinner" />
@@ -650,153 +862,11 @@ async function submitComment() {
                   </template>
                   Research Plan
                 </NButton>
+                <p class="plan-empty-hint">Generate a research plan for this todo using AI.</p>
               </div>
             </div>
-
-            <!-- Activity / Comments -->
-            <div class="activity-section">
-              <label class="section-label">Activity</label>
-              <div v-if="todo.comments?.length" class="comments-list">
-                <div v-for="c in todo.comments" :key="c.id" class="comment-item">
-                  <div class="comment-avatar">{{ (c.authorName || "?")[0].toUpperCase() }}</div>
-                  <div class="comment-body">
-                    <div class="comment-header">
-                      <strong>{{ c.authorName }}</strong>
-                      <span class="comment-date">{{ formatDate(c.createdAt) }}</span>
-                    </div>
-                    <div class="comment-text">{{ c.text }}</div>
-                  </div>
-                </div>
-              </div>
-              <div class="comment-input">
-                <NInput
-                  v-model:value="commentText"
-                  type="textarea"
-                  :autosize="{ minRows: 2, maxRows: 6 }"
-                  placeholder="Leave a comment..."
-                  @keydown.meta.enter="submitComment"
-                  @keydown.ctrl.enter="submitComment"
-                />
-                <NButton
-                  size="small"
-                  type="primary"
-                  :loading="commentLoading"
-                  :disabled="!commentText.trim()"
-                  style="align-self: flex-end; margin-top: 8px"
-                  @click="submitComment"
-                >
-                  Comment
-                </NButton>
-              </div>
-            </div>
-
-            <!-- Timestamps footer -->
-            <div class="timestamps">
-              Created {{ formatDate(todo.createdAt) }} · Updated {{ formatDate(todo.updatedAt) }}
-            </div>
-          </div>
-
-          <!-- Git sidebar -->
-          <div class="detail-sidebar">
-            <label class="section-label">
-              <NIcon :size="12" style="vertical-align: -1px; margin-right: 4px"
-                ><GitBranch
-              /></NIcon>
-              Git
-            </label>
-
-            <!-- Branch -->
-            <div class="git-row">
-              <span class="git-row-label">Branch</span>
-              <div v-if="todo.branch" class="git-row-value">
-                <code class="git-ref">{{ todo.branch }}</code>
-                <button
-                  class="icon-btn icon-btn-danger"
-                  title="Remove branch"
-                  @click="handleRemoveBranch"
-                >
-                  <NIcon :size="12"><Trash /></NIcon>
-                </button>
-              </div>
-              <div v-else class="git-row-actions">
-                <NButton
-                  size="tiny"
-                  quaternary
-                  :loading="branchLoading"
-                  @click="handleCreateBranchOnly"
-                >
-                  + branch
-                </NButton>
-                <NButton
-                  size="tiny"
-                  quaternary
-                  :loading="branchLoading"
-                  @click="handleCreateBranch"
-                >
-                  + worktree
-                </NButton>
-              </div>
-            </div>
-
-            <!-- Worktrees -->
-            <div v-if="todo.worktrees?.length" class="git-row">
-              <span class="git-row-label">Worktrees</span>
-              <div class="git-row-list">
-                <div v-for="wt in todo.worktrees" :key="wt" class="git-row-value">
-                  <code class="git-ref">{{ wt }}</code>
-                </div>
-              </div>
-            </div>
-
-            <!-- Commits -->
-            <div class="git-row">
-              <span class="git-row-label">Commits</span>
-              <div v-if="todo.commits?.length || showCommitInput" class="git-row-list">
-                <div v-for="sha in todo.commits ?? []" :key="sha" class="git-row-value">
-                  <NIcon :size="12" style="opacity: 0.4; flex-shrink: 0"><GitCommit /></NIcon>
-                  <a
-                    v-if="store.remoteUrl"
-                    :href="`${store.remoteUrl}/commit/${sha}`"
-                    target="_blank"
-                    class="git-ref git-link"
-                    >{{ sha.slice(0, 8) }}</a
-                  >
-                  <code v-else class="git-ref">{{ sha.slice(0, 8) }}</code>
-                </div>
-                <div v-if="showCommitInput" class="git-commit-input">
-                  <NInput
-                    v-model:value="commitShaInput"
-                    size="tiny"
-                    placeholder="Paste SHA..."
-                    @keyup.enter="submitCommitLink"
-                    @keyup.escape="showCommitInput = false"
-                  />
-                  <NButton
-                    size="tiny"
-                    type="primary"
-                    :disabled="!commitShaInput.trim()"
-                    @click="submitCommitLink"
-                    >Link</NButton
-                  >
-                </div>
-                <NButton
-                  v-else
-                  text
-                  size="tiny"
-                  class="git-add-btn"
-                  @click="showCommitInput = true"
-                >
-                  + link commit
-                </NButton>
-              </div>
-              <div v-else class="git-row-actions">
-                <NButton size="tiny" quaternary @click="showCommitInput = true">
-                  + link commit
-                </NButton>
-              </div>
-            </div>
-          </div>
-        </div>
+          </NTabPane>
+        </NTabs>
       </div>
     </NCard>
   </NModal>
@@ -879,16 +949,21 @@ async function submitComment() {
 /* ── Property pills bar ── */
 .prop-bar {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 8px;
   margin-bottom: 16px;
   padding-bottom: 14px;
   border-bottom: 1px solid rgba(128, 128, 128, 0.08);
-  flex-wrap: wrap;
+}
+
+.prop-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .prop-pill {
-  width: 120px;
+  width: 150px;
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -904,7 +979,7 @@ async function submitComment() {
 }
 
 .prop-pill-wide {
-  width: 150px;
+  /* kept for markup compat, no special sizing needed */
 }
 
 .prop-pill :deep(.n-base-selection) {
@@ -995,7 +1070,14 @@ a.git-link:hover {
 
 .git-commit-input {
   display: flex;
+  align-items: center;
   gap: 4px;
+}
+
+.git-commit-input .icon-btn {
+  width: 22px;
+  height: 22px;
+  opacity: 0.4;
 }
 
 .git-add-btn {
@@ -1036,7 +1118,7 @@ a.git-link:hover {
   line-height: 1.6;
   word-wrap: break-word;
   font-family: inherit;
-  max-height: 360px;
+  max-height: 50vh;
   overflow-y: auto;
 }
 
@@ -1197,6 +1279,22 @@ a.git-link:hover {
 .comment-input {
   display: flex;
   flex-direction: column;
+}
+
+/* ── Tabs ── */
+.detail-tabs {
+  margin-top: 2px;
+}
+
+/* ── Plan tab ── */
+.plan-tab-content {
+  padding-top: 4px;
+}
+
+.plan-empty-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  opacity: 0.35;
 }
 
 /* ── Timestamps footer ── */
