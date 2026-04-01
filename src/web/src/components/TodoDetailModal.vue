@@ -463,22 +463,26 @@ async function submitComment() {
 
 <template>
   <NModal :show="isOpen" @update:show="(v: boolean) => !v && close()">
-    <NCard :bordered="true" style="width: 880px; max-width: 95vw; min-height: 70vh" role="dialog">
+    <NCard :bordered="true" style="width: 960px; max-width: 95vw; min-height: 80vh" role="dialog">
       <div v-if="!todo" class="not-found">
         <p>Todo not found.</p>
       </div>
 
       <div v-else>
-        <!-- Header: ref + outlink + archive -->
+        <!-- Header: ref + outlink + title + trash -->
         <div class="detail-header">
-          <div class="header-left">
-            <NTag size="small" :bordered="false" style="font-family: monospace; flex-shrink: 0">
-              {{ todo.ref }}
-            </NTag>
-            <button class="outlink-btn" title="Open full page" @click="openFullPage">
-              <NIcon :size="14"><ExternalLink /></NIcon>
-            </button>
-          </div>
+          <NTag size="small" :bordered="false" class="ref-tag">
+            {{ todo.ref }}
+          </NTag>
+          <button class="icon-btn" title="Open full page" @click="openFullPage">
+            <NIcon :size="14"><ExternalLink /></NIcon>
+          </button>
+          <input
+            v-model="title"
+            class="inline-title"
+            @blur="commitTitle"
+            @keydown.enter="($event.target as HTMLInputElement).blur()"
+          />
           <NButton
             v-if="todo.status !== 'archived'"
             size="tiny"
@@ -506,96 +510,93 @@ async function submitComment() {
           </NButton>
         </div>
 
-        <input
-          v-model="title"
-          class="inline-title"
-          @blur="commitTitle"
-          @keydown.enter="($event.target as HTMLInputElement).blur()"
-        />
+        <!-- Property pills bar -->
+        <div class="prop-bar">
+          <div class="prop-pill">
+            <label class="prop-label">Status</label>
+            <NSelect
+              ref="statusSelectRef"
+              :value="todo.status"
+              :options="statusOptions"
+              :render-label="renderStatusLabel"
+              size="tiny"
+              :show="statusPickerOpen"
+              @update:value="changeStatus"
+              @update:show="(v: boolean) => (statusPickerOpen = v)"
+            />
+          </div>
+          <div class="prop-pill">
+            <label class="prop-label">Priority</label>
+            <NSelect
+              ref="prioritySelectRef"
+              :value="todo.priority"
+              :options="priorityOptions"
+              :render-label="renderPriorityLabel"
+              size="tiny"
+              :show="priorityPickerOpen"
+              @update:value="changePriority"
+              @update:show="(v: boolean) => (priorityPickerOpen = v)"
+            />
+          </div>
+          <div class="prop-pill">
+            <label class="prop-label">Difficulty</label>
+            <NSelect
+              ref="difficultySelectRef"
+              :value="todo.difficulty"
+              :options="difficultyOptions"
+              :render-label="renderDifficultyLabel"
+              size="tiny"
+              :show="difficultyPickerOpen"
+              @update:value="changeDifficulty"
+              @update:show="(v: boolean) => (difficultyPickerOpen = v)"
+            />
+          </div>
+          <div class="prop-pill prop-pill-wide">
+            <label class="prop-label">Labels</label>
+            <NSelect
+              :value="todo.labels"
+              :options="labelOptions"
+              :render-label="renderLabelTag"
+              size="tiny"
+              multiple
+              clearable
+              placeholder="None"
+              @update:value="changeLabels"
+            />
+          </div>
+          <div class="prop-pill">
+            <label class="prop-label">Assignee</label>
+            <NSelect
+              :value="todo.assignee"
+              :options="assigneeOptions"
+              size="tiny"
+              clearable
+              placeholder="None"
+              @update:value="changeAssignee"
+            />
+          </div>
+          <div class="prop-pill">
+            <label class="prop-label">Sprint</label>
+            <NSelect
+              :value="todo.cycleId"
+              :options="sprintOptions"
+              size="tiny"
+              clearable
+              placeholder="None"
+              @update:value="changeSprint"
+            />
+          </div>
+        </div>
 
         <div class="detail-columns">
           <!-- Main content -->
           <div class="detail-main">
-            <!-- Meta row -->
-            <div class="meta-grid">
-              <div class="meta-item">
-                <label class="meta-label">Status</label>
-                <NSelect
-                  ref="statusSelectRef"
-                  :value="todo.status"
-                  :options="statusOptions"
-                  :render-label="renderStatusLabel"
-                  size="small"
-                  :show="statusPickerOpen"
-                  style="width: 160px"
-                  @update:value="changeStatus"
-                  @update:show="(v: boolean) => (statusPickerOpen = v)"
-                />
-              </div>
-
-              <div class="meta-item">
-                <label class="meta-label">Priority</label>
-                <NSelect
-                  ref="prioritySelectRef"
-                  :value="todo.priority"
-                  :options="priorityOptions"
-                  :render-label="renderPriorityLabel"
-                  size="small"
-                  :show="priorityPickerOpen"
-                  style="width: 160px"
-                  @update:value="changePriority"
-                  @update:show="(v: boolean) => (priorityPickerOpen = v)"
-                />
-              </div>
-
-              <div class="meta-item">
-                <label class="meta-label">Difficulty</label>
-                <NSelect
-                  ref="difficultySelectRef"
-                  :value="todo.difficulty"
-                  :options="difficultyOptions"
-                  :render-label="renderDifficultyLabel"
-                  size="small"
-                  :show="difficultyPickerOpen"
-                  style="width: 160px"
-                  @update:value="changeDifficulty"
-                  @update:show="(v: boolean) => (difficultyPickerOpen = v)"
-                />
-              </div>
-
-              <div class="meta-item">
-                <label class="meta-label">Labels</label>
-                <NSelect
-                  :value="todo.labels"
-                  :options="labelOptions"
-                  :render-label="renderLabelTag"
-                  size="small"
-                  multiple
-                  clearable
-                  placeholder="Add labels..."
-                  style="min-width: 200px"
-                  @update:value="changeLabels"
-                />
-              </div>
-
-              <div class="meta-item">
-                <label class="meta-label">Created</label>
-                <span class="meta-value">{{ formatDate(todo.createdAt) }}</span>
-              </div>
-
-              <div class="meta-item">
-                <label class="meta-label">Updated</label>
-                <span class="meta-value">{{ formatDate(todo.updatedAt) }}</span>
-              </div>
-            </div>
-
             <!-- Description -->
             <div class="field-group">
-              <label class="meta-label">Description</label>
               <NInput
                 v-model:value="description"
                 type="textarea"
-                :autosize="{ minRows: 6, maxRows: 16 }"
+                :autosize="{ minRows: 4, maxRows: 16 }"
                 placeholder="Add a description..."
                 @blur="commitDescription"
               />
@@ -603,7 +604,7 @@ async function submitComment() {
 
             <!-- Plan -->
             <div class="field-group">
-              <label class="meta-label">
+              <label class="section-label">
                 <NIcon :size="12" style="vertical-align: -1px; margin-right: 4px"
                   ><FileText
                 /></NIcon>
@@ -642,32 +643,29 @@ async function submitComment() {
               </div>
 
               <!-- No plan yet -->
-              <div v-else>
-                <NButton
-                  size="small"
-                  type="primary"
-                  :loading="planLoading"
-                  @click="handleResearchPlan"
-                >
+              <div v-else class="plan-empty">
+                <NButton size="small" quaternary :loading="planLoading" @click="handleResearchPlan">
                   <template #icon>
                     <NIcon :size="14"><FileText /></NIcon>
                   </template>
                   Research Plan
                 </NButton>
-                <span class="plan-hint">AI agent will research this task and write a plan</span>
               </div>
             </div>
 
-            <!-- Comments -->
-            <div class="field-group">
-              <label class="meta-label">Comments ({{ todo.comments?.length ?? 0 }})</label>
+            <!-- Activity / Comments -->
+            <div class="activity-section">
+              <label class="section-label">Activity</label>
               <div v-if="todo.comments?.length" class="comments-list">
                 <div v-for="c in todo.comments" :key="c.id" class="comment-item">
-                  <div class="comment-header">
-                    <strong>{{ c.authorName }}</strong>
-                    <span class="comment-date">{{ formatDate(c.createdAt) }}</span>
+                  <div class="comment-avatar">{{ (c.authorName || "?")[0].toUpperCase() }}</div>
+                  <div class="comment-body">
+                    <div class="comment-header">
+                      <strong>{{ c.authorName }}</strong>
+                      <span class="comment-date">{{ formatDate(c.createdAt) }}</span>
+                    </div>
+                    <div class="comment-text">{{ c.text }}</div>
                   </div>
-                  <div class="comment-text">{{ c.text }}</div>
                 </div>
               </div>
               <div class="comment-input">
@@ -675,7 +673,7 @@ async function submitComment() {
                   v-model:value="commentText"
                   type="textarea"
                   :autosize="{ minRows: 2, maxRows: 6 }"
-                  placeholder="Write a comment..."
+                  placeholder="Leave a comment..."
                   @keydown.meta.enter="submitComment"
                   @keydown.ctrl.enter="submitComment"
                 />
@@ -691,122 +689,111 @@ async function submitComment() {
                 </NButton>
               </div>
             </div>
+
+            <!-- Timestamps footer -->
+            <div class="timestamps">
+              Created {{ formatDate(todo.createdAt) }} · Updated {{ formatDate(todo.updatedAt) }}
+            </div>
           </div>
 
-          <!-- Action sidebar -->
+          <!-- Git sidebar -->
           <div class="detail-sidebar">
-            <div class="sidebar-section">
-              <label class="meta-label">Assignee</label>
-              <NSelect
-                :value="todo.assignee"
-                :options="assigneeOptions"
-                size="small"
-                clearable
-                placeholder="Unassigned"
-                @update:value="changeAssignee"
-              />
-            </div>
+            <label class="section-label">
+              <NIcon :size="12" style="vertical-align: -1px; margin-right: 4px"
+                ><GitBranch
+              /></NIcon>
+              Git
+            </label>
 
-            <div class="sidebar-section">
-              <label class="meta-label">Sprint</label>
-              <NSelect
-                :value="todo.cycleId"
-                :options="sprintOptions"
-                size="small"
-                clearable
-                placeholder="No sprint"
-                @update:value="changeSprint"
-              />
-            </div>
-
-            <div class="sidebar-section">
-              <label class="meta-label">
-                <NIcon :size="11" style="vertical-align: -1px; margin-right: 2px"
-                  ><GitBranch
-                /></NIcon>
-                Branch
-              </label>
-              <div v-if="todo.branch" class="git-item">
-                <NIcon :size="13" class="git-icon"><GitBranch /></NIcon>
+            <!-- Branch -->
+            <div class="git-row">
+              <span class="git-row-label">Branch</span>
+              <div v-if="todo.branch" class="git-row-value">
                 <code class="git-ref">{{ todo.branch }}</code>
-              </div>
-              <div v-if="todo.branch" class="git-branch-actions">
-                <NButton
-                  text
-                  size="tiny"
-                  type="error"
-                  class="git-add-btn"
+                <button
+                  class="icon-btn icon-btn-danger"
+                  title="Remove branch"
                   @click="handleRemoveBranch"
-                  >remove</NButton
                 >
+                  <NIcon :size="12"><Trash /></NIcon>
+                </button>
               </div>
-              <template v-else>
-                <span class="git-none">None</span>
+              <div v-else class="git-row-actions">
                 <NButton
-                  text
                   size="tiny"
-                  class="git-add-btn"
+                  quaternary
                   :loading="branchLoading"
                   @click="handleCreateBranchOnly"
-                  >+ branch</NButton
                 >
+                  + branch
+                </NButton>
                 <NButton
+                  size="tiny"
+                  quaternary
+                  :loading="branchLoading"
+                  @click="handleCreateBranch"
+                >
+                  + worktree
+                </NButton>
+              </div>
+            </div>
+
+            <!-- Worktrees -->
+            <div v-if="todo.worktrees?.length" class="git-row">
+              <span class="git-row-label">Worktrees</span>
+              <div class="git-row-list">
+                <div v-for="wt in todo.worktrees" :key="wt" class="git-row-value">
+                  <code class="git-ref">{{ wt }}</code>
+                </div>
+              </div>
+            </div>
+
+            <!-- Commits -->
+            <div class="git-row">
+              <span class="git-row-label">Commits</span>
+              <div v-if="todo.commits?.length || showCommitInput" class="git-row-list">
+                <div v-for="sha in todo.commits ?? []" :key="sha" class="git-row-value">
+                  <NIcon :size="12" style="opacity: 0.4; flex-shrink: 0"><GitCommit /></NIcon>
+                  <a
+                    v-if="store.remoteUrl"
+                    :href="`${store.remoteUrl}/commit/${sha}`"
+                    target="_blank"
+                    class="git-ref git-link"
+                    >{{ sha.slice(0, 8) }}</a
+                  >
+                  <code v-else class="git-ref">{{ sha.slice(0, 8) }}</code>
+                </div>
+                <div v-if="showCommitInput" class="git-commit-input">
+                  <NInput
+                    v-model:value="commitShaInput"
+                    size="tiny"
+                    placeholder="Paste SHA..."
+                    @keyup.enter="submitCommitLink"
+                    @keyup.escape="showCommitInput = false"
+                  />
+                  <NButton
+                    size="tiny"
+                    type="primary"
+                    :disabled="!commitShaInput.trim()"
+                    @click="submitCommitLink"
+                    >Link</NButton
+                  >
+                </div>
+                <NButton
+                  v-else
                   text
                   size="tiny"
                   class="git-add-btn"
-                  :loading="branchLoading"
-                  @click="handleCreateBranch"
-                  >+ branch &amp; worktree</NButton
+                  @click="showCommitInput = true"
                 >
-              </template>
-            </div>
-
-            <div class="sidebar-section" v-if="todo.worktrees?.length">
-              <label class="meta-label">Worktrees</label>
-              <div v-for="wt in todo.worktrees" :key="wt" class="git-item">
-                <span class="git-wt-dot" />
-                <code class="git-ref">{{ wt }}</code>
+                  + link commit
+                </NButton>
               </div>
-            </div>
-
-            <div class="sidebar-section">
-              <label class="meta-label">
-                <NIcon :size="11" style="vertical-align: -1px; margin-right: 2px"
-                  ><GitCommit
-                /></NIcon>
-                Commits
-              </label>
-              <div v-for="sha in todo.commits ?? []" :key="sha" class="git-item">
-                <NIcon :size="13" class="git-icon"><GitCommit /></NIcon>
-                <a
-                  v-if="store.remoteUrl"
-                  :href="`${store.remoteUrl}/commit/${sha}`"
-                  target="_blank"
-                  class="git-ref git-link"
-                  >{{ sha.slice(0, 8) }}</a
-                >
-                <code v-else class="git-ref">{{ sha.slice(0, 8) }}</code>
+              <div v-else class="git-row-actions">
+                <NButton size="tiny" quaternary @click="showCommitInput = true">
+                  + link commit
+                </NButton>
               </div>
-              <span v-if="!todo.commits?.length && !showCommitInput" class="git-none">None</span>
-              <div v-if="showCommitInput" class="git-commit-input">
-                <NInput
-                  v-model:value="commitShaInput"
-                  size="tiny"
-                  placeholder="Commit SHA"
-                  @keyup.enter="submitCommitLink"
-                  @keyup.escape="showCommitInput = false"
-                />
-                <NButton
-                  size="tiny"
-                  type="primary"
-                  :disabled="!commitShaInput.trim()"
-                  @click="submitCommitLink"
-                  >Link</NButton
-                >
-              </div>
-              <NButton v-else text size="tiny" class="git-add-btn" @click="showCommitInput = true"
-                >+ commit</NButton
-              >
             </div>
           </div>
         </div>
@@ -822,177 +809,239 @@ async function submitComment() {
   opacity: 0.5;
 }
 
+/* ── Header ── */
 .detail-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.ref-tag {
+  font-family: monospace;
+  flex-shrink: 0;
 }
 
-.outlink-btn {
+.inline-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.4;
+  border: none;
+  outline: none;
+  background: rgba(128, 128, 128, 0.06);
+  padding: 4px 8px;
+  color: inherit;
+  font-family: inherit;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.inline-title:hover {
+  background: rgba(128, 128, 128, 0.09);
+}
+
+.inline-title:focus {
+  background: rgba(128, 128, 128, 0.11);
+}
+
+/* Shared icon button */
+.icon-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border: none;
   background: transparent;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   opacity: 0.35;
   color: inherit;
+  flex-shrink: 0;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
 }
 
-.outlink-btn:hover {
+.icon-btn:hover {
   opacity: 0.8;
-  background: rgba(0, 0, 0, 0.06);
+  background: rgba(128, 128, 128, 0.1);
 }
 
+.icon-btn-danger:hover {
+  opacity: 0.9;
+  color: #e06c75;
+  background: rgba(224, 108, 117, 0.1);
+}
+
+/* ── Property pills bar ── */
+.prop-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.08);
+  flex-wrap: wrap;
+}
+
+.prop-pill {
+  width: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.prop-label {
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.4;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding-left: 2px;
+}
+
+.prop-pill-wide {
+  width: 150px;
+}
+
+.prop-pill :deep(.n-base-selection) {
+  --n-border: 1px solid rgba(128, 128, 128, 0.1) !important;
+  --n-border-hover: 1px solid rgba(128, 128, 128, 0.22) !important;
+  --n-border-active: 1px solid rgba(128, 128, 128, 0.22) !important;
+  --n-border-focus: 1px solid rgba(128, 128, 128, 0.22) !important;
+  --n-color: rgba(128, 128, 128, 0.04) !important;
+  --n-color-active: rgba(128, 128, 128, 0.07) !important;
+  border-radius: 6px !important;
+}
+
+/* ── Two-column layout ── */
 .detail-columns {
   display: flex;
-  gap: 24px;
+  gap: 0;
 }
 
 .detail-main {
   flex: 1;
   min-width: 0;
+  padding-right: 24px;
 }
 
+/* ── Git sidebar ���─ */
 .detail-sidebar {
-  width: 200px;
+  width: 220px;
   flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  border-left: 1px solid rgba(128, 128, 128, 0.15);
+  border-left: 1px solid rgba(128, 128, 128, 0.08);
   padding-left: 24px;
 }
 
-.sidebar-section {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.branch-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.inline-title {
-  width: 100%;
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1.3;
-  border: none;
-  outline: none;
-  background: transparent;
-  padding: 4px 0;
-  margin-bottom: 16px;
-  color: inherit;
-  font-family: inherit;
-  border-bottom: 2px solid transparent;
-  transition: border-color 0.15s;
-}
-
-.inline-title:focus {
-  border-bottom-color: var(--n-primary-color, #18a058);
-}
-
-.meta-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px 24px;
-  margin-bottom: 16px;
-}
-
-.meta-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.meta-label {
-  font-size: 11px;
-  font-weight: 600;
-  opacity: 0.5;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.meta-value {
-  font-size: 13px;
-  line-height: 28px; /* align with input heights */
-}
-
-.field-group {
-  margin-bottom: 16px;
-}
-
-.field-group .meta-label {
-  margin-bottom: 6px;
-  display: block;
-}
-
-.comments-list {
+.detail-sidebar .section-label {
   margin-bottom: 12px;
 }
 
-.comment-item {
-  padding: 10px 12px;
-  border: 1px solid rgba(128, 128, 128, 0.15);
-  border-radius: 6px;
-  margin-bottom: 8px;
-}
-
-.comment-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-  font-size: 13px;
-}
-
-.comment-date {
-  font-size: 11px;
-  opacity: 0.5;
-}
-
-.comment-text {
-  font-size: 13px;
-  white-space: pre-wrap;
-}
-
-.comment-input {
+/* Git rows */
+.git-row {
   display: flex;
   flex-direction: column;
+  gap: 4px;
+  margin-bottom: 14px;
 }
 
+.git-row-label {
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.4;
+}
+
+.git-row-value {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.git-row-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.git-row-actions {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.git-ref {
+  font-size: 11px;
+  background: rgba(128, 128, 128, 0.08);
+  padding: 2px 7px;
+  border-radius: 4px;
+  word-break: break-all;
+  font-family: monospace;
+  line-height: 1.5;
+}
+
+a.git-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+a.git-link:hover {
+  text-decoration: underline;
+  color: #63e2b7;
+}
+
+.git-commit-input {
+  display: flex;
+  gap: 4px;
+}
+
+.git-add-btn {
+  font-size: 11px;
+  opacity: 0.35;
+}
+.git-add-btn:hover {
+  opacity: 1;
+}
+
+/* ── Section labels (shared) ── */
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.4;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.field-group {
+  margin-bottom: 20px;
+}
+
+/* ── Plan ── */
 .plan-content {
-  border: 1px solid rgba(128, 128, 128, 0.15);
-  border-radius: 6px;
+  border: 1px solid rgba(128, 128, 128, 0.1);
+  border-radius: 8px;
   overflow: hidden;
+  background: rgba(128, 128, 128, 0.02);
 }
 
 .plan-markdown {
-  padding: 12px 16px;
+  padding: 14px 16px;
   margin: 0;
   font-size: 13px;
   line-height: 1.6;
   word-wrap: break-word;
   font-family: inherit;
-  max-height: 300px;
+  max-height: 360px;
   overflow-y: auto;
 }
 
 .plan-markdown :deep(h1) {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   margin: 0 0 8px;
 }
@@ -1038,7 +1087,7 @@ async function submitComment() {
   font-weight: 600;
 }
 .plan-markdown :deep(blockquote) {
-  border-left: 3px solid rgba(0, 0, 0, 0.15);
+  border-left: 3px solid rgba(128, 128, 128, 0.2);
   padding-left: 12px;
   margin: 0 0 8px;
   opacity: 0.7;
@@ -1046,7 +1095,7 @@ async function submitComment() {
 
 .plan-answer-input {
   padding: 12px 16px;
-  border-top: 1px solid rgba(128, 128, 128, 0.15);
+  border-top: 1px solid rgba(128, 128, 128, 0.08);
   display: flex;
   flex-direction: column;
 }
@@ -1055,15 +1104,16 @@ async function submitComment() {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 16px;
-  border: 1px solid rgba(128, 128, 128, 0.15);
-  border-radius: 6px;
+  padding: 14px 16px;
+  border: 1px solid rgba(128, 128, 128, 0.1);
+  border-radius: 8px;
+  background: rgba(128, 128, 128, 0.02);
 }
 
 .plan-spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(128, 128, 128, 0.2);
+  border: 2px solid rgba(128, 128, 128, 0.15);
   border-top-color: var(--n-primary-color, #18a058);
   border-radius: 50%;
   animation: plan-spin 0.8s linear infinite;
@@ -1078,78 +1128,83 @@ async function submitComment() {
 
 .plan-progress-msg {
   font-size: 13px;
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
-.plan-hint {
-  font-size: 12px;
-  opacity: 0.4;
-  margin-left: 10px;
+.plan-empty {
+  padding: 4px 0;
 }
 
-.git-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.git-icon {
-  opacity: 0.5;
-  flex-shrink: 0;
-}
-
-.git-wt-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #6b7280;
-  opacity: 0.5;
-  flex-shrink: 0;
-  margin: 0 2px;
-}
-
-.git-ref {
-  font-size: 11px;
-  background: rgba(128, 128, 128, 0.1);
-  padding: 1px 5px;
-  border-radius: 3px;
-  word-break: break-all;
-  font-family: monospace;
-}
-
-a.git-link {
-  color: inherit;
-  text-decoration: none;
-  cursor: pointer;
-}
-a.git-link:hover {
-  text-decoration: underline;
-  color: #63e2b7;
-}
-
-.git-commit-input {
-  display: flex;
-  gap: 4px;
+/* ── Activity / Comments ── */
+.activity-section {
+  border-top: 1px solid rgba(128, 128, 128, 0.08);
+  padding-top: 16px;
   margin-top: 4px;
 }
 
-.git-add-btn {
-  font-size: 11px;
-  opacity: 0.4;
-  margin-top: 2px;
-}
-.git-add-btn:hover {
-  opacity: 1;
+.comments-list {
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.git-none {
-  font-size: 12px;
+.comment-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.comment-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(128, 128, 128, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.6;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.comment-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.comment-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 2px;
+  font-size: 13px;
+}
+
+.comment-date {
+  font-size: 11px;
   opacity: 0.35;
 }
 
-.git-branch-actions {
-  margin-top: 2px;
+.comment-text {
+  font-size: 13px;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.comment-input {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Timestamps footer ── */
+.timestamps {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(128, 128, 128, 0.06);
+  font-size: 11px;
+  opacity: 0.3;
 }
 </style>
