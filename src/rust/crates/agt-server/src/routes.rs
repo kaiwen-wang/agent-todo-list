@@ -56,6 +56,14 @@ pub async fn get_project(State(state): State<AppState>) -> impl IntoResponse {
     Json(project).into_response()
 }
 
+// ── GET /api/stats ─────────────────────────────────────────────────
+
+pub async fn get_stats(State(state): State<AppState>) -> impl IntoResponse {
+    let doc = state.doc.lock().await;
+    let stats = agt_lib::stats::compute_stats(&doc);
+    Json(json!(stats)).into_response()
+}
+
 // ── POST /api/change ────────────────────────────────────────────────
 
 pub async fn post_change(

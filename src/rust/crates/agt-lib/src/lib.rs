@@ -9,4 +9,5 @@ pub mod operations;
 pub mod project;
 pub mod queries;
 pub mod schema;
+pub mod stats;
 pub mod storage;

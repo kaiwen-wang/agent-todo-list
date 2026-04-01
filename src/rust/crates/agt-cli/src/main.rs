@@ -278,6 +278,12 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
+    /// Show project statistics
+    Stats {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
     /// Git merge driver for .automerge files (called by git)
     #[command(hide = true)]
     MergeDriver {
@@ -492,7 +498,7 @@ fn print_grouped_help() {
         (
             "Project",
             &[
-                "init", "member", "sprint", "config", "serve", "inbox", "commit", "log",
+                "init", "member", "sprint", "config", "serve", "inbox", "commit", "log", "stats",
             ],
         ),
     ];
@@ -750,6 +756,7 @@ fn main() -> Result<()> {
         Commands::Serve { port, open } => commands::serve::run(port, open),
         Commands::Inbox { action, text } => commands::inbox::run(action, text),
         Commands::Log { limit, json } => commands::log::run(limit, json),
+        Commands::Stats { json } => commands::stats::run(json),
         Commands::MergeDriver { base, ours, theirs } => {
             commands::merge_driver::run(base, ours, theirs)
         }

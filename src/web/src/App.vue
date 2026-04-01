@@ -10,7 +10,16 @@ import {
   NTag,
   NIcon,
 } from "naive-ui";
-import { Inbox, LayoutKanban, LayoutRows, Table, Users, Settings, Search } from "@vicons/tabler";
+import {
+  Inbox,
+  LayoutKanban,
+  LayoutRows,
+  Table,
+  Users,
+  Settings,
+  Search,
+  ChartDots,
+} from "@vicons/tabler";
 import { useProjectStore } from "@/stores/project";
 import { STATUSES, STATUS_DISPLAY, STATUS_COLORS, CYCLE_STATUS_COLORS } from "@/types";
 import SettingsModal from "@/components/SettingsModal.vue";
@@ -85,6 +94,7 @@ const navItems = [
   { label: "Sprints", key: "cycles", icon: LayoutRows },
   { label: "Table", key: "list", icon: Table },
   { label: "Members", key: "members", icon: Users },
+  { label: "Statistics", key: "statistics", icon: ChartDots },
 ];
 
 function navigate(key: string) {

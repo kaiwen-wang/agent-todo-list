@@ -20,6 +20,7 @@ pub mod run;
 pub mod runs;
 pub mod serve;
 pub mod show;
+pub mod stats;
 pub mod unassign;
 pub mod unbranch;
 pub mod update;

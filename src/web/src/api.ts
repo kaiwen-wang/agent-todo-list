@@ -18,6 +18,58 @@ export async function fetchProject(): Promise<Project> {
   return res.json();
 }
 
+export async function fetchStats(): Promise<ProjectStats> {
+  const res = await fetch(`${BASE}/api/stats`);
+  if (!res.ok) throw new Error(`Failed to fetch stats: ${res.statusText}`);
+  return res.json();
+}
+
+export interface ProjectStats {
+  summary: {
+    total: number;
+    active: number;
+    inProgress: number;
+    completed: number;
+    unassigned: number;
+    completionRate: number;
+  };
+  byStatus: CountEntry[];
+  byPriority: CountEntry[];
+  byDifficulty: CountEntry[];
+  byLabel: CountEntry[];
+  members: MemberStatsEntry[];
+  cycles: CycleStatsEntry[];
+}
+
+export interface CountEntry {
+  key: string;
+  label: string;
+  count: number;
+}
+
+export interface MemberStatsEntry {
+  id: string;
+  name: string;
+  role: string;
+  active: number;
+  completed: number;
+  total: number;
+}
+
+export interface CycleStatsEntry {
+  id: string;
+  name: string;
+  status: string;
+  total: number;
+  completed: number;
+  inProgress: number;
+  pctDone: number;
+  startDate: string | null;
+  endDate: string | null;
+  daysTotal: number | null;
+  daysElapsed: number | null;
+}
+
 export interface AddTodoParams {
   title: string;
   description?: string;

@@ -65,6 +65,7 @@ pub async fn start_server(project_path: &Path, port: u16) -> Result<()> {
         .route("/api/project", axum::routing::get(routes::get_project))
         .route("/api/change", axum::routing::post(routes::post_change))
         .route("/api/plan/{number}", axum::routing::get(routes::get_plan))
+        .route("/api/stats", axum::routing::get(routes::get_stats))
         .route("/ws", axum::routing::get(routes::ws_handler))
         .with_state(state)
         .layer(CorsLayer::permissive());
