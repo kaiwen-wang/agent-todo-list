@@ -8,7 +8,7 @@ default: completions ## Quick release build + install CLI (no web assets)
 dev: ## Start Rust API server (auto-rebuild) + Vite dev server
 	@bash -c '\
 		trap "kill 0" EXIT; \
-		cd src/rust && watchexec -r -w crates --exts rs,toml -- cargo run -- serve 2>&1 | grep -v "^Dashboard:" & \
+		cd src/rust && watchexec -r --stop-signal SIGKILL -w crates --exts rs,toml -- sh -c "cargo build 2>&1 && exec target/debug/agt serve" 2>&1 | grep -v "^Dashboard:" & \
 		printf "Waiting for API server on :3000..."; \
 		until curl -s http://localhost:3000/api/project > /dev/null 2>&1; do sleep 0.5; done; \
 		printf " ready\n\n"; \
