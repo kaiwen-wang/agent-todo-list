@@ -1,3 +1,0 @@
-tomato
-next
-test
