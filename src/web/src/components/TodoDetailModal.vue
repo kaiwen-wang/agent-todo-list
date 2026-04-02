@@ -24,7 +24,6 @@ import {
   GitBranch,
   GitCommit,
   Trash,
-  User,
   CalendarEvent,
   X,
 } from "@vicons/tabler";
@@ -510,51 +509,47 @@ function submitComment() {
 
 <template>
   <NModal :show="isOpen" @update:show="(v: boolean) => !v && close()">
-    <NCard :bordered="true" style="width: 960px; max-width: 95vw; min-height: 80vh" role="dialog">
+    <NCard
+      :bordered="true"
+      style="width: 960px; max-width: 95vw; height: 85vh"
+      role="dialog"
+      class="detail-card"
+    >
       <div v-if="!todo" class="not-found">
         <p>Todo not found.</p>
       </div>
 
-      <div v-else>
+      <div v-else class="detail-wrapper">
         <!-- Header: ref + outlink + title + trash -->
         <div class="detail-header">
+          <button class="header-icon-btn" title="Open full page" @click="openFullPage">
+            <NIcon :size="18"><ExternalLink /></NIcon>
+          </button>
           <NTag size="small" :bordered="false" class="ref-tag">
             {{ todo.ref }}
           </NTag>
-          <button class="icon-btn" title="Open full page" @click="openFullPage">
-            <NIcon :size="14"><ExternalLink /></NIcon>
-          </button>
           <input
             v-model="title"
             class="inline-title"
             @blur="commitTitle"
             @keydown.enter="($event.target as HTMLInputElement).blur()"
           />
-          <NButton
+          <button
             v-if="todo.status !== 'archived'"
-            size="tiny"
-            quaternary
-            type="error"
-            style="flex-shrink: 0"
+            class="header-icon-btn header-icon-btn-danger"
+            title="Archive"
             @click="handleArchive"
           >
-            <template #icon>
-              <NIcon :size="14"><Trash /></NIcon>
-            </template>
-          </NButton>
-          <NButton
+            <NIcon :size="18"><Trash /></NIcon>
+          </button>
+          <button
             v-else
-            size="tiny"
-            quaternary
-            type="error"
-            style="flex-shrink: 0"
+            class="header-icon-btn header-icon-btn-danger"
+            title="Delete permanently"
             @click="handleDelete"
           >
-            <template #icon>
-              <NIcon :size="14"><Trash /></NIcon>
-            </template>
-            Delete
-          </NButton>
+            <NIcon :size="18"><Trash /></NIcon>
+          </button>
         </div>
 
         <!-- Property pills bar -->
@@ -641,233 +636,221 @@ function submitComment() {
           </div>
         </div>
 
-        <NTabs v-model:value="activeTab" type="line" size="small" class="detail-tabs">
-          <NTabPane name="details" tab="Details">
-            <div class="detail-columns">
-              <!-- Main content -->
-              <div class="detail-main">
-                <!-- Description -->
-                <div class="field-group">
-                  <NInput
-                    v-model:value="description"
-                    type="textarea"
-                    :autosize="{ minRows: 4, maxRows: 16 }"
-                    placeholder="Add a description..."
-                    @blur="commitDescription"
-                  />
+        <!-- Tabs + Git sidebar -->
+        <div class="tabs-and-git">
+          <NTabs v-model:value="activeTab" type="line" size="small" class="detail-tabs">
+            <NTabPane name="details" tab="Details">
+              <!-- Description -->
+              <div class="field-group">
+                <NInput
+                  v-model:value="description"
+                  type="textarea"
+                  :autosize="{ minRows: 4, maxRows: 16 }"
+                  placeholder="Add a description..."
+                  @blur="commitDescription"
+                />
+              </div>
+
+              <!-- Timestamps footer -->
+              <div class="timestamps">
+                Created {{ formatDate(todo.createdAt) }} · Updated
+                {{ formatDate(todo.updatedAt) }}
+              </div>
+            </NTabPane>
+
+            <NTabPane name="plan" tab="Plan">
+              <div class="plan-tab-content">
+                <!-- Researching state -->
+                <div v-if="planResearching" class="plan-researching">
+                  <div class="plan-spinner" />
+                  <span class="plan-progress-msg">{{ planProgressMsg }}</span>
                 </div>
 
-                <!-- Activity / Comments -->
-                <div class="activity-section">
-                  <label class="section-label">Activity</label>
-                  <div v-if="todo.comments?.length" class="comments-list">
-                    <div v-for="c in todo.comments" :key="c.id" class="comment-item">
-                      <div class="comment-avatar">{{ (c.authorName || "?")[0].toUpperCase() }}</div>
-                      <div class="comment-body">
-                        <div class="comment-header">
-                          <strong>{{ c.authorName }}</strong>
-                          <span class="comment-date">{{ formatDate(c.createdAt) }}</span>
-                        </div>
-                        <div class="comment-text">{{ c.text }}</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="comment-input">
+                <!-- Plan exists with content -->
+                <div v-else-if="planExists && planContent" class="plan-content">
+                  <div class="plan-markdown" v-html="renderedPlan" />
+                  <div class="plan-answer-input">
                     <NInput
-                      v-model:value="commentText"
+                      v-model:value="planAnswerText"
                       type="textarea"
-                      :autosize="{ minRows: 2, maxRows: 6 }"
-                      placeholder="Leave a comment..."
+                      :autosize="{ minRows: 2, maxRows: 4 }"
+                      placeholder="Answer questions..."
                       @keydown="
                         (e: KeyboardEvent) => {
-                          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitComment();
+                          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitPlanAnswer();
                         }
                       "
                     />
                     <NButton
                       size="small"
                       type="primary"
-                      :disabled="!commentText.trim()"
+                      :loading="planAnswerLoading"
+                      :disabled="!planAnswerText.trim()"
                       style="align-self: flex-end; margin-top: 8px"
-                      @click="submitComment"
+                      @click="submitPlanAnswer"
                     >
-                      Comment
+                      Answer
                     </NButton>
                   </div>
                 </div>
 
-                <!-- Timestamps footer -->
-                <div class="timestamps">
-                  Created {{ formatDate(todo.createdAt) }} · Updated
-                  {{ formatDate(todo.updatedAt) }}
+                <!-- No plan yet -->
+                <div v-else class="plan-empty">
+                  <NButton
+                    size="small"
+                    quaternary
+                    :loading="planLoading"
+                    @click="handleResearchPlan"
+                  >
+                    <template #icon>
+                      <NIcon :size="14"><FileText /></NIcon>
+                    </template>
+                    Research Plan
+                  </NButton>
+                  <p class="plan-empty-hint">Generate a research plan for this todo using AI.</p>
                 </div>
               </div>
+            </NTabPane>
 
-              <!-- Git sidebar -->
-              <div class="detail-sidebar">
-                <label class="section-label">
-                  <NIcon :size="12" style="vertical-align: -1px; margin-right: 4px"
-                    ><GitBranch
-                  /></NIcon>
-                  Git
-                </label>
-
-                <!-- Branch -->
-                <div class="git-row">
-                  <span class="git-row-label">Branch</span>
-                  <div v-if="todo.branch" class="git-row-value">
-                    <code class="git-ref">{{ todo.branch }}</code>
-                    <button
-                      class="icon-btn icon-btn-danger"
-                      title="Remove branch"
-                      @click="handleRemoveBranch"
-                    >
-                      <NIcon :size="12"><Trash /></NIcon>
-                    </button>
-                  </div>
-                  <div v-else class="git-row-actions">
-                    <NButton
-                      size="tiny"
-                      quaternary
-                      :loading="branchLoading"
-                      @click="handleCreateBranchOnly"
-                    >
-                      + branch
-                    </NButton>
-                    <NButton
-                      size="tiny"
-                      quaternary
-                      :loading="branchLoading"
-                      @click="handleCreateBranch"
-                    >
-                      + worktree
-                    </NButton>
-                  </div>
-                </div>
-
-                <!-- Worktrees -->
-                <div v-if="todo.worktrees?.length" class="git-row">
-                  <span class="git-row-label">Worktrees</span>
-                  <div class="git-row-list">
-                    <div v-for="wt in todo.worktrees" :key="wt" class="git-row-value">
-                      <code class="git-ref">{{ wt }}</code>
+            <NTabPane name="comments" :tab="`Comments (${todo.comments?.length ?? 0})`">
+              <div class="comments-tab-content">
+                <div v-if="todo.comments?.length" class="comments-list">
+                  <div v-for="c in todo.comments" :key="c.id" class="comment-item">
+                    <div class="comment-avatar">{{ (c.authorName || "?")[0].toUpperCase() }}</div>
+                    <div class="comment-body">
+                      <div class="comment-header">
+                        <strong>{{ c.authorName }}</strong>
+                        <span class="comment-date">{{ formatDate(c.createdAt) }}</span>
+                      </div>
+                      <div class="comment-text">{{ c.text }}</div>
                     </div>
                   </div>
                 </div>
-
-                <!-- Commits -->
-                <div class="git-row">
-                  <span class="git-row-label">Commits</span>
-                  <div v-if="todo.commits?.length || showCommitInput" class="git-row-list">
-                    <div v-for="sha in todo.commits ?? []" :key="sha" class="git-row-value">
-                      <NIcon :size="12" style="opacity: 0.4; flex-shrink: 0"><GitCommit /></NIcon>
-                      <a
-                        v-if="store.remoteUrl"
-                        :href="`${store.remoteUrl}/commit/${sha}`"
-                        target="_blank"
-                        class="git-ref git-link"
-                        >{{ sha.slice(0, 8) }}</a
-                      >
-                      <code v-else class="git-ref">{{ sha.slice(0, 8) }}</code>
-                    </div>
-                    <div v-if="showCommitInput" class="git-commit-input">
-                      <NInput
-                        v-model:value="commitShaInput"
-                        size="tiny"
-                        placeholder="Paste SHA..."
-                        @keyup.enter="submitCommitLink"
-                        @keyup.escape="
-                          showCommitInput = false;
-                          commitShaInput = '';
-                        "
-                      />
-                      <NButton
-                        size="tiny"
-                        type="primary"
-                        :disabled="!commitShaInput.trim()"
-                        @click="submitCommitLink"
-                        >Link</NButton
-                      >
-                      <button
-                        class="icon-btn"
-                        title="Cancel"
-                        @click="
-                          showCommitInput = false;
-                          commitShaInput = '';
-                        "
-                      >
-                        <NIcon :size="12"><X /></NIcon>
-                      </button>
-                    </div>
-                    <NButton
-                      v-else
-                      text
-                      size="tiny"
-                      class="git-add-btn"
-                      @click="showCommitInput = true"
-                    >
-                      + link commit
-                    </NButton>
-                  </div>
-                  <div v-else class="git-row-actions">
-                    <NButton size="tiny" quaternary @click="showCommitInput = true">
-                      + link commit
-                    </NButton>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </NTabPane>
-
-          <NTabPane name="plan" tab="Plan">
-            <div class="plan-tab-content">
-              <!-- Researching state -->
-              <div v-if="planResearching" class="plan-researching">
-                <div class="plan-spinner" />
-                <span class="plan-progress-msg">{{ planProgressMsg }}</span>
-              </div>
-
-              <!-- Plan exists with content -->
-              <div v-else-if="planExists && planContent" class="plan-content">
-                <div class="plan-markdown" v-html="renderedPlan" />
-                <div class="plan-answer-input">
+                <div class="comment-input">
                   <NInput
-                    v-model:value="planAnswerText"
+                    v-model:value="commentText"
                     type="textarea"
-                    :autosize="{ minRows: 2, maxRows: 4 }"
-                    placeholder="Answer questions..."
+                    :autosize="{ minRows: 2, maxRows: 6 }"
+                    placeholder="Leave a comment..."
                     @keydown="
                       (e: KeyboardEvent) => {
-                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitPlanAnswer();
+                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitComment();
                       }
                     "
                   />
                   <NButton
                     size="small"
                     type="primary"
-                    :loading="planAnswerLoading"
-                    :disabled="!planAnswerText.trim()"
+                    :disabled="!commentText.trim()"
                     style="align-self: flex-end; margin-top: 8px"
-                    @click="submitPlanAnswer"
+                    @click="submitComment"
                   >
-                    Answer
+                    Comment
                   </NButton>
                 </div>
               </div>
+            </NTabPane>
+          </NTabs>
 
-              <!-- No plan yet -->
-              <div v-else class="plan-empty">
-                <NButton size="small" quaternary :loading="planLoading" @click="handleResearchPlan">
-                  <template #icon>
-                    <NIcon :size="14"><FileText /></NIcon>
-                  </template>
-                  Research Plan
-                </NButton>
-                <p class="plan-empty-hint">Generate a research plan for this todo using AI.</p>
+          <!-- Git sidebar -->
+          <div class="git-sidebar">
+            <label class="section-label">
+              <NIcon :size="12" style="vertical-align: -1px; margin-right: 4px"
+                ><GitBranch
+              /></NIcon>
+              Git
+            </label>
+
+            <div class="git-row">
+              <span class="git-row-label">Branch</span>
+              <div v-if="todo.branch" class="git-row-value">
+                <code class="git-ref">{{ todo.branch }}</code>
+                <button
+                  class="icon-btn icon-btn-danger"
+                  title="Remove branch"
+                  @click="handleRemoveBranch"
+                >
+                  <NIcon :size="12"><Trash /></NIcon>
+                </button>
+              </div>
+              <div v-else class="git-row-actions">
+                <NButton
+                  size="tiny"
+                  quaternary
+                  :loading="branchLoading"
+                  @click="handleCreateBranchOnly"
+                  >+ branch</NButton
+                >
+                <NButton size="tiny" quaternary :loading="branchLoading" @click="handleCreateBranch"
+                  >+ worktree</NButton
+                >
               </div>
             </div>
-          </NTabPane>
-        </NTabs>
+
+            <div v-if="todo.worktrees?.length" class="git-row">
+              <span class="git-row-label">Worktrees</span>
+              <div class="git-row-list">
+                <div v-for="wt in todo.worktrees" :key="wt" class="git-row-value">
+                  <code class="git-ref">{{ wt }}</code>
+                </div>
+              </div>
+            </div>
+
+            <div class="git-row">
+              <span class="git-row-label">Commits</span>
+              <div v-if="todo.commits?.length || showCommitInput" class="git-row-list">
+                <div v-for="sha in todo.commits ?? []" :key="sha" class="git-row-value">
+                  <NIcon :size="12" style="opacity: 0.4; flex-shrink: 0"><GitCommit /></NIcon>
+                  <a
+                    v-if="store.remoteUrl"
+                    :href="`${store.remoteUrl}/commit/${sha}`"
+                    target="_blank"
+                    class="git-ref git-link"
+                    >{{ sha.slice(0, 8) }}</a
+                  >
+                  <code v-else class="git-ref">{{ sha.slice(0, 8) }}</code>
+                </div>
+                <div v-if="showCommitInput" class="git-commit-input">
+                  <NInput
+                    v-model:value="commitShaInput"
+                    size="tiny"
+                    placeholder="Paste SHA..."
+                    @keyup.enter="submitCommitLink"
+                    @keyup.escape="
+                      showCommitInput = false;
+                      commitShaInput = '';
+                    "
+                  />
+                  <NButton
+                    size="tiny"
+                    type="primary"
+                    :disabled="!commitShaInput.trim()"
+                    @click="submitCommitLink"
+                    >Link</NButton
+                  >
+                  <button
+                    class="icon-btn"
+                    title="Cancel"
+                    @click="
+                      showCommitInput = false;
+                      commitShaInput = '';
+                    "
+                  >
+                    <NIcon :size="12"><X /></NIcon>
+                  </button>
+                </div>
+                <NButton v-else text size="tiny" class="git-add-btn" @click="showCommitInput = true"
+                  >+ link commit</NButton
+                >
+              </div>
+              <div v-else class="git-row-actions">
+                <NButton size="tiny" quaternary @click="showCommitInput = true"
+                  >+ link commit</NButton
+                >
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </NCard>
   </NModal>
@@ -891,6 +874,38 @@ function submitComment() {
 .ref-tag {
   font-family: monospace;
   flex-shrink: 0;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.header-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0.35;
+  color: inherit;
+  flex-shrink: 0;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
+}
+
+.header-icon-btn:hover {
+  opacity: 0.8;
+  background: rgba(128, 128, 128, 0.1);
+}
+
+.header-icon-btn-danger:hover {
+  opacity: 0.9;
+  color: #e06c75;
+  background: rgba(224, 108, 117, 0.1);
 }
 
 .inline-title {
@@ -899,13 +914,14 @@ function submitComment() {
   font-size: 17px;
   font-weight: 600;
   line-height: 1.4;
+  height: 34px;
   border: none;
   outline: none;
   background: rgba(128, 128, 128, 0.06);
   padding: 4px 8px;
   color: inherit;
   font-family: inherit;
-  border-radius: 6px;
+  border-radius: 0;
   transition: background 0.15s;
 }
 
@@ -957,6 +973,21 @@ function submitComment() {
   border-bottom: 1px solid rgba(128, 128, 128, 0.08);
 }
 
+/* ── Tabs + Git sidebar ── */
+.tabs-and-git {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.git-sidebar {
+  width: 200px;
+  flex-shrink: 0;
+  border-left: 1px solid rgba(128, 128, 128, 0.08);
+  padding-left: 20px;
+  margin-left: 20px;
+}
+
 .prop-row {
   display: flex;
   align-items: center;
@@ -980,7 +1011,7 @@ function submitComment() {
 }
 
 .prop-pill-wide {
-  /* kept for markup compat, no special sizing needed */
+  width: 150px;
 }
 
 .prop-pill :deep(.n-base-selection) {
@@ -994,26 +1025,9 @@ function submitComment() {
 }
 
 /* ── Two-column layout ── */
-.detail-columns {
-  display: flex;
-  gap: 0;
-}
-
-.detail-main {
-  flex: 1;
-  min-width: 0;
-  padding-right: 24px;
-}
 
 /* ── Git sidebar ���─ */
-.detail-sidebar {
-  width: 220px;
-  flex-shrink: 0;
-  border-left: 1px solid rgba(128, 128, 128, 0.08);
-  padding-left: 24px;
-}
-
-.detail-sidebar .section-label {
+.git-sidebar .section-label {
   margin-bottom: 12px;
 }
 
@@ -1282,13 +1296,65 @@ a.git-link:hover {
   flex-direction: column;
 }
 
+/* ── Layout: make card content flex so tabs fill remaining space ── */
+.detail-card :deep(.n-card__content) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.detail-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 /* ── Tabs ── */
 .detail-tabs {
-  margin-top: 2px;
+  margin-top: 0;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-tabs :deep(.n-tabs-nav) {
+  flex-shrink: 0;
+}
+
+.detail-tabs :deep(.n-tabs-pane-wrapper) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-tabs :deep(.n-tab-pane) {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-top: 8px;
+}
+
+/* Remove gap between tab buttons */
+.detail-tabs :deep(.n-tabs-tab) {
+  margin-right: 0 !important;
+  margin-left: 0 !important;
+}
+
+.detail-tabs :deep(.n-tabs-tab-wrapper) {
+  gap: 0 !important;
 }
 
 /* ── Plan tab ── */
 .plan-tab-content {
+  padding-top: 4px;
+}
+
+/* ── Comments tab ── */
+.comments-tab-content {
   padding-top: 4px;
 }
 
