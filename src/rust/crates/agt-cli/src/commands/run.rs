@@ -314,7 +314,7 @@ pub fn run(reference: String, budget: Option<f64>, dry_run: bool) -> Result<()> 
             };
             format!("Agent run completed: {}", truncated)
         };
-        operations::add_comment(&mut doc, num, &summary, None)?;
+        operations::add_comment(&mut doc, num, &summary, None, None)?;
         save_project(&paths, &mut doc)?;
     } else {
         let code = exit_status.code().unwrap_or(-1);
@@ -330,7 +330,7 @@ pub fn run(reference: String, budget: Option<f64>, dry_run: bool) -> Result<()> 
             };
             format!("Agent run failed (exit {}): {}", code, truncated)
         };
-        operations::add_comment(&mut doc, num, &error_msg, None)?;
+        operations::add_comment(&mut doc, num, &error_msg, None, None)?;
         save_project(&paths, &mut doc)?;
     }
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, h, onMounted, onUnmounted, type Component } from "vue";
+import { ref, computed, watch, h, nextTick, onMounted, onUnmounted, type Component } from "vue";
 import { useRouter } from "vue-router";
 import {
   NModal,
@@ -25,6 +25,7 @@ import {
   GitCommit,
   Trash,
   CalendarEvent,
+  MessageCircle,
   X,
 } from "@vicons/tabler";
 import { marked } from "marked";
@@ -495,15 +496,82 @@ watch(
 
 // ── Comments ──
 const commentText = ref("");
+const replyingTo = ref<string | null>(null);
+const replyText = ref("");
+const replyInputRef = ref<InstanceType<typeof NInput> | null>(null);
+
+function startReply(commentId: string) {
+  if (replyingTo.value === commentId) {
+    replyingTo.value = null;
+    replyText.value = "";
+  } else {
+    replyingTo.value = commentId;
+    replyText.value = "";
+    nextTick(() => {
+      const el = replyInputRef.value;
+      const input = Array.isArray(el) ? el[0] : el;
+      input?.focus();
+    });
+  }
+}
 
 function submitComment() {
   if (!todo.value || !commentText.value.trim()) return;
   const text = commentText.value.trim();
   commentText.value = "";
-  // Store handles optimistic update + rollback on failure
   store.addComment(todo.value.number, text).catch((e: unknown) => {
     message.error(e instanceof Error ? e.message : "Failed to add comment");
   });
+}
+
+function submitReply() {
+  if (!todo.value || !replyText.value.trim() || !replyingTo.value) return;
+  const text = replyText.value.trim();
+  const parentId = replyingTo.value;
+  replyText.value = "";
+  replyingTo.value = null;
+  store.addComment(todo.value.number, text, parentId).catch((e: unknown) => {
+    message.error(e instanceof Error ? e.message : "Failed to add reply");
+  });
+}
+
+interface CommentWithDepth {
+  id: string;
+  author: string;
+  authorName: string;
+  text: string;
+  createdAt: number;
+  parentId?: string | null;
+  depth: number;
+}
+
+/** Flatten comments into thread order with depth for indentation. */
+function threadedComments(): CommentWithDepth[] {
+  const comments = todo.value?.comments ?? [];
+  const result: CommentWithDepth[] = [];
+  const childrenOf = new Map<string, typeof comments>();
+  const roots: typeof comments = [];
+
+  for (const c of comments) {
+    if (!c.parentId) {
+      roots.push(c);
+    } else {
+      const arr = childrenOf.get(c.parentId) ?? [];
+      arr.push(c);
+      childrenOf.set(c.parentId, arr);
+    }
+  }
+
+  function walk(comment: (typeof comments)[0], depth: number) {
+    result.push({ ...comment, depth });
+    const children = childrenOf.get(comment.id) ?? [];
+    children.sort((a, b) => a.createdAt - b.createdAt);
+    for (const child of children) walk(child, depth + 1);
+  }
+
+  roots.sort((a, b) => a.createdAt - b.createdAt);
+  for (const root of roots) walk(root, 0);
+  return result;
 }
 </script>
 
@@ -715,16 +783,65 @@ function submitComment() {
             <NTabPane name="comments" :tab="`Comments (${todo.comments?.length ?? 0})`">
               <div class="comments-tab-content">
                 <div v-if="todo.comments?.length" class="comments-list">
-                  <div v-for="c in todo.comments" :key="c.id" class="comment-item">
-                    <div class="comment-avatar">{{ (c.authorName || "?")[0].toUpperCase() }}</div>
-                    <div class="comment-body">
-                      <div class="comment-header">
-                        <strong>{{ c.authorName }}</strong>
-                        <span class="comment-date">{{ formatDate(c.createdAt) }}</span>
+                  <template v-for="c in threadedComments()" :key="c.id">
+                    <div class="comment-item" :style="{ marginLeft: `${c.depth * 28}px` }">
+                      <div :class="['comment-avatar', c.depth > 0 && 'comment-avatar-sm']">
+                        {{ (c.authorName || "?")[0].toUpperCase() }}
                       </div>
-                      <div class="comment-text">{{ c.text }}</div>
+                      <div class="comment-body">
+                        <div class="comment-header">
+                          <strong>{{ c.authorName }}</strong>
+                          <span class="comment-date">{{ formatDate(c.createdAt) }}</span>
+                          <NIcon class="comment-reply-btn" :size="18" @click="startReply(c.id)"
+                            ><MessageCircle
+                          /></NIcon>
+                        </div>
+                        <div class="comment-text">{{ c.text }}</div>
+                      </div>
                     </div>
-                  </div>
+                    <!-- Reply input appears right after the comment being replied to -->
+                    <div
+                      v-if="replyingTo === c.id"
+                      class="comment-reply-input"
+                      :style="{ marginLeft: `${(c.depth + 1) * 28}px` }"
+                    >
+                      <NInput
+                        ref="replyInputRef"
+                        v-model:value="replyText"
+                        type="textarea"
+                        :autosize="{ minRows: 1, maxRows: 4 }"
+                        placeholder="Write a reply..."
+                        size="small"
+                        @keydown="
+                          (e: KeyboardEvent) => {
+                            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitReply();
+                            if (e.key === 'Escape') {
+                              replyingTo = null;
+                              replyText = '';
+                            }
+                          }
+                        "
+                      />
+                      <div class="comment-reply-actions">
+                        <NButton
+                          size="tiny"
+                          quaternary
+                          @click="
+                            replyingTo = null;
+                            replyText = '';
+                          "
+                          >Cancel</NButton
+                        >
+                        <NButton
+                          size="tiny"
+                          type="primary"
+                          :disabled="!replyText.trim()"
+                          @click="submitReply"
+                          >Reply</NButton
+                        >
+                      </div>
+                    </div>
+                  </template>
                 </div>
                 <div class="comment-input">
                   <NInput
@@ -1274,7 +1391,7 @@ a.git-link:hover {
 
 .comment-header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   margin-bottom: 2px;
   font-size: 13px;
@@ -1289,6 +1406,35 @@ a.git-link:hover {
   font-size: 13px;
   white-space: pre-wrap;
   line-height: 1.5;
+}
+
+.comment-reply-btn {
+  cursor: pointer;
+  opacity: 0.3;
+  transition: opacity 0.15s;
+  display: flex;
+  align-items: center;
+}
+
+.comment-reply-btn:hover {
+  opacity: 0.7;
+}
+
+.comment-avatar-sm {
+  width: 22px;
+  height: 22px;
+  font-size: 10px;
+}
+
+.comment-reply-input {
+  margin-top: 6px;
+}
+
+.comment-reply-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 4px;
 }
 
 .comment-input {

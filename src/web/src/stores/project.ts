@@ -187,7 +187,7 @@ export const useProjectStore = defineStore("project", () => {
     }
   }
 
-  async function addComment(number: number, text: string) {
+  async function addComment(number: number, text: string, parentId?: string | null) {
     error.value = null;
 
     // Optimistic update — show the comment immediately
@@ -201,6 +201,7 @@ export const useProjectStore = defineStore("project", () => {
           authorName: members.value[0]?.name ?? "You",
           text,
           createdAt: Date.now(),
+          parentId: parentId ?? null,
         };
         project.value = {
           ...project.value,
@@ -215,7 +216,7 @@ export const useProjectStore = defineStore("project", () => {
 
     skipNextRefresh = true;
     try {
-      await api.addCommentApi(number, text);
+      await api.addCommentApi(number, text, parentId);
     } catch (e: unknown) {
       // Rollback on failure
       project.value = snapshot;

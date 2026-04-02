@@ -168,6 +168,7 @@ fn read_todo_at(doc: &AutoCommit, todos_id: &automerge::ObjId, idx: usize) -> Op
                     author_name: get_str(doc, &c_id, "authorName").unwrap_or_default(),
                     text: get_str(doc, &c_id, "text").unwrap_or_default(),
                     created_at: get_i64(doc, &c_id, "createdAt").unwrap_or(0),
+                    parent_id: get_str(doc, &c_id, "parentId"),
                 };
                 comments.push(comment);
             }

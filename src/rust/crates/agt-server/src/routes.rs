@@ -188,8 +188,9 @@ async fn handle_add_comment(state: &AppState, body: &Value) -> Result<Value, Str
         .and_then(|n| n.as_u64())
         .ok_or("missing number")?;
     let text = body.get("text").and_then(|t| t.as_str()).unwrap_or("");
+    let parent_id = body.get("parentId").and_then(|p| p.as_str());
 
-    operations::add_comment(&mut doc, number, text, None).map_err(|e| e.to_string())?;
+    operations::add_comment(&mut doc, number, text, None, parent_id).map_err(|e| e.to_string())?;
 
     drop(doc);
     state.save().await.map_err(|e| e.to_string())?;

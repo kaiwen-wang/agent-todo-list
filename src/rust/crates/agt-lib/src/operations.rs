@@ -44,6 +44,7 @@ const K_AGENT_MODEL: &str = "agentModel";
 const K_AUTHOR: &str = "author";
 const K_AUTHOR_NAME: &str = "authorName";
 const K_TEXT: &str = "text";
+const K_PARENT_ID: &str = "parentId";
 const K_PLAN_PATH: &str = "planPath";
 const K_WORKTREES: &str = "worktrees";
 const K_COMMITS: &str = "commits";
@@ -464,6 +465,7 @@ pub fn add_comment(
     todo_number: u64,
     text: &str,
     actor_id: Option<&str>,
+    parent_id: Option<&str>,
 ) -> Result<()> {
     let actor = resolve_actor(doc, actor_id);
     let (todo_obj, _) = find_todo_obj(doc, todo_number)?;
@@ -475,6 +477,24 @@ pub fn add_comment(
         None => doc.put_object(&todo_obj, K_COMMENTS, ObjType::List)?,
     };
 
+    // If replying, validate parent comment exists
+    if let Some(pid) = parent_id {
+        let len = doc.length(&comments_id);
+        let mut found = false;
+        for i in 0..len {
+            if let Ok(Some((_, c_id))) = doc.get(&comments_id, i)
+                && let Some(id) = read_str(doc, &c_id, K_ID)
+                && id == pid
+            {
+                found = true;
+                break;
+            }
+        }
+        if !found {
+            bail!("Parent comment \"{pid}\" not found");
+        }
+    }
+
     let len = doc.length(&comments_id);
     let comment_obj = doc.insert_object(&comments_id, len, ObjType::Map)?;
 
@@ -483,6 +503,11 @@ pub fn add_comment(
     doc.put(&comment_obj, K_AUTHOR_NAME, actor_name.as_str())?;
     doc.put(&comment_obj, K_TEXT, text)?;
     doc.put(&comment_obj, K_CREATED_AT, now_millis())?;
+    if let Some(pid) = parent_id {
+        doc.put(&comment_obj, K_PARENT_ID, pid)?;
+    } else {
+        doc.put(&comment_obj, K_PARENT_ID, ScalarValue::Null)?;
+    }
     doc.put(&todo_obj, K_UPDATED_AT, now_millis())?;
 
     let prefix = get_prefix(doc);
@@ -491,12 +516,16 @@ pub fn add_comment(
     } else {
         text.to_string()
     };
+    let mut details = json!({ "text": truncated });
+    if let Some(pid) = parent_id {
+        details["parentId"] = json!(pid);
+    }
     let msg = build_msg(
         doc,
         "todo.commented",
         &actor,
         &format!("{prefix}-{todo_number}"),
-        Some(json!({ "text": truncated })),
+        Some(details),
     );
     commit_msg(doc, msg);
     Ok(())

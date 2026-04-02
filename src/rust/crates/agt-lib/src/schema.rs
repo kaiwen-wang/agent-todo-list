@@ -462,6 +462,9 @@ pub struct Comment {
     pub author_name: String,
     pub text: String,
     pub created_at: i64,
+    /// If set, this comment is a reply to the comment with this ID.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent_id: Option<String>,
 }
 
 /// Audit entry reconstructed from Automerge change history at read time.
@@ -531,7 +534,7 @@ pub struct Member {
 }
 
 /// Current schema version — increment when making breaking changes.
-pub const CURRENT_SCHEMA_VERSION: u64 = 9;
+pub const CURRENT_SCHEMA_VERSION: u64 = 10;
 
 /// Config stored in .todo/config.toml (committed to git).
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -34,6 +34,7 @@ export interface Comment {
   authorName: string;
   text: string;
   createdAt: Timestamp;
+  parentId?: string | null;
 }
 
 export interface AuditEntry {

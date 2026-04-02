@@ -160,6 +160,9 @@ enum Commands {
         reference: String,
         /// Comment text
         text: String,
+        /// Reply to a specific comment by ID
+        #[arg(long, value_name = "COMMENT_ID")]
+        reply_to: Option<String>,
         /// Output as JSON
         #[arg(long)]
         json: bool,
@@ -676,8 +679,9 @@ fn main() -> Result<()> {
         Commands::Comment {
             reference,
             text,
+            reply_to,
             json,
-        } => commands::comment::run(reference, text, json),
+        } => commands::comment::run(reference, text, reply_to, json),
         Commands::Branch { reference, json } => commands::branch::run(reference, json),
         Commands::LinkCommit {
             reference,

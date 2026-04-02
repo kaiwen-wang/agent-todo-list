@@ -254,10 +254,43 @@ pub fn print_todo_detail(
             "{}",
             format!("--- Comments ({}) ---", comments.len()).dimmed()
         );
-        for comment in comments {
+        // Show top-level comments first, then replies indented beneath them
+        let top_level: Vec<_> = comments.iter().filter(|c| c.parent_id.is_none()).collect();
+        for comment in &top_level {
             let ts = format_ts(comment.created_at);
             println!("  {} {}", comment.author_name.bold(), ts.dimmed());
             println!("  {}", comment.text);
+            println!();
+            // Show replies to this comment
+            for reply in comments
+                .iter()
+                .filter(|c| c.parent_id.as_deref() == Some(&comment.id))
+            {
+                let rts = format_ts(reply.created_at);
+                println!(
+                    "    {} {} {}",
+                    "↳".dimmed(),
+                    reply.author_name.bold(),
+                    rts.dimmed()
+                );
+                println!("      {}", reply.text);
+                println!();
+            }
+        }
+        // Show orphan replies (parent deleted) at the end
+        let orphans: Vec<_> = comments
+            .iter()
+            .filter(|c| {
+                c.parent_id.is_some()
+                    && !comments
+                        .iter()
+                        .any(|p| Some(p.id.as_str()) == c.parent_id.as_deref())
+            })
+            .collect();
+        for reply in orphans {
+            let ts = format_ts(reply.created_at);
+            println!("  {} {}", reply.author_name.bold(), ts.dimmed());
+            println!("  {}", reply.text);
             println!();
         }
     }

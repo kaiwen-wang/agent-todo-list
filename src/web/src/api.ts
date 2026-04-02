@@ -198,11 +198,17 @@ export interface UpdateMemberParams {
   agentModel?: string;
 }
 
-export async function addCommentApi(number: number, text: string): Promise<{ ok: boolean }> {
+export async function addCommentApi(
+  number: number,
+  text: string,
+  parentId?: string | null,
+): Promise<{ ok: boolean }> {
+  const payload: Record<string, unknown> = { action: "addComment", number, text };
+  if (parentId) payload.parentId = parentId;
   const res = await fetch(`${BASE}/api/change`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "addComment", number, text }),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) {
     const data = await res.json();
