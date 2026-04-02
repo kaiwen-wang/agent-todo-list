@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, h, type Component } from "vue";
+import { ref, computed, h } from "vue";
 import {
   NButton,
   NCard,
@@ -7,34 +7,17 @@ import {
   NEmpty,
   NForm,
   NFormItem,
-  NIcon,
   NInput,
   NModal,
   NPopconfirm,
-  NSelect,
   NSpace,
-  NTag,
   useMessage,
   type DataTableColumns,
 } from "naive-ui";
-import {
-  AntennaBars1,
-  AntennaBars2,
-  AntennaBars3,
-  AntennaBars4,
-  AntennaBars5,
-} from "@vicons/tabler";
 import { useProjectStore } from "@/stores/project";
-import type { Member, MemberRole, Todo, Priority } from "@/types";
-import { STATUS_DISPLAY, STATUS_COLORS, PRIORITY_COLORS } from "@/types";
-
-const PRIORITY_ICON: Record<Priority, Component> = {
-  none: AntennaBars1,
-  low: AntennaBars2,
-  medium: AntennaBars3,
-  high: AntennaBars4,
-  urgent: AntennaBars5,
-};
+import { fetchGitIdentity } from "@/api";
+import type { Member, Todo } from "@/types";
+import { STATUS_DISPLAY, STATUS_COLORS } from "@/types";
 
 const store = useProjectStore();
 const message = useMessage();
@@ -47,25 +30,13 @@ const editingMember = ref<Member | null>(null);
 // Add form state (human members only)
 const addName = ref("");
 const addEmail = ref("");
-const addRole = ref<MemberRole>("member");
 const addSubmitting = ref(false);
+const addSelfLoading = ref(false);
 
 // Edit form state (human members only)
 const editName = ref("");
 const editEmail = ref("");
-const editRole = ref<MemberRole>("member");
 const editSubmitting = ref(false);
-
-const roleOptions = [
-  { label: "Owner", value: "owner" },
-  { label: "Member", value: "member" },
-];
-
-const ROLE_COLORS: Record<MemberRole, string> = {
-  owner: "#f59e0b",
-  member: "#3b82f6",
-  agent: "#8b5cf6",
-};
 
 // ── Agents ──
 
@@ -79,24 +50,6 @@ const columns: DataTableColumns<Member> = [
     key: "name",
     render(row) {
       return row.name;
-    },
-  },
-  {
-    title: "Role",
-    key: "role",
-    width: 120,
-    render(row) {
-      const color = ROLE_COLORS[row.role];
-      return h(
-        NTag,
-        {
-          size: "small",
-          round: true,
-          bordered: false,
-          color: { color: color + "22", textColor: color },
-        },
-        () => row.role,
-      );
     },
   },
   {
@@ -155,19 +108,6 @@ const memberTodoColumns: DataTableColumns<Todo> = [
       ]);
     },
   },
-  {
-    title: "Priority",
-    key: "priority",
-    width: 60,
-    align: "center",
-    render(row) {
-      return h(
-        NIcon,
-        { size: 16, color: PRIORITY_COLORS[row.priority] },
-        { default: () => h(PRIORITY_ICON[row.priority]) },
-      );
-    },
-  },
 ];
 
 function selectMember(member: Member) {
@@ -182,7 +122,6 @@ const rowProps = (row: Member) => ({
 function openAdd() {
   addName.value = "";
   addEmail.value = "";
-  addRole.value = "member";
   showAddModal.value = true;
 }
 
@@ -190,7 +129,6 @@ function openEdit(member: Member) {
   editingMember.value = member;
   editName.value = member.name;
   editEmail.value = member.email ?? "";
-  editRole.value = member.role;
   showEditModal.value = true;
 }
 
@@ -210,7 +148,6 @@ async function handleAdd() {
   try {
     await store.addMember({
       name: addName.value.trim(),
-      role: addRole.value,
       email: addEmail.value.trim() || undefined,
     });
     message.success("Member added");
@@ -229,9 +166,6 @@ async function handleEdit() {
     const updates: Record<string, string | null> = {};
     if (editName.value.trim() !== editingMember.value.name) {
       updates.name = editName.value.trim();
-    }
-    if (editRole.value !== editingMember.value.role) {
-      updates.role = editRole.value;
     }
     const newEmail = editEmail.value.trim() || null;
     if (newEmail !== editingMember.value.email) {
@@ -260,14 +194,43 @@ async function handleRemove(member: Member) {
     message.error("Failed to remove member");
   }
 }
+
+async function handleAddSelf() {
+  addSelfLoading.value = true;
+  try {
+    const identity = await fetchGitIdentity();
+    if (!identity.name) {
+      message.warning("git user.name is not configured");
+      return;
+    }
+    const existing = store.members.find((m) => m.name === identity.name && m.role !== "agent");
+    if (existing) {
+      message.info(`"${identity.name}" is already a member`);
+      return;
+    }
+    await store.addMember({
+      name: identity.name,
+      email: identity.email ?? undefined,
+    });
+    message.success(`Added ${identity.name}`);
+  } catch (e) {
+    console.error("Add self failed:", e);
+    message.error(`Failed to add self: ${e instanceof Error ? e.message : e}`);
+  } finally {
+    addSelfLoading.value = false;
+  }
+}
 </script>
 
 <template>
   <div class="members-view">
     <!-- Members section -->
     <div class="members-toolbar">
-      <h3>Members</h3>
-      <NButton type="primary" size="small" @click="openAdd">+ Add Member</NButton>
+      <h2>Members</h2>
+      <div style="display: flex; gap: 8px">
+        <NButton size="small" :loading="addSelfLoading" @click="handleAddSelf">Add Self</NButton>
+        <NButton type="primary" size="small" @click="openAdd">+ Add Member</NButton>
+      </div>
     </div>
 
     <div class="members-table-container">
@@ -297,20 +260,8 @@ async function handleRemove(member: Member) {
             }}</span>
             <div>
               <div class="member-detail-name">{{ selectedMember.name }}</div>
-              <div class="member-detail-meta">
-                <NTag
-                  size="small"
-                  round
-                  :bordered="false"
-                  :color="{
-                    color: ROLE_COLORS[selectedMember.role] + '22',
-                    textColor: ROLE_COLORS[selectedMember.role],
-                  }"
-                  >{{ selectedMember.role }}</NTag
-                >
-                <span v-if="selectedMember.email" class="member-detail-email">{{
-                  selectedMember.email
-                }}</span>
+              <div v-if="selectedMember.email" class="member-detail-meta">
+                <span class="member-detail-email">{{ selectedMember.email }}</span>
               </div>
             </div>
           </div>
@@ -363,9 +314,6 @@ async function handleRemove(member: Member) {
           <NFormItem label="Email">
             <NInput v-model:value="addEmail" placeholder="email@example.com (optional)" />
           </NFormItem>
-          <NFormItem label="Role">
-            <NSelect v-model:value="addRole" :options="roleOptions" />
-          </NFormItem>
           <NSpace justify="end" :size="8">
             <NButton @click="showAddModal = false">Cancel</NButton>
             <NButton
@@ -402,9 +350,6 @@ async function handleRemove(member: Member) {
           </NFormItem>
           <NFormItem label="Email">
             <NInput v-model:value="editEmail" placeholder="email@example.com (optional)" />
-          </NFormItem>
-          <NFormItem label="Role">
-            <NSelect v-model:value="editRole" :options="roleOptions" />
           </NFormItem>
           <NSpace justify="end" :size="8">
             <NButton @click="showEditModal = false">Cancel</NButton>
@@ -541,16 +486,13 @@ async function handleRemove(member: Member) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px 12px;
+  padding: 16px 24px;
   flex-shrink: 0;
 }
 
-.members-toolbar h3 {
-  font-size: 14px;
+.members-toolbar h2 {
+  font-size: 16px;
   font-weight: 600;
-  opacity: 0.7;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .members-table-container {

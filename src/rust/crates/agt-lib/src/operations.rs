@@ -195,7 +195,7 @@ pub fn create_project(
     } else {
         doc.put(&member, K_EMAIL, ScalarValue::Null)?;
     }
-    doc.put(&member, K_ROLE, MemberRole::Owner.as_str())?;
+    doc.put(&member, K_ROLE, MemberRole::Member.as_str())?;
 
     doc.put_object(ROOT, K_TODOS, ObjType::List)?;
     doc.put_object(ROOT, K_CYCLES, ObjType::List)?;

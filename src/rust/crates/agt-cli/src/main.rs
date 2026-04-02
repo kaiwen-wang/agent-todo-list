@@ -355,7 +355,7 @@ enum MemberAction {
     Add {
         /// Member name
         name: String,
-        /// Role (owner, member, agent)
+        /// Role (member, agent)
         #[arg(long, default_value = "member")]
         role: String,
         /// Email address
@@ -392,7 +392,7 @@ enum MemberAction {
         /// New name (rename)
         #[arg(long = "name", value_name = "NEW_NAME")]
         new_name: Option<String>,
-        /// New role (owner, member, agent)
+        /// New role (member, agent)
         #[arg(long)]
         role: Option<String>,
         /// New email address

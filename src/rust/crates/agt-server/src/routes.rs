@@ -11,6 +11,7 @@ use std::process::{Command, Stdio};
 
 use agt_lib::export::to_json;
 use agt_lib::git;
+use agt_lib::git_identity;
 use agt_lib::inbox;
 use agt_lib::operations::{self, AddCycleOpts, AddTodoOpts, UpdateCycleFields, UpdateTodoFields};
 use agt_lib::project::sync_config;
@@ -58,6 +59,17 @@ pub async fn get_stats(State(state): State<AppState>) -> impl IntoResponse {
     let doc = state.doc.lock().await;
     let stats = agt_lib::stats::compute_stats(&doc);
     Json(json!(stats)).into_response()
+}
+
+// ── GET /api/git-identity ───────────────────────────────────────────
+
+pub async fn get_git_identity() -> impl IntoResponse {
+    let identity = git_identity::get_git_identity();
+    Json(json!({
+        "name": identity.name,
+        "email": identity.email,
+    }))
+    .into_response()
 }
 
 // ── POST /api/change ────────────────────────────────────────────────

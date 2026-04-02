@@ -154,6 +154,14 @@ export async function deleteTodo(number: number): Promise<{ ok: boolean }> {
   return res.json();
 }
 
+// ── Git identity ──
+
+export async function fetchGitIdentity(): Promise<{ name: string | null; email: string | null }> {
+  const res = await fetch(`${BASE}/api/git-identity`);
+  if (!res.ok) throw new Error(`Failed to fetch git identity: ${res.statusText}`);
+  return res.json();
+}
+
 // ── Member API ──
 
 export interface AddMemberParams {

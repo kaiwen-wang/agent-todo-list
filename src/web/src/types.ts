@@ -13,7 +13,7 @@ export type Priority = "none" | "low" | "medium" | "high" | "urgent";
 export type Difficulty = "none" | "easy" | "medium" | "hard";
 export type Label = "new_feature" | "bug" | "feature_plus";
 export type Platform = "cli" | "web" | "unknown";
-export type MemberRole = "owner" | "member" | "agent";
+export type MemberRole = "member" | "agent";
 export type AgentProvider = "claude-code" | "opencode" | "custom";
 
 export const AGENT_PROVIDERS: AgentProvider[] = ["claude-code", "opencode", "custom"];

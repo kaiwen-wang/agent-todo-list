@@ -305,7 +305,6 @@ pub fn print_members_list(members: &[Member]) {
 
     for member in members {
         let role = match member.role {
-            MemberRole::Owner => "owner".yellow().to_string(),
             MemberRole::Member => "member".normal().to_string(),
             MemberRole::Agent => "agent".cyan().to_string(),
         };

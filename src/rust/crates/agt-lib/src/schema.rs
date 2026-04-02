@@ -369,7 +369,6 @@ impl std::str::FromStr for CycleStatus {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MemberRole {
-    Owner,
     Member,
     Agent,
 }
@@ -377,7 +376,6 @@ pub enum MemberRole {
 impl MemberRole {
     pub fn as_str(&self) -> &'static str {
         match self {
-            MemberRole::Owner => "owner",
             MemberRole::Member => "member",
             MemberRole::Agent => "agent",
         }
@@ -394,8 +392,8 @@ impl std::str::FromStr for MemberRole {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "owner" => Ok(MemberRole::Owner),
-            "member" => Ok(MemberRole::Member),
+            // "owner" is legacy — treat as regular member
+            "owner" | "member" => Ok(MemberRole::Member),
             "agent" => Ok(MemberRole::Agent),
             _ => Err(format!("unknown role: {s}")),
         }
