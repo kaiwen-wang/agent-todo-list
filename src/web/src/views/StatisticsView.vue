@@ -104,35 +104,65 @@ function formatAction(action: string): string {
     <div v-if="loading && !stats" class="loading">Loading statistics...</div>
 
     <div v-else-if="stats" class="stats-scroll">
-      <!-- Summary cards -->
-      <div class="summary-row">
-        <div class="summary-card">
-          <div class="summary-value">{{ stats.summary.total }}</div>
-          <div class="summary-label">Total</div>
-        </div>
-        <div class="summary-card">
-          <div class="summary-value">{{ stats.summary.active }}</div>
-          <div class="summary-label">Active</div>
-        </div>
-        <div class="summary-card">
-          <div class="summary-value">{{ stats.summary.inProgress }}</div>
-          <div class="summary-label">In Progress</div>
-        </div>
-        <div class="summary-card">
-          <div class="summary-value">{{ stats.summary.completed }}</div>
-          <div class="summary-label">Completed</div>
-        </div>
-        <div class="summary-card">
-          <div class="summary-value">{{ stats.summary.unassigned }}</div>
-          <div class="summary-label">Unassigned</div>
-        </div>
-        <div class="summary-card">
-          <div class="summary-value">{{ stats.summary.completionRate }}%</div>
-          <div class="summary-label">Closed Rate</div>
-        </div>
-      </div>
-
       <div class="stats-grid">
+        <!-- Overview -->
+        <div class="stats-card">
+          <div class="card-title">Overview</div>
+          <div class="bar-list">
+            <div class="bar-row">
+              <div class="bar-label">Active</div>
+              <div class="bar-track">
+                <div
+                  class="bar-fill"
+                  :style="{
+                    width: pct(stats.summary.active, stats.summary.total) + '%',
+                    background: '#3b82f6',
+                  }"
+                />
+              </div>
+              <div class="bar-value">{{ stats.summary.active }}</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label">In Progress</div>
+              <div class="bar-track">
+                <div
+                  class="bar-fill"
+                  :style="{
+                    width: pct(stats.summary.inProgress, stats.summary.total) + '%',
+                    background: '#f59e0b',
+                  }"
+                />
+              </div>
+              <div class="bar-value">{{ stats.summary.inProgress }}</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label">Completed</div>
+              <div class="bar-track">
+                <div
+                  class="bar-fill"
+                  :style="{
+                    width: pct(stats.summary.completed, stats.summary.total) + '%',
+                    background: '#10b981',
+                  }"
+                />
+              </div>
+              <div class="bar-value">{{ stats.summary.completed }}</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label">Unassigned</div>
+              <div class="bar-track">
+                <div
+                  class="bar-fill"
+                  :style="{
+                    width: pct(stats.summary.unassigned, stats.summary.total) + '%',
+                    background: '#9ca3af',
+                  }"
+                />
+              </div>
+              <div class="bar-value">{{ stats.summary.unassigned }}</div>
+            </div>
+          </div>
+        </div>
         <!-- Status distribution -->
         <div class="stats-card">
           <div class="card-title">Status Distribution</div>
@@ -325,39 +355,6 @@ function formatAction(action: string): string {
   flex: 1;
   overflow-y: auto;
   padding: 0 24px 24px;
-}
-
-/* ── Summary row ── */
-
-.summary-row {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.summary-card {
-  flex: 1;
-  padding: 14px 16px;
-  border-radius: 8px;
-  background: #f8f8f8;
-  border: 1px solid #eee;
-  text-align: center;
-}
-
-.summary-value {
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 1.2;
-  font-variant-numeric: tabular-nums;
-}
-
-.summary-label {
-  font-size: 11px;
-  font-weight: 500;
-  opacity: 0.45;
-  margin-top: 2px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
 }
 
 /* ── Stats grid ── */

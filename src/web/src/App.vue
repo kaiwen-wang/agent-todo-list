@@ -7,7 +7,6 @@ import {
   NLayout,
   NLayoutSider,
   NLayoutContent,
-  NTag,
   NIcon,
 } from "naive-ui";
 import {
@@ -21,7 +20,6 @@ import {
   ChartDots,
 } from "@vicons/tabler";
 import { useProjectStore } from "@/stores/project";
-import { STATUSES, STATUS_DISPLAY, STATUS_COLORS, CYCLE_STATUS_COLORS } from "@/types";
 import SettingsModal from "@/components/SettingsModal.vue";
 import CreateTodoModal from "@/components/CreateTodoModal.vue";
 import TodoDetailModal from "@/components/TodoDetailModal.vue";
@@ -150,62 +148,6 @@ const themeOverrides = {
                 <kbd class="kbd-hint">&#8984;K</kbd>
               </button>
             </nav>
-
-            <!-- Status overview -->
-            <div class="sidebar-section">
-              <div class="section-label">Status</div>
-              <div class="status-counts">
-                <div v-for="s in STATUSES" :key="s" class="status-row">
-                  <span class="status-dot" :style="{ background: STATUS_COLORS[s] }" />
-                  <span class="status-name">{{ STATUS_DISPLAY[s] }}</span>
-                  <span class="status-count">{{ store.statusCounts[s] }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Members -->
-            <div class="sidebar-section">
-              <div class="section-label">Members</div>
-              <div class="member-list">
-                <div
-                  v-for="m in store.members.filter((m) => m.role !== 'agent')"
-                  :key="m.id"
-                  class="member-row"
-                >
-                  <span class="member-avatar">{{ m.name.charAt(0).toUpperCase() }}</span>
-                  <span class="member-name">{{ m.name }}</span>
-                  <NTag size="tiny" :bordered="false" round>{{ m.role }}</NTag>
-                </div>
-              </div>
-            </div>
-
-            <!-- Cycles -->
-            <div class="sidebar-section">
-              <div class="section-label">Sprints</div>
-              <div class="cycle-list">
-                <button
-                  v-if="store.activeCycleId"
-                  class="cycle-row cycle-clear"
-                  @click="store.setActiveCycle(null)"
-                >
-                  <span class="cycle-name">All todos</span>
-                </button>
-                <button
-                  v-for="c in store.cycles"
-                  :key="c.id"
-                  class="cycle-row"
-                  :class="{ active: store.activeCycleId === c.id }"
-                  @click="store.setActiveCycle(c.id)"
-                >
-                  <span class="status-dot" :style="{ background: CYCLE_STATUS_COLORS[c.status] }" />
-                  <span class="cycle-name">{{ c.name }}</span>
-                  <span class="cycle-count">{{
-                    store.todos.filter((t) => t.cycleId === c.id).length
-                  }}</span>
-                </button>
-                <span v-if="store.cycles.length === 0" class="cycle-empty">No cycles yet</span>
-              </div>
-            </div>
           </template>
         </NLayoutSider>
 
@@ -390,165 +332,6 @@ body {
   text-align: center;
   font-size: 14px;
   flex-shrink: 0;
-}
-
-/* ── Sections ── */
-
-.sidebar-section {
-  padding: 0 0 0 4px;
-}
-
-.section-label {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  opacity: 0.35;
-  margin-bottom: 4px;
-}
-
-/* ── Status counts ── */
-
-.status-counts {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding-left: 4px;
-}
-
-.status-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  padding: 2px 0;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.status-name {
-  flex: 1;
-  opacity: 0.7;
-}
-
-.status-count {
-  font-weight: 600;
-  font-size: 12px;
-  opacity: 0.4;
-  font-variant-numeric: tabular-nums;
-  min-width: 16px;
-  text-align: right;
-}
-
-/* ── Members ── */
-
-.member-list {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.member-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-}
-
-.member-avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: #ddd;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 600;
-  color: #666;
-  flex-shrink: 0;
-}
-
-.agent-avatar {
-  background: #8b5cf622 !important;
-  color: #8b5cf6 !important;
-  font-size: 9px !important;
-  letter-spacing: 0.3px;
-}
-
-.member-name {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ── Cycles ── */
-
-.cycle-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.cycle-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
-  border: none;
-  background: transparent;
-  border-radius: 6px;
-  font-size: 13px;
-  cursor: pointer;
-  color: inherit;
-  opacity: 0.7;
-  text-align: left;
-  font-family: inherit;
-  width: 100%;
-}
-
-.cycle-row:hover {
-  background: rgba(0, 0, 0, 0.05);
-  opacity: 0.9;
-}
-
-.cycle-row.active {
-  background: rgba(0, 0, 0, 0.08);
-  opacity: 1;
-  font-weight: 600;
-}
-
-.cycle-name {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.cycle-empty {
-  font-size: 12px;
-  opacity: 0.35;
-  padding: 2px 8px;
-}
-
-.cycle-clear {
-  opacity: 0.45;
-  font-style: italic;
-}
-
-.cycle-count {
-  font-weight: 600;
-  font-size: 12px;
-  opacity: 0.4;
-  font-variant-numeric: tabular-nums;
-  min-width: 16px;
-  text-align: right;
 }
 
 /* ── Main content ── */
