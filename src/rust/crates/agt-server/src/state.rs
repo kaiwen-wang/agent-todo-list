@@ -21,6 +21,8 @@ pub struct AppState {
     pub tx: broadcast::Sender<String>,
     /// Flag to ignore our own file writes.
     pub saving: Arc<std::sync::atomic::AtomicBool>,
+    /// Cached git remote URL (computed once at startup).
+    pub remote_url: Option<String>,
 }
 
 impl AppState {
@@ -34,6 +36,9 @@ impl AppState {
 
         let (tx, _) = broadcast::channel(64);
 
+        let project_root = todo_dir.parent().unwrap_or(&todo_dir);
+        let remote_url = agt_lib::git::remote_base_url(project_root);
+
         Ok(Self {
             data_path,
             config_path,
@@ -41,6 +46,7 @@ impl AppState {
             doc: Arc::new(Mutex::new(doc)),
             tx,
             saving: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            remote_url,
         })
     }
 

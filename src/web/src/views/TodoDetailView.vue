@@ -400,19 +400,15 @@ watch(
 
 // ── Comments ──
 const commentText = ref("");
-const commentLoading = ref(false);
 
-async function submitComment() {
+function submitComment() {
   if (!todo.value || !commentText.value.trim()) return;
-  commentLoading.value = true;
-  try {
-    await store.addComment(todo.value.number, commentText.value.trim());
-    commentText.value = "";
-  } catch (e: unknown) {
+  const text = commentText.value.trim();
+  commentText.value = "";
+  // Store handles optimistic update + rollback on failure
+  store.addComment(todo.value.number, text).catch((e: unknown) => {
     message.error(e instanceof Error ? e.message : "Failed to add comment");
-  } finally {
-    commentLoading.value = false;
-  }
+  });
 }
 </script>
 
@@ -636,7 +632,6 @@ async function submitComment() {
               <NButton
                 size="small"
                 type="primary"
-                :loading="commentLoading"
                 :disabled="!commentText.trim()"
                 style="align-self: flex-end; margin-top: 8px"
                 @click="submitComment"

@@ -5,12 +5,13 @@ use automerge::AutoCommit;
 use std::path::Path;
 
 /// Auto-stage a file so it's included in the next commit.
+/// Spawns `git add` in the background — does not block the caller.
 pub fn git_stage(path: &Path) {
     let _ = std::process::Command::new("git")
         .args(["add", &path.to_string_lossy()])
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
-        .status();
+        .spawn(); // non-blocking: fire and forget
 }
 
 /// Save an Automerge document to a file, then git-add it.

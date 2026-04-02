@@ -43,14 +43,10 @@ pub async fn get_project(State(state): State<AppState>) -> impl IntoResponse {
 
     let mut project = to_json(&mut doc, false);
 
-    // Derive project root from todo_dir (parent of .todo/)
-    let project_root = state.todo_dir.parent().unwrap_or(&state.todo_dir);
-    let remote_url = git::remote_base_url(project_root);
-
     if let Some(obj) = project.as_object_mut() {
         obj.insert("inboxText".into(), json!(inbox_text));
         obj.insert("inboxProcessed".into(), json!(inbox_processed));
-        obj.insert("remoteUrl".into(), json!(remote_url));
+        obj.insert("remoteUrl".into(), json!(state.remote_url.clone()));
     }
 
     Json(project).into_response()
